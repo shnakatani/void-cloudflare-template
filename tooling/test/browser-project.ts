@@ -31,12 +31,6 @@ export async function browserProject({ compiler }: { compiler: boolean }) {
           "@base-ui/react/popover",
           "react-day-picker",
         ],
-        // Start plugin 不在の test 環境では #tanstack-*-entry 仮想 import が解決不能
-        exclude: [
-          "@tanstack/react-start",
-          "@tanstack/react-start-server",
-          "@tanstack/start-server-core",
-        ],
       },
       test: {
         name: compiler ? "browser" : "browser-no-compiler",

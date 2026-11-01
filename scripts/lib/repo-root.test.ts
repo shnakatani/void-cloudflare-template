@@ -11,7 +11,7 @@ describe("REPO_ROOT", () => {
   it("このリポジトリのルートを指す", () => {
     expect(existsSync(join(REPO_ROOT, "package.json"))).toBe(true);
     expect(existsSync(join(REPO_ROOT, "vite.config.ts"))).toBe(true);
-    expect(existsSync(join(REPO_ROOT, "src", "router.tsx"))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, "src", "styles.css"))).toBe(true);
   });
 
   it("絶対パスを返す", () => {

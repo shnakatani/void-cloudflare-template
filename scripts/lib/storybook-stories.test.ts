@@ -30,7 +30,7 @@ describe("excludeStoriesOutside", () => {
 
   test("stories が 1 つの起点を持つ glob の配列でなければ止まる", () => {
     expect(() =>
-      excludeStoriesOutside([...STORIES, "../src/routes/**/*.stories.tsx"], "src/components/ui"),
+      excludeStoriesOutside([...STORIES, "../src/pages/**/*.stories.tsx"], "src/components/ui"),
     ).toThrow(NOT_ONE_ROOT);
     expect(() =>
       excludeStoriesOutside(["../src/components/*.stories.tsx"], "src/components/ui"),

@@ -75,7 +75,7 @@ describe("companionFilePattern", () => {
     }
     expect(pattern.test("button.tsx")).toBe(false);
     expect(pattern.test("handlers.server.ts")).toBe(false);
-    expect(pattern.test("routeTree.gen.ts")).toBe(false);
+    expect(pattern.test("schema.gen.ts")).toBe(false);
   });
 });
 
@@ -91,7 +91,7 @@ describe("isCompanionFile", () => {
     // basename に `.` を持つアプリのコード。字面が似ているので取り違えると本体が検査から漏れる
     expect(isCompanionFile("button.tsx")).toBe(false);
     expect(isCompanionFile("handlers.server.ts")).toBe(false);
-    expect(isCompanionFile("routeTree.gen.ts")).toBe(false);
+    expect(isCompanionFile("schema.gen.ts")).toBe(false);
     expect(isCompanionFile("env.d.ts")).toBe(false);
     expect(isCompanionFile("vite-env.d.ts")).toBe(false);
   });

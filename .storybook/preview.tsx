@@ -1,5 +1,5 @@
 import { withThemeByClassName } from "@storybook/addon-themes";
-import type { Preview } from "@storybook/tanstack-react";
+import type { Preview } from "@storybook/react-vite";
 import { StrictMode } from "react";
 
 import { NARROW_VIEWPORT } from "@/test/browser/viewport-sizes";

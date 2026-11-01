@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useSyncExternalStore } from "react";
 import { expect, within } from "storybook/test";
 

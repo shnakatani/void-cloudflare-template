@@ -12,7 +12,7 @@ import {
 /**
  * mutation 成功後の一覧 refetch が失敗しても通知されない silent failure の回帰テスト。
  *
- * - 初回ロード失敗 (data === undefined) は error boundary (RouteErrorContent) が扱うため通知しない
+ * - 初回ロード失敗 (data === undefined) は error boundary が扱うため通知しない
  * - data はあるが observer が無い query の失敗 (閉じたダイアログの 1 件を loader が取り直すなど) は、
  *   取得を await した側が扱うため通知しない
  * - 部品が表示している (data があり observer がある) データの background refetch 失敗のみ通知する

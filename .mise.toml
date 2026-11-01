@@ -12,19 +12,14 @@ disable_tools = ["node", "pnpm"]
 # daemons (下の port の導出) が experimental (ADR-0004)
 experimental = true
 
-[env]
-# config_root から組んで絶対パスにする (docs/guides/database.md「パスを cwd 基準にする理由」)
-DB_FILE_NAME = "{{ [config_root, '.data/dev.sqlite'] | join_path }}"
-
 # vite.config.ts の同名のタスクは worktree を知らない。worktree ごとの port は、下の daemons が出す
-# SERVE_PORT / STORYBOOK_PORT を、このタスクが引数で足す。serve は PORT にも入れる。nitro が --port より
-# PORT を先に読むので、入れないと、シェルに PORT があればその port で起動する。storybook には入れない (ADR-0004)
+# SERVE_PORT / STORYBOOK_PORT を、このタスクが引数で足す (ADR-0004)
 # mise は既定でタスクに stdin をつながない。interactive でつなぎ、Vite のキーボードのショートカットを
 # 効かせる。interactive のタスクは mise の I/O の lock を取るので、serve と storybook を 1 つの mise run
 # (depends など) で束ねない。一方が待ち続ける。両方を動かすときは daemons を使う (ADR-0004)
 [tasks.serve]
 interactive = true
-run = "PORT=${SERVE_PORT:?mise の daemons の port が届いていない} exec vp run serve --port $SERVE_PORT"
+run = "exec vp run serve --port ${SERVE_PORT:?mise の daemons の port が届いていない}"
 
 [tasks.storybook]
 interactive = true

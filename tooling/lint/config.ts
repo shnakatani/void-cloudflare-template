@@ -10,7 +10,7 @@ import {
 const OXLINT_DEFAULT_PLUGINS = ["typescript", "unicorn", "oxc"] as const;
 
 /**
- * `@shadcn/lint` が design system component として認識する層 (ADR-0011)。`routes/` などから
+ * `@shadcn/lint` が design system component として認識する層 (ADR-0011)。層の外から
  * これらの部品へ渡す className を `no-restyle` と `require-static-classes` が検査する。
  * `action/` は ui 部品を async React (Transition) にした層で、ui と同じく design system の部品として
  * 認識する。外すと `ActionForm` への見た目の上書きや動的な className が無診断で通る
@@ -38,22 +38,6 @@ const RESTRICTED_BARREL_IMPORTS = [
 ];
 
 /**
- * テストに router を `createRouter` で直接組ませない。テスト用の既定は `createRouterWithTestDefaults` が入れるので、
- * 直接組んだテストだけが上流の既定で走る (`docs/guides/testing/real-router.md`「テスト用の router の既定をそろえる」)。
- * `Router` は `new Router(options)` で同じ router を組めるので、合わせて止める
- */
-const RESTRICTED_TEST_ROUTER_IMPORTS = [
-  {
-    name: "@tanstack/react-router",
-    importNames: ["createRouter", "Router"],
-    // 型 (`Router<…>`) は router を組まないので許す
-    allowTypeImports: true,
-    message:
-      "テストの router は createRouterWithTestDefaults (src/test/app/create-router-with-test-defaults.ts) で組む。createRouter で直接組むと、テスト用の既定 (defaultPendingMinMs: 0 など) が入らない (docs/guides/testing/real-router.md「テスト用の router の既定をそろえる」)。Router は型でもあり、型だけが要るなら import type { Router } か import { type Router } と書けば止まらない",
-  },
-];
-
-/**
  * `vite.config.ts` の `lint`。`lintConfig` の中の文字列のパス (`jsPlugins` の specifier、`overrides` の `files` /
  * `excludeFiles`、`ignorePatterns`) は、このファイルではなく `vite.config.ts` のあるディレクトリから解決される。
  * 切り出し方とパスの解決元は `docs/guides/vite-configuration.md`「block を別のファイルへ切り出す」
@@ -69,9 +53,8 @@ export const lintConfig = {
     { name: "testing-library", specifier: "eslint-plugin-testing-library" },
     // ブラウザテストの assert を見る自前ルール (ADR-0009)
     { name: "browser-test", specifier: "./scripts/lint/browser-test.ts" },
-    // TanStack Query / Router の契約の検査 (ADR-0007、oxc-project/oxc#11648)
+    // TanStack Query の契約の検査 (ADR-0007、oxc-project/oxc#11648)
     { name: "tanstack-query", specifier: "@tanstack/eslint-plugin-query" },
-    { name: "tanstack-router", specifier: "@tanstack/eslint-plugin-router" },
   ],
   settings: {
     shadcn: {
@@ -156,17 +139,11 @@ export const lintConfig = {
     "typescript/no-unsafe-member-access": "error",
     "typescript/no-unsafe-return": "error",
     "typescript/no-useless-constructor": "error",
-    // throw redirect() / notFound() は Router の制御フロー。公式の案内どおり allow する。
     // allowThrowingAny と allowThrowingUnknown を既定の true から外し、型が any か unknown の値の throw も
-    // 止める (catch で受けた値の投げ直しは止めない)。Error でない値は server のエラーの文言を落とす adapter を通らない
-    // (ADR-0038「Error でない値の throw を止める lint のオプション」)
+    // 止める (catch で受けた値の投げ直しは止めない。ADR-0038「Error でない値の throw を止める lint のオプション」)
     "typescript/only-throw-error": [
       "error",
       {
-        allow: [
-          { from: "package", package: "@tanstack/router-core", name: "Redirect" },
-          { from: "package", package: "@tanstack/router-core", name: "NotFoundError" },
-        ],
         allowThrowingAny: false,
         allowThrowingUnknown: false,
       },
@@ -272,11 +249,6 @@ export const lintConfig = {
     // recommended-strict から足す (ADR-0007)
     "tanstack-query/prefer-query-options": "error",
     // no-void-query-fn は登録しない。型情報が要り、oxlint の JS plugin では常に無診断になる (ADR-0007)
-
-    // -- tanstack-router: @tanstack/eslint-plugin-router の recommended (ADR-0007) --
-    "tanstack-router/route-param-names": "error",
-    // 上流は warn (ADR-0007)
-    "tanstack-router/create-route-property-order": "error",
 
     // -- vitest: @vitest/eslint-plugin の recommended (ADR-0007) --
     // 既定を置換する。expect* が既定の 2 つと helper を覆い、assert* には広げない
@@ -406,21 +378,8 @@ export const lintConfig = {
         ],
       },
     },
-    {
-      // テストに router を createRouter で直接組ませない。テスト用の既定を入れる factory 自身は外す
-      files: ["**/*.test.ts", "**/*.test.tsx", "src/test/**", ...testHelperGlobs("**/")],
-      excludeFiles: ["src/test/app/create-router-with-test-defaults.ts"],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          // トップレベルの paths をここでも渡す。渡さないと、この override の範囲でバレルの禁止が外れる
-          { paths: [...RESTRICTED_BARREL_IMPORTS, ...RESTRICTED_TEST_ROUTER_IMPORTS] },
-        ],
-      },
-    },
   ],
   ignorePatterns: [
-    "src/routeTree.gen.ts",
     ".claude/worktrees/**",
     ".agents/**",
     ".claude/skills/**",

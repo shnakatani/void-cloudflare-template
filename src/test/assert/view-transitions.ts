@@ -2,7 +2,7 @@ import { expect, onTestFinished, vi } from "vite-plus/test";
 
 /**
  * これから `document.startViewTransition` の呼び出しを記録し、操作が始めた View Transition を読む関数を返す。
- * router は返った ViewTransition の `updateCallbackDone` を待つので、元の実装をそのまま呼ぶ
+ * 呼び出し側が返った ViewTransition を待てるよう、元の実装をそのまま呼ぶ
  */
 export function recordViewTransitions() {
   const spy = vi.spyOn(document, "startViewTransition");

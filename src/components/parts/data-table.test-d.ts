@@ -7,7 +7,7 @@ import type { DataTableFeatures } from "./data-table-features";
 
 type Fruit = { id: number; name: string };
 type Props = ComponentProps<typeof DataTable<Fruit>>;
-type Base = Pick<Props, "tableKey" | "caption" | "columns" | "data">;
+type Base = Pick<Props, "caption" | "columns" | "data">;
 type GetRowId = (fruit: Fruit) => string;
 type GetRowCanExpand = (row: Row<DataTableFeatures, Fruit>) => boolean;
 type RenderSubComponent = (props: { row: Row<DataTableFeatures, Fruit> }) => ReactNode;
