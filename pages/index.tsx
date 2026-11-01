@@ -1,7 +1,9 @@
+import { APP_NAME } from "@/lib/app-name";
+
 export default function Page() {
   return (
     <main>
-      <h1>void-cloudflare-template</h1>
+      <h1>{APP_NAME}</h1>
     </main>
   );
 }
