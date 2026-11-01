@@ -14,7 +14,7 @@
 
 1. `void.config.ts` の `routing.headers` の `"/*"` の配列を書き換える。1 要素を `"Name: value"` の形で書く ([Void docs「Custom Headers」][])
 2. `scripts/checks/runtime/security-headers.ts` の `EXPECTED_HEADERS` を同じ値に揃える。CSP は production の値 (`NODE_ENV` が development 以外) を書く。定数を共有せず写しで持つ理由は、そのファイルの docstring にある
-3. `vp run verify:build` のあとに `vp run verify:security-headers` を走らせる。検査は `vp preview` を空きの port で起動し、`/`、`public/` の `/robots.txt`、route の無い path の 404 の 3 つの応答に全件が乗ることを見る
+3. `vp run verify:build` のあとに `vp run verify:security-headers` を走らせる。検査は `vp preview` を空きの port で起動し、`/login`、`public/` の `/robots.txt`、route の無い path の 404 の 3 つの応答に全件が乗ることを見る
 
 | 対象                                                    | 起きること                                                                                                                                                                                                                                                                                     | 対処                                            |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
@@ -38,10 +38,12 @@ Void の docs は、`routing.headers` の rule が掛かる応答を次のよう
 
 | 応答の種類                     | path                        | status |
 | ------------------------------ | --------------------------- | ------ |
-| SSR の page                    | `/`                         | 200    |
+| SSR の page                    | `/login`                    | 200    |
 | `public/` の静的な asset       | `/robots.txt`               | 200    |
 | ビルド出力の hash 付きの asset | `/assets/layout-<hash>.css` | 200    |
 | route の無い path              | `/no-such-page`             | 404    |
+
+SSR の page は 2026-11-02 に `/login` で取り直した。`/` は未ログインでは 302 になり、検査の対象の種類に入っていない。
 
 検査は hash 付きの asset を見ない。ファイル名がビルドごとに変わり、検査する path をビルド出力から探すことになるため。hash 付きの asset に乗ることは、上の実測でだけ確かめている。
 
