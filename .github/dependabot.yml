@@ -56,6 +56,10 @@ updates:
         patterns:
           - "tailwindcss"
           - "@tailwindcss/*"
+      void:
+        patterns:
+          - "void"
+          - "@void/*"
       # patterns を持つほかのグループの依存をすべて除き、グループを変えたらここも変える。写さないと、組の依存が
       # 組のグループから外れてこの PR に入るか、両方のグループに入る (dependabot/dependabot-core#14576。
       # docs/guides/dependencies-and-toolchain.md「Vite+ を上げる」)
@@ -80,3 +84,5 @@ updates:
           - "@types/react-dom"
           - "tailwindcss"
           - "@tailwindcss/*"
+          - "void"
+          - "@void/*"

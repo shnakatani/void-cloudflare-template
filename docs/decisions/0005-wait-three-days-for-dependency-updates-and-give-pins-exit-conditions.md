@@ -120,7 +120,7 @@ operator を持たない `*` は operator ごと書き換えられるので、�
 
 組の片方だけが上がると、peer の食い違いなら `verify:peers` が `unmet peer` で落ち、exact の依存なら依存先が 2 つの版で入る。`minor-and-patch` は major を束ねないので、組の major は依存ごとの PR に割れる。
 
-`.github/dependabot.yml` に、組ごとに `update-types` を書かないグループを 1 つ置き、その patterns を `minor-and-patch` の `exclude-patterns` にも写す。2026-10-30 に lockfile で確かめた組は、peer で結ばれる storybook、React と、exact の依存で結ばれる Tailwind CSS (`@tailwindcss/vite` が `tailwindcss` を exact で依存に持つ) である。
+`.github/dependabot.yml` に、組ごとに `update-types` を書かないグループを 1 つ置き、その patterns を `minor-and-patch` の `exclude-patterns` にも写す。2026-10-30 に lockfile で確かめた組は、peer で結ばれる storybook、React と、exact の依存で結ばれる Tailwind CSS (`@tailwindcss/vite` が `tailwindcss` を exact で依存に持つ) である。2026-11-01 に `node_modules/@void/react/package.json` で確かめた Void (`@void/react` 1.4.0 が `void` を peer に exact の版 `1.4.0` で持つ) も組に入る。
 
 グループの PR は、組の major と minor と patch を 1 本に混ぜて上げる。Dependabot はどの依存も最新の版へ上げ、今の major の中の最新の版を別に出さない (dependabot-core の npm の update checker は、`ignore` で外した版を除いた最新の版を 1 つ決める)。組の major を見送るときは、組の依存ごとに `dependency-name` と `update-types: ["version-update:semver-major"]` の `ignore` を足す。`@types/node` の行と同じ形である。外した major は候補から落ちるので、今の major の中の最新の版が届く。この `ignore` は pin なので、「pin には出口条件を書く」のとおり撤去条件を書く。
 
