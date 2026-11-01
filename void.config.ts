@@ -8,7 +8,7 @@ export default defineConfig({
     // Void 1.4.0 の void init は、Void が知っている最新の日付 (LATEST_KNOWN_COMPAT_DATE) を書く
     compatibility_date: "2026-02-24",
   },
-  // ページが head() を返さないときの <head> の既定 (Void の docs「Head Management」の Site defaults)。
+  // すべてのページの <head> の既定。ページの head() とマージされ、ページの値が勝つ (Void の docs「Head Management」)。
   // lang と title は WCAG 3.1.1 と 2.4.2。ページ名を足す titleTemplate は、ページの head() を書く段階で決める
   head: {
     title: APP_NAME,
