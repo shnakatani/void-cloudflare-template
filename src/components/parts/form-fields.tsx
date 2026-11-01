@@ -53,7 +53,7 @@ interface FormTextFieldProps
   extends
     Pick<
       ComponentProps<typeof Input>,
-      "type" | "inputMode" | "autoFocus" | "disabled" | "placeholder"
+      "type" | "inputMode" | "autoComplete" | "autoFocus" | "disabled" | "placeholder"
     >,
     FieldValueTypeCheckProps<string> {
   label: string;
@@ -95,6 +95,7 @@ export function FormTextField({
   placeholder,
   type,
   inputMode,
+  autoComplete,
   autoFocus,
   disabled,
   sanitize,
@@ -113,6 +114,7 @@ export function FormTextField({
         id={id}
         type={type}
         inputMode={inputMode}
+        autoComplete={autoComplete}
         // oxlint-disable-next-line jsx-a11y/no-autofocus -- 既定は無効で、消費側が明示的に渡したときだけ転送する。ダイアログ内の先頭フィールドのように妥当な場面があるかは消費側でしか判定できない
         autoFocus={autoFocus}
         disabled={disabled}
