@@ -266,6 +266,8 @@ a11y の検査は、ブラウザテストの中に 2 種類が混ざっている
 - サイトやページの中を移動するリンクのまとまりは `<nav>` で包む ([APG「Landmark Regions」][] の Navigation)。`role="navigation"` は `jsx-a11y/prefer-tag-over-role` が止める (2026-10-05、oxlint 1.85.0)
 - 1 ページに `<nav>` が複数あるときは、それぞれに区別できる名前を与える。見出しがあれば `aria-labelledby` で指し、無ければ `aria-label` を渡す。名前に「ナビゲーション」を含めない。ロールと重ねて読まれる。同じリンクの組を 2 か所に置くときは同じ名前にする ([APG「Landmark Regions」][] の Step 3: Label areas と Navigation)
 - 現在のページを指す項目に `aria-current="page"` を付ける。1 つのまとまりの中で current にするのは 1 つだけにする ([WAI-ARIA 1.2][] の `aria-current`)
+- 現在地の印は `NavLink` (`src/components/parts/nav-link.tsx`) が付ける。`useRouter().path` と `href` の pathname を比べ、同じなら `aria-current="page"` を渡す。手で書くのは、`NavLink` を使わずに現在地を示すときだけにする
+- `NavLink` は query と hash を比べず、末尾の `/` も正規化しない。`/notes` と `/notes/` は別のページとして扱う。比べるのは pathname の完全一致なので、親と子の path へのリンクが並んでも、子のページで親が current にならない
 
 ### ダイアログの閉じる手段を残す
 
