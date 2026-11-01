@@ -45,7 +45,11 @@ describe("findHeaderViolations", () => {
   it("関係ないヘッダが増えていても違反にしない", () => {
     expect(
       findHeaderViolations(
-        { "x-content-type-options": "nosniff", "x-frame-options": "DENY", "x-powered-by": "nitro" },
+        {
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY",
+          "x-powered-by": "example",
+        },
         EXPECTED,
       ),
     ).toEqual([]);

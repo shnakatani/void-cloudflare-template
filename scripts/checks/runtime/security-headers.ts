@@ -1,31 +1,30 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { createServer } from "node:net";
 import { join } from "node:path";
 
-import { findCspNonceViolations } from "../../lib/csp-nonce.ts";
 import { REPO_ROOT } from "../../lib/repo-root.ts";
 import { type ExpectedHeader, findHeaderViolations } from "../../lib/response-headers.ts";
 
 /**
- * `vite.config.ts` の `nitro({ routeRules })` で付けたセキュリティヘッダが、実際の
- * レスポンスに乗っていることをビルド成果物で確かめる。root route の `headers` が付ける
- * CSP も、nonce が HTML の `<script>` に届き、応答ごとに変わることと併せて確かめる。
+ * `void.config.ts` の `routing.headers` で付けたセキュリティヘッダが、実際の応答に乗っている
+ * ことを、ビルド成果物を `vp preview` で起動して確かめる。
  *
- * 設定値の検査では代替できない。`.output/nitro.json` の `config` は空で routeRules を
- * 含まず、Cloudflare の preset へ移して `nitro()` ごと外す変更は設定にもビルドにも
- * エラーを出さないまま緑で通る。
+ * 設定値の検査では代替できない。`routing.headers` は URL の pattern に一致した応答にだけ
+ * 付くので、pattern を書き違えても、設定にもビルドにもエラーは出ない。
  *
  * 整合検査 (`scripts/checks/integrity/`) に置かないのは、`vp build` の成果物が要るため。
  *
- * `/` に加えて、route の無い path の 404 も見る。h3 は 400 以上の応答に、用意した
- * ヘッダのうち `event.res.errHeaders` だけを合わせる (h3 docs「Sending Response」、h3 2.0.2)。routeRules の
- * `headers` がそこへ書かない版では、`/` に乗っても 404 と SSR の 500 には乗らない
- * (nitro 3.0.260610-beta で、2026-10-31 に実測)。500 を見ないのは、必ず失敗する route を
- * 検査のためだけにテンプレートへ置くことになるため。
+ * SSR の page (`/`)、`public/` の静的な asset (`/robots.txt`)、route の無い path の 404 を見る。
+ * Void の docs「Custom Headers」の Scope は、ヘッダの rule が静的な asset・SSR の page・API の
+ * 応答に掛かると書く。3 つは、その応答の種類を 1 つずつ代表する。2026-11-01 に Void 1.4.0
+ * (`@cloudflare/vite-plugin` 1.66.0) の `vp preview` で、この 3 つとビルド出力の hash 付きの
+ * CSS の応答に 6 件すべてが乗ることを確かめた。hash 付きの asset を検査に入れないのは、
+ * ファイル名がビルドごとに変わり、検査する path をビルド出力から探すことになるため。
  */
 
 /**
- * 期待するヘッダ。`vite.config.ts` の `routeRules` と対で持つ。
+ * 期待するヘッダ。`void.config.ts` の `routing.headers` と対で持つ。
  *
  * 定数を共有していないのは、production の設定を `scripts/` から import させると依存の
  * 向きが逆になるため。写しである代わりに、値を変えると本検査が落ちて両方を見ることになる。
@@ -39,23 +38,17 @@ const EXPECTED_HEADERS: readonly ExpectedHeader[] = [
   { name: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
 ];
 
-/**
- * 期待する CSP。`src/routes/__root.tsx` の `headers` と対で持つ。`{nonce}` には応答ごとの nonce が入る。
- * 写しで持つ理由は `EXPECTED_HEADERS` と同じ
- */
-const EXPECTED_CSP =
-  "script-src 'nonce-{nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
-
-const SERVER_ENTRY = join(REPO_ROOT, ".output", "server", "index.mjs");
+/** `vp build` が書き、`vp preview` が Worker の設定として読むファイル */
+const BUILD_OUTPUT = join(REPO_ROOT, "dist", "ssr", "wrangler.json");
 const HOST = "127.0.0.1";
-const PORT = 39271;
-const ORIGIN = `http://${HOST}:${PORT.toString()}`;
 /** 検査する path と、その path が返すはずの status */
 const CHECKED_RESPONSES = [
   { path: "/", status: 200 },
+  { path: "/robots.txt", status: 200 },
   { path: "/__security-headers-check-not-found", status: 404 },
 ] as const;
 const STARTUP_TIMEOUT_MS = 30_000;
+const SHUTDOWN_TIMEOUT_MS = 5000;
 const POLL_INTERVAL_MS = 250;
 
 /** 検査の失敗。プロセスの終了はサーバを止めたあとで行う */
@@ -66,31 +59,49 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * 起動前に、その origin で既に何かが応答していないことを確かめる。
+ * OS に空いている port を 1 つ選ばせて返す。
  *
- * 応答するものが居ると、こちらの起動が失敗していてもそれが答えてしまい、古いビルドを
- * 検査した結果が緑になる。socket の bind で見ないのは、IPv6 の wildcard で listen して
- * いるプロセスがあっても IPv4 の特定アドレスへの bind は EADDRINUSE にならないため
- * (macOS で実測、2026-09-02)。応答の有無で見れば address family に依存しない。
+ * 固定の port にすると、前回の残骸や別の worktree の検査が同じ port で応答し、こちらの起動が
+ * 失敗しても古い成果物を検査して緑になる。閉じてから `vp preview` が bind するまでの間に
+ * 別のプロセスが取ったときは、`--strictPort` で `vp preview` が終わり、`waitForServer` が落ちる
  */
-async function assertOriginIsFree(): Promise<void> {
-  try {
-    await fetch(ORIGIN, { signal: AbortSignal.timeout(2000) });
-  } catch {
-    return;
-  }
-  throw new CheckFailure(
-    `${ORIGIN} で既に何かが応答している。前回の残骸だと古いビルドを検査してしまうため止める`,
-  );
+function findFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(0, HOST, () => {
+      const address = probe.address();
+      probe.close(() => {
+        if (address === null || typeof address === "string") {
+          reject(new Error(`空きの port を取れなかった: ${String(address)}`));
+          return;
+        }
+        resolve(address.port);
+      });
+    });
+  });
 }
 
-async function waitForServer(): Promise<void> {
+/** 子プロセスが終わったときの終了コードとシグナル。走っている間は undefined */
+interface ExitStatus {
+  readonly code: number | null;
+  readonly signal: NodeJS.Signals | null;
+}
+
+async function waitForServer(origin: string, getExit: () => ExitStatus | undefined): Promise<void> {
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
   let lastError = "";
   while (Date.now() < deadline) {
+    const exit = getExit();
+    if (exit !== undefined) {
+      // 応答を待ち続けると、起動の失敗 (成果物の欠け、port の衝突) がタイムアウトに化ける
+      throw new CheckFailure(
+        `vp preview が応答する前に終わった (code: ${String(exit.code)}, signal: ${String(exit.signal)})`,
+      );
+    }
     try {
       // oxlint-disable-next-line eslint/no-await-in-loop -- 起動を待つ逐次ポーリング。並列化すると「起動したか」を観測する意味が消える
-      await fetch(ORIGIN);
+      await fetch(origin);
       return;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
@@ -99,67 +110,89 @@ async function waitForServer(): Promise<void> {
     }
   }
   throw new CheckFailure(
-    `${ORIGIN} が ${(STARTUP_TIMEOUT_MS / 1000).toString()} 秒以内に応答しない: ${lastError}`,
+    `${origin} が ${(STARTUP_TIMEOUT_MS / 1000).toString()} 秒以内に応答しない: ${lastError}`,
   );
 }
 
 /**
- * `/` の CSP の nonce が HTML の `<script>` に届き、応答ごとに変わることを確かめる。
- * 2 回目の応答は、1 回目と比べるためだけに取る
+ * `vp preview` をプロセスグループごと止め、終わるのを待つ。
+ *
+ * `vp preview` は Vite と workerd を子孫として起動する。`vp` の pid にだけシグナルを送ると
+ * 子孫が port を持ったまま残るので、`detached` で作ったグループの全体へ送る。
+ * `vp` が先に終わっていても子孫が残りうるので、終わったかどうかに関わらず送る。
+ * SIGTERM で終わらなければ SIGKILL を送る
  */
-async function checkCspNonce(): Promise<void> {
-  // run() のヘッダの検査と同じく redirect を追わず、200 の応答だけを比べる
-  const responses = [
-    await fetch(ORIGIN, { redirect: "manual" }),
-    await fetch(ORIGIN, { redirect: "manual" }),
-  ];
-  for (const response of responses) {
-    if (response.status !== 200) {
-      throw new CheckFailure(
-        `CSP を比べる ${ORIGIN} の status が ${response.status.toString()} で、200 ではない`,
-      );
+async function stopServer(server: ChildProcess, closed: Promise<void>): Promise<void> {
+  const { pid } = server;
+  if (pid === undefined) {
+    // spawn が失敗し、プロセスが作られていない
+    return;
+  }
+  const signalGroup = (signal: NodeJS.Signals) => {
+    try {
+      process.kill(-pid, signal);
+    } catch (error) {
+      // ESRCH はグループが既に居ないこと。それ以外は止められていない可能性があるので知らせる
+      if (!(error instanceof Error && "code" in error && error.code === "ESRCH")) {
+        console.warn(`[security-headers] vp preview に ${signal} を送れなかった`, { error });
+      }
     }
-  }
-  const samples = await Promise.all(
-    responses.map(async (response) => ({
-      policy: response.headers.get("Content-Security-Policy"),
-      html: await response.text(),
-    })),
-  );
-  const violations = findCspNonceViolations(samples, EXPECTED_CSP);
-  if (violations.length > 0) {
-    throw new CheckFailure(
-      [
-        "CSP の nonce が HTML の応答に届いていない。",
-        "src/router.tsx の ssr と src/routes/__root.tsx の headers を見る。",
-        ...violations.map((violation) => `  - ${violation}`),
-      ].join("\n"),
+  };
+  signalGroup("SIGTERM");
+  const stopped = await Promise.race([
+    closed.then(() => true),
+    delay(SHUTDOWN_TIMEOUT_MS).then(() => false),
+  ]);
+  if (!stopped) {
+    console.warn(
+      `[security-headers] vp preview が ${(SHUTDOWN_TIMEOUT_MS / 1000).toString()} 秒で終わらないので SIGKILL を送る`,
     );
+    signalGroup("SIGKILL");
   }
-  console.log(
-    `[security-headers] CSP の nonce が ${ORIGIN} の HTML の <script> に届き、応答ごとに変わっている`,
-  );
 }
 
 async function run(): Promise<void> {
-  if (!existsSync(SERVER_ENTRY)) {
-    throw new CheckFailure(`${SERVER_ENTRY} が無い。先に vp build を実行する`);
+  if (!existsSync(BUILD_OUTPUT)) {
+    throw new CheckFailure(`${BUILD_OUTPUT} が無い。先に vp build を実行する`);
   }
-  await assertOriginIsFree();
+  const port = await findFreePort();
+  const origin = `http://${HOST}:${port.toString()}`;
 
-  const server = spawn(process.execPath, [SERVER_ENTRY], {
-    cwd: REPO_ROOT,
-    env: { ...process.env, PORT: PORT.toString() },
-    stdio: "ignore",
+  // 起動の失敗を読めるよう、出力はためて失敗したときだけ出す
+  const output: Buffer[] = [];
+  const server = spawn(
+    "vp",
+    ["preview", "--host", HOST, "--port", port.toString(), "--strictPort"],
+    { cwd: REPO_ROOT, detached: true, stdio: ["ignore", "pipe", "pipe"] },
+  );
+  server.stdout.on("data", (chunk: Buffer) => output.push(chunk));
+  server.stderr.on("data", (chunk: Buffer) => output.push(chunk));
+  let exit: ExitStatus | undefined;
+  const closed = new Promise<void>((resolve) => {
+    server.once("close", (code, signal) => {
+      exit = { code, signal };
+      resolve();
+    });
   });
+  // spawn の失敗 (ENOENT など) は error で届く。close も続いて届くので、waitForServer が落とす
+  server.once("error", (error) => output.push(Buffer.from(`${error.stack ?? String(error)}\n`)));
 
   try {
-    await waitForServer();
+    try {
+      await waitForServer(origin, () => exit);
+    } catch (error) {
+      if (error instanceof CheckFailure) {
+        throw new CheckFailure(
+          `${error.message}\n--- vp preview の出力 ---\n${Buffer.concat(output).toString()}`,
+        );
+      }
+      throw error;
+    }
     const violations: string[] = [];
     for (const { path, status } of CHECKED_RESPONSES) {
       // redirect を追うと、移り先の応答を検査してしまう
       // oxlint-disable-next-line eslint/no-await-in-loop -- 1 つのサーバへ数件を順に聞くだけで、並列にしても得るものが無い
-      const response = await fetch(`${ORIGIN}${path}`, { redirect: "manual" });
+      const response = await fetch(`${origin}${path}`, { redirect: "manual" });
       if (response.status !== status) {
         // 期待と違う status の応答を検査しても、その path の経路を確かめたことにならない
         throw new CheckFailure(
@@ -177,14 +210,13 @@ async function run(): Promise<void> {
       throw new CheckFailure(
         [
           "セキュリティヘッダが実レスポンスに乗っていない。",
-          "vite.config.ts の nitro({ routeRules }) と、preset を差し替えていないかを見る。",
+          "void.config.ts の routing.headers の pattern と値を見る。設定を変えたあとは vp build からやり直す。",
           ...violations.map((violation) => `  - ${violation}`),
         ].join("\n"),
       );
     }
-    await checkCspNonce();
   } finally {
-    server.kill();
+    await stopServer(server, closed);
   }
 
   console.log(
