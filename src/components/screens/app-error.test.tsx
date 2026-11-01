@@ -153,6 +153,16 @@ describe("AppErrorBoundary", () => {
     await expect.element(screen.getByRole("heading", { name: "ページの中身" })).toHaveFocus();
   });
 
+  it("再試行のあとも失敗したら、失敗の見出しへ focus を移す", async () => {
+    const { screen } = await renderBoundary();
+
+    await screen.getByRole("button", { name: "再試行" }).click();
+
+    await expect
+      .element(screen.getByRole("heading", { name: "エラーが発生しました", level: 1 }))
+      .toHaveFocus();
+  });
+
   it("再読み込みが失敗しても子を描き直し、失敗を warn に残す", async () => {
     const { screen, state, router } = await renderBoundary();
     const reload = deferMock(vi.spyOn(router, "refresh"));
