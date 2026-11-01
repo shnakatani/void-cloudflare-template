@@ -1,0 +1,39 @@
+/*
+ * public/404.html と public/500.html の見た目。どちらも layout と React を通らず、アプリの CSS を読まない (ADR-0050)。
+ * 値は src/styles.css の :root (light) の --background・--foreground・--font-sans を写した。
+ * src/styles.css のこれらを変えたら、ここも直す。
+ * Geist Variable はアプリの bundle が持つ font のファイルで、ここからは読めない。端末に無ければ sans-serif で描く
+ */
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: oklch(1 0 0);
+  color: oklch(0.148 0.004 228.8);
+  font-family: "Geist Variable", sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 100svh;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+a {
+  color: inherit;
+}
