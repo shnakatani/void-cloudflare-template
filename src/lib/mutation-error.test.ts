@@ -3,11 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { curateMutationErrorMessage, MUTATION_ERROR_FALLBACK_MESSAGE } from "./mutation-error";
 
 /**
- * mutation の onError で使うエラー文言整形の境界網羅テスト。
+ * mutation の失敗の toast で使うエラー文言整形の境界網羅テスト。
  *
  * サーバ側の処理が throw する文言は開発者向け (id や検証失敗の項目パスを含む) なので、
- * そのまま画面へ出さず固定文言へ丸める。raw error は observability のため console.warn に残す
- * (`query-cache-handlers.ts` の background refetch 用ハンドラと対になる意匠)。
+ * そのまま画面へ出さず固定文言へ丸める。raw error は observability のため console.warn に残す。
  */
 describe("curateMutationErrorMessage", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;

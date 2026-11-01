@@ -5,13 +5,12 @@ export const MUTATION_ERROR_FALLBACK_MESSAGE =
   "操作に失敗しました。時間をおいて再試行してください。";
 
 /**
- * mutation の onError で toast に出す文言を組み立てる。
+ * mutation の失敗で toast に出す文言を組み立てる。
  *
  * server から返る Error の文言はユーザーが取れる行動を含まないため、そのまま render せず固定文言へ丸める。
  * infra / network 由来の raw error ("Failed to fetch" 等の英語技術文言) も同じ扱いになる。
  *
- * raw error は observability のため console.warn に残す (fail-closed。
- * `query-cache-handlers.ts` の background refetch 用ハンドラと対になる意匠)。
+ * raw error は observability のため console.warn に残す (fail-closed)。
  *
  * ユーザー向けの文言を持つエラーを導入するときは、その型の分岐をここへ足して
  * `error.message` を返す。分岐を足す場所をここ 1 箇所に
@@ -23,16 +22,11 @@ export function curateMutationErrorMessage(error: unknown): string {
 }
 
 /**
- * mutation の `onError` へそのまま渡せるハンドラ。
+ * mutation の失敗を toast に出す。`usePageAction` の `run` が、呼び出し側で扱う失敗をこれで出す。
  *
  * 「curate を通した文言だけを toast に出す」という配線を消費側ごとに書くと、
  * 1 箇所が `error.message` を直接渡す形へ戻っても他が正しいままで気付けない。
- * useMutation を足すときは onError にこれを渡す。
- *
- * 引数を `unknown` ではなく react-query の既定 TError (`Error`) で受けるのは、
- * onError へ渡したときに TError が `unknown` へ広がるのを防ぐため
- * (広がると UseMutationResult の型が消費側の契約と合わなくなる)。
- * 実行時に非 Error が来ても curateMutationErrorMessage が受け止める。
+ * 失敗を toast に出す経路を足すときは、これを通す。
  */
 export function toastMutationError(error: Error): void {
   toast.add({ type: "error", title: curateMutationErrorMessage(error) });

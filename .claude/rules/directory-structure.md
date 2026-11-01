@@ -61,7 +61,7 @@ paths:
 | `src/test/browser/`        | browser project の実行環境を組むもの。config と setup が読む定数もここに置く (`docs/guides/placement.md`「`src/test/` に helper を置く」) |
 | `src/test/assert/`         | テスト本文が呼ぶ assert と実測、その引数の型 (`docs/guides/placement.md`「`src/test/` に helper を置く」)                                 |
 | `src/test/a11y/`           | axe の実行と結果の整形 (`docs/guides/placement.md`「`src/test/` に helper を置く」)                                                       |
-| `src/test/app/`            | アプリの依存 (QueryClient・mock・action) をテスト用に作る足場 (`docs/guides/placement.md`「`src/test/` に helper を置く」)                |
+| `src/test/app/`            | アプリの依存 (router・mock・action) をテスト用に作る足場 (`docs/guides/placement.md`「`src/test/` に helper を置く」)                     |
 
 - `src/test/` の helper は上の表のディレクトリに置き、直下に置かない (`docs/guides/placement.md`「`src/test/` の helper を何を作るかで分ける理由」)
 - helper を持たず、全 project に効く実行環境が効いていることだけを確かめるテストは、`src/test/` の直下に置く (`test-time-zone.tz.test.ts`)。表の役割は helper が何を作るかで分けていて、テストだけのディレクトリは作らない (`docs/guides/placement.md`「`src/test/` に helper を置く」)

@@ -24,7 +24,6 @@ export async function browserProject({ compiler }: { compiler: boolean }) {
         // docs/guides/testing/configuration.md「project に `optimizeDeps` を書く理由」、足し方と判定の手順は
         // 同「ブラウザと story の project に事前バンドルする依存を足す」
         include: [
-          "@tanstack/react-query",
           "@tanstack/react-form",
           "@tanstack/react-pacer",
           "axe-core",

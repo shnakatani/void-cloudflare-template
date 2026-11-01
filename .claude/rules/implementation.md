@@ -47,18 +47,18 @@ lint (`typescript/no-misused-promises`) が止める。直し方 (`docs/guides/r
 
 ## ユーザー操作による更新は Transition の中で行う
 
-lint では見ないのでレビューで見る (ADR-0015、Action 層と `useActionMutation` は ADR-0016、完了点とブロック範囲は ADR-0017)。
+lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-0016、完了点とブロック範囲は ADR-0017)。
 
 | 更新の種類                        | 書き方                                                                                                                                            |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| mutation を伴う操作               | `src/components/action/` の部品に `action` を渡す。Action の中で `useActionMutation` の `runAction` を呼ぶ                                        |
+| mutation を伴う操作               | `src/components/action/` の部品に `action` を渡す。Action の中で `usePageAction` の `run` を呼ぶ                                                  |
 | mutation 成功後のダイアログ close | 閉じる時点は ADR-0017 の完了点の軸で選び、理由を実装近傍に書く。選択肢は ADR-0017                                                                 |
 | 制御コンポーネントの入力値        | 緊急更新のまま。Transition は割り込まれるので入力値の反映が遅れる                                                                                 |
 | 検索条件の変更                    | 打鍵中は debounce した値を `useDeferredValue` に通して `useSuspenseQuery` の key にする (`docs/guides/lists-and-search.md`「検索の入力欄を組む」) |
 
 - pending 表示は Action 層の `isPending` から取る。例外は項目の busy・楽観表示・close 阻止で、mutation の pending から取る (ADR-0017)
-- mutation は `src/hooks/use-action-mutation.ts` の `useActionMutation` を通す。`onError` は型で必須。`runAction` が reject を吸収するので、無いと失敗が無通知になる (`docs/guides/react/updates.md`「mutation の書き方」)
-- Action の reject は最寄りの Error Boundary へ届く。`runAction` を通さない Action は、失敗を Action の中で処理し切る (ADR-0016)
+- mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` が呼び出し側で扱う失敗を toast に出すので、通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
+- Action の reject は最寄りの Error Boundary へ届く。`usePageAction` を通さない Action は、失敗を Action の中で処理し切る (ADR-0016)
 - `onSuccess` は再取得の Promise を返す。再取得完了前に close するなら、対象の項目にその pending から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
 - 止めるのは対象の項目だけにする。並行操作が整合を壊すときだけ全体を止め、理由を実装近傍に書く (ADR-0017)
 - Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず query の再取得に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)
