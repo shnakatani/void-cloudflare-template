@@ -66,6 +66,7 @@ Void 1.4.0 は Better Auth を管理して持つ。`void/auth` から import す
 - `vp preview` と deploy には `BETTER_AUTH_SECRET` が要る。preview への渡し方は `docs/guides/auth.md`「preview に secret を渡す」
 - deploy 先では IP ごとの rate limit が効く。deploy したアプリへ何度も sign up する end-to-end のテストは、この制限に当たる
 - サインインした要求への応答には `Cache-Control: no-store` が付く (Void の docs「Authentication」の Behavior)
+- 登録で `USER_ALREADY_EXISTS` を欄のエラーに出すので、登録済みの email を第三者が調べられる (Better Auth の既定)。`requireEmailVerification` か `autoSignIn: false` にすると、登録済みの email にも同じ応答を返して調べられなくなる
 - Better Auth の `requireEmailVerification` か `autoSignIn: false` を `auth.ts` で設定すると、登録の成功で session が作られず、登録済みの email にも成功を返すようになる。登録の画面と文言を合わせて直す (`docs/guides/auth.md`「auth の設定を変える」)
 
 ## 出典
