@@ -17,10 +17,12 @@ const verifySteps = {
   "verify:time-zones": "vpx scripts/time-zones/run-tests.ts",
   "verify:build": "vp build",
   "verify:security-headers": "vpx scripts/checks/runtime/security-headers.ts",
+  "verify:auth-redirect": "vpx scripts/checks/runtime/auth-redirect.ts",
 };
 
 export default defineConfig({
-  // Vite の .env 読み込みを切る (ADR-0004、vitejs/vite#19373)
+  // Vite の .env 読み込みを切る (ADR-0004、vitejs/vite#19373)。Void は別に、ルートの .env を読んで build が dist/ssr/.dev.vars へ写す。
+  // BETTER_AUTH_SECRET はここ経由で preview の Worker に届く (docs/guides/auth.md「preview に secret を渡す」)
   envDir: false,
   staged: {
     // --no-error-on-unmatched-pattern: staged が ignorePatterns の中のファイルだけのとき対象ゼロを error にしない

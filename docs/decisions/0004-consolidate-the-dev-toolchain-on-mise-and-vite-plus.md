@@ -165,7 +165,7 @@ Vite 公式は「`VITE_*` variables should _not_ contain sensitive information�
 
 暗号化した `.env` をそのまま commit する方式 (dotenvx は暗号文を `.env` 自身へ書き戻し、秘密鍵だけを `.env.keys` へ出す) は、Vite が `.env` を native に読むと衝突する。暗号文が復号されないまま `import.meta.env` と `process.env` へ流れ込むためで、vitejs/vite#19373 がその報告である。`envDir: false` はその解として Vite へ追加された。
 
-読み込む `.env` が現時点で無いので、いま切っても失うものは無い。逆に、後から `.env` を置いた人が「Vite が勝手に読む」前提でコードを書くのを防げる。
+`envDir: false` が切るのは Vite の読み込みだけである。Void はルートの `.env` を別に読み、build が `dist/ssr/.dev.vars` へ写す。`vp preview` の Worker が secret を受けるのはこの経路だけである (Void 1.4.0 の観測)。Vite が `.env` を読まないので、`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことは防げる。
 
 `envDir: false` は `vite.config.ts` に 1 つだけ書く。
 テストの project は `vite.config.ts` の設定を継承するので (ADR-0037)、ビルドとテストで値が割れない。
