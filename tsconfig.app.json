@@ -2,14 +2,10 @@
 // 検査する。テストと story は tsconfig.test.json が持つ。exclude の並びは tsconfig.test.json の include と
 // 揃える。ずれると、そのファイルはどちらの tsconfig にも入らないか、両方に入る (ADR-0047)
 {
-  "extends": ["./tsconfig.base.json", "./.void/tsconfig.json"],
+  "extends": ["./tsconfig.base.json", "./.void/tsconfig.json", "./tsconfig.paths.json"],
   "compilerOptions": {
     "lib": ["ES2024", "ESNext.Error", "DOM", "DOM.Iterable"],
-    "types": ["vite-plus/client"],
-    // tsconfig.json と同じ値にする。shadcn の docs「Installation > Vite」が両方に書くよう案内している
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "types": ["vite-plus/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "pages/**/*.ts", "pages/**/*.tsx"],
   "exclude": [

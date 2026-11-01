@@ -9,7 +9,7 @@
     { "path": "./tsconfig.node.json" }
   ],
   "compilerOptions": {
-    // shadcn の CLI はこのファイルの paths だけを読む (shadcn-ui/ui#11466)。tsconfig.app.json と同じ値にする
+    // shadcn の CLI はこのファイルの paths だけを読む (shadcn-ui/ui#11466)。tsconfig.paths.json の `@/*` と同じ値にする
     "paths": {
       "@/*": ["./src/*"]
     }
