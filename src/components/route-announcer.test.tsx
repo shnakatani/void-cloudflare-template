@@ -25,11 +25,17 @@ function SearchQuery() {
   return <p>検索条件: {useRouter().query.toString()}</p>;
 }
 
+/** 同じページの中の位置。hash だけの遷移が描画に届いたことを待つ手がかりにする */
+function HashPosition() {
+  return <p>位置: {useRouter().url.hash}</p>;
+}
+
 function Harness({ router, navigation }: { router: FakeRouter; navigation?: NavigationState }) {
   return (
     <VoidRouterProvider router={router} navigation={navigation}>
       <PageHeading />
       <SearchQuery />
+      <HashPosition />
       {/* 遷移の後も残る要素。遷移の前と遷移中の focus の置き場にする */}
       <button type="button">前</button>
       <button type="button">後</button>
@@ -96,6 +102,21 @@ describe("RouteAnnouncer", () => {
     await before.click();
     router.navigate("/a?q=x");
     await expect.element(screen.getByText("検索条件: q=x")).toBeInTheDocument();
+    await expect.element(before).toHaveFocus();
+
+    // 読み上げが無かったことは、後に来る path の遷移の読み上げまでの並びで見る
+    setDocumentTitle("B — アプリ");
+    router.navigate("/b");
+    await expectAnnouncements(["B — アプリ"]);
+  });
+
+  it("hash だけが変わったときは focus を動かさず、読み上げない", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    const before = screen.getByRole("button", { name: "前" });
+    await before.click();
+    router.navigate("/a#x");
+    await expect.element(screen.getByText("位置: #x")).toBeInTheDocument();
     await expect.element(before).toHaveFocus();
 
     // 読み上げが無かったことは、後に来る path の遷移の読み上げまでの並びで見る
