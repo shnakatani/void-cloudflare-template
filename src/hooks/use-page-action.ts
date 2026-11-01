@@ -19,7 +19,8 @@ type ActionCallOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest<U>[0]>
 type PageActionCallbacks = {
   /**
    * 成功のあとに走る。返した Promise の決着まで `run` は resolve せず、Transition も続く。
-   * ここで throw した失敗は `run` が握らず reject し、Action の reject として error boundary に届く
+   * ここで throw した失敗は `run` が握らず、console.error に残して reject する。Action の reject として error boundary に届くが、
+   * 部品が unmount していれば届かず、console にだけ残る
    */
   onSuccess?: () => void | Promise<void>;
   /** 422 で返ったフィールドのエラー (`{ <field 名>: <文言> }`) を受ける */
@@ -38,7 +39,7 @@ export type PageActionFormOptions<U extends ActionUrl> = ActionCallOptions<U> &
  *
  * | `action()` の結果 | `run` |
  * | --- | --- |
- * | 成功 | `onSuccess` を await して `true` |
+ * | 成功 | `onSuccess` を await して `true`。`true` を返すのは新しい props の commit の前 (shell の到着) で、`await run()` の後の処理と `onSuccess` は新しいページの描画より前に走る |
  * | 422 のフィールドのエラー | `onValidationError` に渡して `false`。渡していないときと、エラーが空のときは、警告を残して toast に出す |
  * | それ以外の `ok: false` | 固定の文言の toast に出して `false` |
  * | 取り消し (`AbortError`。送信中の遷移、`router.refresh()`、次の action) | 何も出さずに `false`。Void の `useForm` も同じく握る |
@@ -47,7 +48,7 @@ export type PageActionFormOptions<U extends ActionUrl> = ActionCallOptions<U> &
  * 失敗の通知を `run` が持つので、呼び出し側が書き忘れても無通知にならない。
  * throw を error boundary へ渡さないのは、Action の reject は `useTransition` を呼んだ部品から境界へ投げられ、
  * その部品が送信中に unmount すると (閉じたダイアログ、消した行) どこにも出ずに消えるため (2026-11-02 に dev で観測)。
- * toast は unmount の後も出る。取り消しは利用者の操作の結果なので、失敗として知らせない。
+ * toast は unmount の後も出る。取り消しは後から始めた遷移や送信が前の送信を置き換えた結果なので、失敗として知らせない。
  * 取り消されても、サーバーの action は最後まで走る。
  *
  * TanStack Form から送るときは `usePageActionForm` を使う。
@@ -73,7 +74,13 @@ export function usePageAction<U extends ActionUrl>(
       return false;
     }
     if (result.ok) {
-      await onSuccess?.();
+      try {
+        await onSuccess?.();
+      } catch (error) {
+        // 部品が unmount していると、この reject は境界にも届かず消える。痕跡を残してから投げ直す
+        console.error("[usePageAction] onSuccess failed", { url, error });
+        throw error;
+      }
       return true;
     }
     // Void の useForm と同じく、フィールドのエラーとして読むのは 422 だけにする

@@ -147,6 +147,25 @@ describe("usePageAction", () => {
     expect(console.warn).toHaveBeenCalledWith("[mutation] failed", { error });
   });
 
+  it("onSuccess が throw したら run は reject し、error を console.error に残す", async () => {
+    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    const error = new Error("onSuccess failed");
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { result } = await renderHook(() =>
+      usePageAction(ACTION_URL, {
+        onSuccess: () => {
+          throw error;
+        },
+      }),
+    );
+
+    await expect(result.current.run({ title: "a", memo: "" })).rejects.toBe(error);
+    expect(errorLog).toHaveBeenCalledWith("[usePageAction] onSuccess failed", {
+      url: ACTION_URL,
+      error,
+    });
+  });
+
   it("遷移などで取り消された送信は、toast も警告も出さずに false を返す", async () => {
     vi.mocked(action).mockRejectedValue(new DOMException("Navigation aborted", "AbortError"));
     const { result } = await renderHook(() => usePageAction(ACTION_URL, {}), {

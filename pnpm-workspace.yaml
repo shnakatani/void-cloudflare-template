@@ -83,8 +83,12 @@ packageExtensions:
 # 理由: React の action() が新しい props の commit を待ち、その commit は Action の終わりを待つので、Action の中で
 # await action() すると決着しない (2026-11-02 に dev で観測)。void は createActionClient が _resolveOnShell を受け、
 # @void/react はそれを渡す
-# 撤去条件: 5fd23eb を含む版に上げたら 2 つとも消す。上げた版の dist に hunk が当たらなければ、vp install が
-# ERR_PNPM_PATCH_FAILED で落ちる (docs/guides/dependencies-and-toolchain.md「patch のキーをパッケージ名だけにする理由」)
+# 撤去条件: 5fd23eb を含む版に上げたら 2 つとも消す。当たらない patch は vp install を ERR_PNPM_PATCH_FAILED で落とすが、
+# 前向きに当たらなくても逆向きが当たれば成功になるので、5fd23eb を含む版では静かに通りうる
+# (docs/guides/dependencies-and-toolchain.md「patch のキーをパッケージ名だけにする理由」)。落ちる主な原因は
+# @void/react の chunk 名 (action-4EvQppia.mjs) の変更で、修正を含まない版でも変わりうる。
+# 落ちたら、その版が 5fd23eb を含むかを見て、含めば 2 つとも消し、含まなければ作り直す。
+# 静かに通る場合に備え、Void を上げたら確かめる
 # 確かめ方: ActionButton の Action で usePageAction の run を await し、pending が解けて props が入れ替わること。
 # use-page-action.test.tsx は action() を mock するので、vp run verify では捕まえない
 patchedDependencies:
