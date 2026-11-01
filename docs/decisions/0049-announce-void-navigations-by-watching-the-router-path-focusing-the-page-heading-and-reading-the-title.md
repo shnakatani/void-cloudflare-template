@@ -1,7 +1,7 @@
 # ADR-0049: Void の遷移は router の path の変化で検出し、新しいページの見出しへの focus と title の読み上げで伝える
 
 - Status: Accepted
-- Date: 2026-11-01
+- Date: 2026-11-02
 - 関連: ADR-0026 (読み上げは `announce()` の polite の region に流す)、ADR-0027 (検索条件の変化は件数の通知で伝える)、ADR-0048 (テストでは偽の router で描く)
 
 ## Context
