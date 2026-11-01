@@ -1,4 +1,4 @@
-import { NavigationContext, RouterContext } from "@void/react";
+import { NavigationContext, RouterContext, SharedContext } from "@void/react";
 import { useMemo, useSyncExternalStore, type ReactNode } from "react";
 import type { NavigationState, VisitOptions, VoidRouter } from "void/pages-client";
 
@@ -70,10 +70,13 @@ export function createFakeRouter(initialPath = "/"): FakeRouter {
 export function VoidRouterProvider({
   router,
   navigation,
+  shared,
   children,
 }: {
   router: FakeRouter;
   navigation?: NavigationState;
+  /** `useShared()` が返す値。渡さないと包まず、`useShared()` は Void のページの外と同じく throw する */
+  shared?: Record<string, unknown>;
   children: ReactNode;
 }) {
   const href = useSyncExternalStore(
@@ -104,7 +107,11 @@ export function VoidRouterProvider({
   return (
     <RouterContext.Provider value={value}>
       <NavigationContext.Provider value={navigation ?? idleNavigation}>
-        {children}
+        {shared === undefined ? (
+          children
+        ) : (
+          <SharedContext.Provider value={shared}>{children}</SharedContext.Provider>
+        )}
       </NavigationContext.Provider>
     </RouterContext.Provider>
   );

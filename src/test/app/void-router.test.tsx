@@ -1,4 +1,4 @@
-import { Link, useNavigation, useRouter } from "@void/react";
+import { Link, useNavigation, useRouter, useShared } from "@void/react";
 import { describe, expect, it } from "vite-plus/test";
 import { render } from "vitest-browser-react";
 
@@ -63,5 +63,17 @@ describe("VoidRouterProvider", () => {
       </VoidRouterProvider>,
     );
     await expect.element(screen.getByText("loading")).toBeInTheDocument();
+  });
+
+  it("shared を渡すと useShared がその値を返す", async () => {
+    function SharedText() {
+      return <p>{useShared<{ label: string }>().label}</p>;
+    }
+    const screen = await render(
+      <VoidRouterProvider router={createFakeRouter("/")} shared={{ label: "共有" }}>
+        <SharedText />
+      </VoidRouterProvider>,
+    );
+    await expect.element(screen.getByText("共有")).toBeInTheDocument();
   });
 });
