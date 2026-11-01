@@ -75,6 +75,22 @@ describe("AppError", () => {
 
     expect(document.title).toBe("ノート — アプリ");
   });
+
+  it("error が変わったら、そのときの title の前に付け直す", async () => {
+    const previous = document.title;
+    onTestFinished(() => {
+      document.title = previous;
+    });
+    document.title = "ノート — アプリ";
+    const screen = await render(<AppError error={new Error("a")} onRetry={() => {}} />);
+    await expect.poll(() => document.title).toBe("エラー: ノート — アプリ");
+
+    // 遷移の先でも失敗すると、Void が title を書き換えてからこの部品が次の error を受ける
+    document.title = "設定 — アプリ";
+    await screen.rerender(<AppError error={new Error("b")} onRetry={() => {}} />);
+
+    await expect.poll(() => document.title).toBe("エラー: 設定 — アプリ");
+  });
 });
 
 describe("AppErrorBoundary", () => {
