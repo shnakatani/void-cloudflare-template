@@ -34,5 +34,5 @@ Void 1.4.0 の確認結果は次のとおり (2026-11-01、`node_modules/void/do
 ## Consequences
 
 - Void を上げたら、3 つの context が `@void/react` の export に残っているかを確かめる。docs の公開 API ではないので、消えても通知されない
-- 偽の router は Void の遷移 (loader の実行、title の更新、scroll) を再現しない。それらに頼る振る舞いは dev server で確かめる
+- 偽の router は Void の遷移 (loader の実行、title の更新、scroll、`visit` の決着の時点) を再現しない。本物の GET の `visit` は新しいページの commit まで決着しないが、偽物はすぐ決着する。それらに頼る振る舞いは dev server で確かめる
 - `VoidRouter` の型が変わると `createFakeRouter` が型検査で落ちる。足場が追随し損ねたままテストが通ることは無い

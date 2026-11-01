@@ -13,6 +13,7 @@ import { CREDENTIAL_FIELD_LABELS, loginSchema } from "@/features/auth/credential
 import { requestAuth } from "@/features/auth/request-auth";
 import { useAppForm } from "@/hooks/use-app-form";
 import { submitClearingServerFieldErrors } from "@/lib/server-field-errors";
+import { startVisit } from "@/lib/start-visit";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function LoginPage() {
     onSubmit: async ({ value, formApi }) => {
       const input = v.parse(loginSchema, value);
       if (await requestAuth(formApi, () => auth.signIn.email(input))) {
-        await router.visit(HOME_PATH);
+        startVisit(router, HOME_PATH);
       }
     },
   });

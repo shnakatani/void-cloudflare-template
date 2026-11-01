@@ -3,6 +3,7 @@ import { auth } from "void/client";
 
 import { ActionButton } from "@/components/action/button";
 import { toastMutationError } from "@/lib/mutation-error";
+import { startVisit } from "@/lib/start-visit";
 
 import { LOGIN_PATH } from "./access";
 
@@ -19,7 +20,7 @@ export function LogoutButton() {
       toastMutationError(result.error);
       return;
     }
-    await router.visit(LOGIN_PATH);
+    startVisit(router, LOGIN_PATH);
   }
   return (
     <ActionButton variant="outline" action={logout}>

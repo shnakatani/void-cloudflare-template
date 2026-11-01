@@ -13,6 +13,7 @@ import { CREDENTIAL_FIELD_LABELS, signUpSchema } from "@/features/auth/credentia
 import { requestAuth } from "@/features/auth/request-auth";
 import { useAppForm } from "@/hooks/use-app-form";
 import { submitClearingServerFieldErrors } from "@/lib/server-field-errors";
+import { startVisit } from "@/lib/start-visit";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function SignUpPage() {
       const input = v.parse(signUpSchema, value);
       // Better Auth の autoSignIn は既定で有効なので、登録の成功でログインした状態になる
       if (await requestAuth(formApi, () => auth.signUp.email(input))) {
-        await router.visit(HOME_PATH);
+        startVisit(router, HOME_PATH);
       }
     },
   });
