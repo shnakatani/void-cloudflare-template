@@ -1,0 +1,29 @@
+// ブラウザで動くアプリのコード (DOM の型、Node の型なし)。ページは Worker の SSR でも動くが、DOM の型で
+// 検査する。テストと story は tsconfig.test.json が持つ。exclude の並びは tsconfig.test.json の include と
+// 揃える。ずれると、そのファイルはどちらの型検査にも入らないか、両方に入る (ADR-0047)
+{
+  "extends": ["./tsconfig.base.json", "./.void/tsconfig.json"],
+  "compilerOptions": {
+    "lib": ["ES2024", "ESNext.Error", "DOM", "DOM.Iterable"],
+    "types": ["vite-plus/client"],
+    // tsconfig.json と同じ値にする。shadcn の docs「Installation > Vite」が両方に書くよう案内している
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "pages/**/*.ts", "pages/**/*.tsx"],
+  "exclude": [
+    "pages/**/*.server.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.test-d.ts",
+    "src/**/*.test-d.tsx",
+    "src/**/*.test-helpers.ts",
+    "src/**/*.test-helpers.tsx",
+    "src/**/*.story-helpers.ts",
+    "src/**/*.story-helpers.tsx",
+    "src/**/*.stories.ts",
+    "src/**/*.stories.tsx",
+    "src/test/**"
+  ]
+}

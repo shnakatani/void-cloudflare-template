@@ -179,7 +179,7 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 
 ### 走査対象を持つ config を足す
 
-tsconfig / `tooling/test/config.ts` (test。project はここから継承する) / `tooling/lint/config.ts` (lint) / `vite.config.ts` (fmt) は、それぞれ `.claude/worktrees/**` を除外している。走査対象を持つ config を新しく足したら、同じ除外をその場で書く。除外の経路は config ごとに別で共通化できず、1 つ落とすと worktree のコードがその走査へ黙って混ざる。
+`tooling/test/config.ts` (test。project はここから継承する) / `tooling/lint/config.ts` (lint) / `vite.config.ts` (fmt) は、それぞれ `.claude/worktrees/**` を除外している。`tsconfig.*.json` は `include` を `src/**` などの具体的なディレクトリに限り、`.claude/` を含めない。走査対象を持つ config を新しく足したら、同じ除外をその場で書くか、`include` を同じように限る。除外の経路は config ごとに別で共通化できず、1 つ落とすと worktree のコードがその走査へ黙って混ざる。
 
 ### `git status` に出ないファイルを調べる
 

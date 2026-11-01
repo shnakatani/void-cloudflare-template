@@ -1,0 +1,28 @@
+// テストと story (DOM の型と Node の型)。unit のテストは Node で、ブラウザテストと story は chromium で走る。
+// どちらも Vitest と Storybook の型を通して Node の型を読むので、アプリのコードと分ける (ADR-0047)
+{
+  "extends": ["./tsconfig.base.json", "./.void/tsconfig.json"],
+  "compilerOptions": {
+    "lib": ["ES2024", "ESNext.Error", "DOM", "DOM.Iterable"],
+    // vite-plus/test/browser-playwright は、playwright の provider が vitest/browser の cdp() に足す型を読む
+    "types": ["vite-plus/client", "vite-plus/test/browser-playwright", "node"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.test-d.ts",
+    "src/**/*.test-d.tsx",
+    "src/**/*.test-helpers.ts",
+    "src/**/*.test-helpers.tsx",
+    "src/**/*.story-helpers.ts",
+    "src/**/*.story-helpers.tsx",
+    "src/**/*.stories.ts",
+    "src/**/*.stories.tsx",
+    "src/test/**/*.ts",
+    "src/test/**/*.tsx",
+    ".storybook/preview.tsx"
+  ]
+}
