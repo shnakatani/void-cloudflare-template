@@ -1,0 +1,76 @@
+import { useNavigation, useRouter } from "@void/react";
+import { useEffect, useRef } from "react";
+
+import { focusPageHeading } from "@/lib/focus-page-heading";
+import { announce } from "@/lib/live-announcer";
+
+type FocusChangeRecord = {
+  /** 記録を始めてから、利用者かアプリが focus を動かしたか */
+  changed: boolean;
+  stop: () => void;
+};
+
+/**
+ * 遷移中に利用者かアプリが focus を動かしたかを記録する (ADR-0049)。直前に focusin を受けた要素 (始めは記録を
+ * 始めたときに focus していた要素) と違う要素が focusin を受けたら動いたとみなし、前と同じ要素へ戻っても動いたとみなす。
+ * focusin に出ない動き (blur() で viewport へ外すなど) は見えない。
+ * capture で受けるのは、下の要素の listener が stopPropagation しても記録を漏らさないため
+ */
+function recordFocusChanges(): FocusChangeRecord {
+  let focused: EventTarget | null = document.activeElement;
+  function onFocusIn(event: FocusEvent) {
+    if (event.target !== focused) {
+      record.changed = true;
+    }
+    focused = event.target;
+  }
+  const record: FocusChangeRecord = {
+    changed: false,
+    stop: () => {
+      document.removeEventListener("focusin", onFocusIn, { capture: true });
+    },
+  };
+  document.addEventListener("focusin", onFocusIn, { capture: true });
+  return record;
+}
+
+/**
+ * path の変わる遷移を利用者に伝える。新しいページの見出し (`focusPageHeading` が選ぶ) へ focus を移し、
+ * `document.title` を読み上げる (ADR-0049)。root の layout に置き、DOM を描かない。
+ *
+ * Void は遷移の開始と完了を購読させないので、`useNavigation()` が idle 以外になった描画から focus の記録を始め、
+ * `useRouter().path` が変わった描画の effect で伝える。Void は新しいページの commit の layout effect の後に
+ * `document.title` を書き換えるので、passive effect の時点では title が新しい値になっている。
+ * query だけの変化と最初の描画では伝えない。
+ */
+export function RouteAnnouncer(): null {
+  const { path } = useRouter();
+  const navigating = useNavigation().state !== "idle";
+  const focusChanges = useRef<FocusChangeRecord | null>(null);
+  const announcedPath = useRef(path);
+
+  useEffect(() => {
+    if (!navigating) {
+      return;
+    }
+    const record = recordFocusChanges();
+    focusChanges.current = record;
+    // 記録は消さない。遷移の終わりと path の変化が同じ描画に来ると、この後始末が下の effect より先に走る
+    return record.stop;
+  }, [navigating]);
+
+  useEffect(() => {
+    // 伝えた path を ref に持ち、同じなら何もしない。最初の描画と StrictMode の付け直しはここで止まる
+    if (path === announcedPath.current) {
+      return;
+    }
+    announcedPath.current = path;
+    const record = focusChanges.current;
+    focusChanges.current = null;
+    record?.stop();
+    focusPageHeading(record?.changed ?? false);
+    announce(document.title);
+  }, [path]);
+
+  return null;
+}

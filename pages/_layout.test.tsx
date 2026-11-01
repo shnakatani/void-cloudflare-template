@@ -1,3 +1,4 @@
+import { useRouter } from "@void/react";
 import { describe, expect, it } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
@@ -8,9 +9,9 @@ import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 
 import Layout from "./layout";
 
-async function renderLayout(children: React.ReactNode) {
+async function renderLayout(children: React.ReactNode, router = createFakeRouter("/")) {
   return render(
-    <VoidRouterProvider router={createFakeRouter("/")}>
+    <VoidRouterProvider router={router}>
       <Layout>{children}</Layout>
     </VoidRouterProvider>,
   );
@@ -43,4 +44,16 @@ describe("root layout", () => {
       .element(page.elementLocator(viewport).getByText("保存しました"))
       .toBeInTheDocument();
   });
+
+  it("path の変わる遷移で、新しいページの見出しへ focus を移す", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await renderLayout(<PathHeading />, router);
+    await expect.element(screen.getByRole("heading", { name: "/a" })).toBeInTheDocument();
+    router.navigate("/b");
+    await expect.element(screen.getByRole("heading", { name: "/b" })).toHaveFocus();
+  });
 });
+
+function PathHeading() {
+  return <h1>{useRouter().path}</h1>;
+}

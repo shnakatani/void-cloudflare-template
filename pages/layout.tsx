@@ -2,6 +2,7 @@ import { StrictMode, type ReactNode } from "react";
 
 import { AppDevtools } from "@/components/app-devtools";
 import { LiveRegions } from "@/components/live-regions";
+import { RouteAnnouncer } from "@/components/route-announcer";
 import { Toaster } from "@/components/ui/toast";
 
 // root layout が読む CSS は、Void がこの layout の下のすべてのページの <head> に載せる
@@ -20,6 +21,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <Toaster />
       </main>
       <LiveRegions />
+      <RouteAnnouncer />
       <AppDevtools />
     </StrictMode>
   );
