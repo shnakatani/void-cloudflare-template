@@ -44,6 +44,7 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 - 暗号化した env ファイルは `.gitignore` の `.env` か `.env.*` に当たる。commit するファイルは `!.env.production` のような行で外し、その行を、同じファイルに当たるどの行よりも後ろに置く。同じ `.gitignore` の中では最後に当たった行が効くので、ツールの init が後から末尾に足した行が当たると、`!` の行は打ち消される ([gitignore(5)][])
 - 秘密鍵の `.env.keys` は `.env.*` が覆う。dotenvx が ignore を求めるのはこのファイルである ([dotenvx README][])
+- Void はルートの `.env` を別に読み、`vp build` が `dist/ssr/.dev.vars` へ写す。`.env` 以外の dotenv ファイル (`.env.local`・`.env.production`・`.dev.vars`) を Void は扱わない ([Void docs「Environment variables」][] の Local development)。いま `.env` が持つ `BETTER_AUTH_SECRET` の渡し方は `docs/guides/auth.md`「preview に secret を渡す」にある
 
 ### Dependabot の alerts を有効にする
 
@@ -233,6 +234,7 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 [gitignore(5)]: https://git-scm.com/docs/gitignore
 [git-add(1)]: https://git-scm.com/docs/git-add
 [dotenvx README]: https://github.com/dotenvx/dotenvx/blob/v2.32.3/README.md
+[Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
 [Vite+ docs「Package Management」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/install.md
 [Vite+ docs「Environment」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/env.md
 [Vite+ docs「Commit Hooks」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/commit-hooks.md

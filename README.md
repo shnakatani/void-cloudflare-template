@@ -1,13 +1,14 @@
 # tanstack-start-template
 
 Vite+ で組んだ Web アプリケーションの template repository。
-バックエンドサービス・認証・デプロイ先は選定していない。
+サーバーは Void (Cloudflare Workers)、DB は D1、認証は Void が管理する Better Auth の email とパスワードで持つ。
 テンプレートから始めたら、`TEMPLATE_SETUP.md` の手順を済ませてから、その文書ごと消す。
 
 ## 技術スタック
 
 - React 19 + TanStack Form / Table
 - shadcn/ui (Base UI) + Tailwind CSS v4
+- Void (Cloudflare Workers) + D1 + Better Auth (`docs/guides/database.md`、`docs/guides/auth.md`)
 - Vite+ (`vp`) + mise
 
 ## セットアップ
@@ -26,6 +27,7 @@ mise のシェル hook を入れる。hook の走らないシェルでの打ち�
 mise trust && mise install                        # .mise.toml を信頼して [env] と port を読ませ、[tools] のツールを入れる
 vp install                                        # 依存パッケージ
 vp exec playwright install chromium --only-shell  # vp install では入らない。無いと browser project のテストが落ちる
+printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" > .env  # vp preview と vp run verify の secret (docs/guides/auth.md「preview に secret を渡す」)
 mise run serve                                    # dev server。port は worktree ごとに変わる (.mise.toml の daemons)
 mise run storybook                                # 部品とデザイントークンのカタログ (docs/guides/storybook.md)
 ```

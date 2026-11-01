@@ -22,6 +22,14 @@ vp dlx gitpick shnakatani/tanstack-start-template my-app && cd my-app && git ini
 
 </details>
 
+## preview の secret を作る
+
+`vp preview` と `vp run verify` は、ルートの `.env` の `BETTER_AUTH_SECRET` を読む (`docs/guides/auth.md`「preview に secret を渡す」)。`.env` は ignore 済みで、clone のたびに作る。
+
+```bash
+printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" > .env
+```
+
 ## 名前を置換する
 
 ```bash
