@@ -2,8 +2,8 @@ import { useRouter } from "@void/react";
 import { useEffect, type ReactNode } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 
+import { ActionButton } from "@/components/action/button";
 import { FullScreenNotice } from "@/components/parts/centered-card";
-import { Button } from "@/components/ui/button";
 
 /**
  * 本文に出す固定の文言。原因ではなく次に取れる行動だけを伝える
@@ -19,9 +19,16 @@ const ERROR_TITLE_PREFIX = "エラー: ";
  *
  * 出している間は `document.title` の前に「エラー: 」を付け、タブと遷移の読み上げ (ADR-0049) にも失敗を出す。
  * 外れたときは、title が付けたときのままなら戻す。再試行や遷移で Void が書き換えていたら、その値を残す。
- * `error` が変わったら付け直す。遷移の先でも失敗すると、この部品は作り直されずに次の `error` を受ける
+ * `error` が変わったら付け直す。遷移の先でも失敗すると、この部品は作り直されずに次の `error` を受ける。
+ * 再試行は決着するまで押せない (`ActionButton`)。
  */
-export function AppError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+export function AppError({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => Promise<void> | void;
+}) {
   useEffect(() => {
     const pageTitle = document.title;
     const errorTitle = `${ERROR_TITLE_PREFIX}${pageTitle}`;
@@ -35,9 +42,9 @@ export function AppError({ error, onRetry }: { error: unknown; onRetry: () => vo
 
   return (
     <FullScreenNotice title="エラーが発生しました" description={APP_ERROR_MESSAGE}>
-      <Button onClick={onRetry} className="w-full">
+      <ActionButton action={onRetry} className="w-full">
         再試行
-      </Button>
+      </ActionButton>
     </FullScreenNotice>
   );
 }
@@ -59,12 +66,7 @@ function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
     resetErrorBoundary();
   }
 
-  function handleRetry() {
-    // retry が失敗を warn に残して処理し切る
-    void retry();
-  }
-
-  return <AppError error={error} onRetry={handleRetry} />;
+  return <AppError error={error} onRetry={retry} />;
 }
 
 /**

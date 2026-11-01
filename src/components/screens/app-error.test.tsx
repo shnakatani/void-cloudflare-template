@@ -1,4 +1,5 @@
 import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
+import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
 import { deferMock } from "@/test/app/defer-mock";
@@ -90,6 +91,21 @@ describe("AppError", () => {
     await screen.rerender(<AppError error={new Error("b")} onRetry={() => {}} />);
 
     await expect.poll(() => document.title).toBe("エラー: 設定 — アプリ");
+  });
+
+  it("再試行が決着するまで押せず、再クリックでは onRetry を呼ばない", async () => {
+    const pending = Promise.withResolvers<undefined>();
+    const onRetry = vi.fn(() => pending.promise);
+    const screen = await render(<AppError error={new Error("x")} onRetry={onRetry} />);
+    const button = screen.getByRole("button", { name: "再試行" });
+
+    await button.click();
+    await expect.element(button).toBeDisabled();
+    await expect.element(button).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(onRetry).toHaveBeenCalledOnce();
+    pending.resolve(undefined);
   });
 });
 
