@@ -2,11 +2,11 @@
 
 - Status: Accepted
 - Date: 2026-09-24
-- 関連: ADR-0026 (通知は常時 mount の live region に集約する。本 ADR が呼び出し層を取得結果へ広げる)、ADR-0019 (検索条件は URL が持つ)
+- 関連: ADR-0026 (通知は常時 mount の live region に集約する。本 ADR が呼び出し層を取得結果へ広げる)
 
 ## Context
 
-一覧の検索 (ADR-0019) では、打鍵が止まるたびに一覧が入れ替わる。行の半透明は読み上げに出ないので、入れ替わったことと件数はスクリーンリーダーに届かない。WCAG 2.2 の 4.1.3 Status Messages は「5 results returned」を例に、結果の件数を status message として伝えることを求める。
+一覧の検索では、打鍵が止まるたびに一覧が入れ替わる。行の半透明は読み上げに出ないので、入れ替わったことと件数はスクリーンリーダーに届かない。WCAG 2.2 の 4.1.3 Status Messages は「5 results returned」を例に、結果の件数を status message として伝えることを求める。
 
 ADR-0026 は通知を `announce()` (常時 mount の live region) に集約したが、呼び出し層として決めたのは mutation の `onMutate` / `onSuccess` だけで、query 由来の結果 (取得した一覧の件数) をどの層が通知するかは決めていなかった。
 
@@ -14,7 +14,7 @@ ADR-0026 は通知を `announce()` (常時 mount の live region) に集約し�
 
 | 制約                                                                                                          | 出どころ                                                                                    |
 | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 条件の確定 (debounce → `useDeferredValue`) と取得の決着 (`isFetching`) はページの中で起きる                   | ADR-0019 のデータの流れ                                                                     |
+| 条件の確定 (debounce → `useDeferredValue`) と取得の決着 (`isFetching`) はページの中で起きる                   | `docs/guides/lists-and-search.md`「検索の入力欄を組む」                                     |
 | 同じ条件に対する通知は 1 回にする。debounce 後に通知した直後の Enter (URL が同じ条件になる) で 2 回読ませない | 重複は通知を埋める                                                                          |
 | 取得中に通知すると古い件数を読む。無効化済みキャッシュは表示しながら再取得する                                | TanStack Query の `useSuspenseQuery` はデータがあれば Suspend せず、`isFetching` だけが立つ |
 

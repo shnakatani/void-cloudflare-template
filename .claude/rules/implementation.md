@@ -10,21 +10,16 @@ paths:
 lint (`react/set-state-in-effect`、`react/no-deriving-state-in-effects`) が止める。代替のうち lint が案内しないもの:
 
 - 外部ストアの値を読む購読は `useSyncExternalStore`。lint では検出できないのでレビューで見る (`docs/guides/react/effects.md`「effect に書くかを判定する」)
-- データ取得は TanStack Query で行い、loader が取得を待つのは、欠かせない query (主要な中身・タイトル・認可・リダイレクト・存在を決める) だけにする。書き方は `queryClient.query({ ...options, staleTime: "static" })` (既存の値を編集するダイアログの route は `staleTime: 0`。ADR-0041)。副次的な query まで待つと、遷移と SSR の応答がそれを待つ。同じ route に留まる読み込み (loader の `cause` が `"stay"`) では、head の値・notFound・redirect・認可を決めない query に限り待たずに流し、読む部分を `<Suspense>` と `SectionErrorBoundary` で囲む。決める query は stay でも待つ。待つと失敗が検索欄ごとページを置き換える (ADR-0033)
-- 副次的な query は loader で `void queryClient.query(...).catch(noop)` (`noop` は `@tanstack/react-query` の export) として流し、読む側を `<Suspense>` と `SectionErrorBoundary` (`src/components/parts/section-error-boundary.tsx`) で囲む。囲まないと、読み込み中と失敗がページ全体の pending 表示とエラー表示に置き換わる (ADR-0033)
+- データ取得は TanStack Query で行う (`docs/guides/react/effects.md`「effect に書くかを判定する」)
 
 ## effect かイベントハンドラかを原因で決める
 
 lint では見ないのでレビューで見る。
 
 - 原因が特定の操作 (保存、送信、操作の開始と完了の通知、親への変化の通知) なら、effect ではなくイベントハンドラか mutation の callback に書く。effect に置くと、同じ表示に戻っただけで走る (`docs/guides/react/effects.md`「effect に書くかを判定する」)
-- effect は、表示された結果を React の外の系 (DOM、ブラウザ API、外部 widget、イベントに応じて動く購読、router、announcer) に合わせるときだけ使う (`docs/guides/react/effects.md`「effect とイベントハンドラを分ける理由」)
+- effect は、表示された結果を React の外の系 (DOM、ブラウザ API、外部 widget、イベントに応じて動く購読、announcer) に合わせるときだけ使う (`docs/guides/react/effects.md`「effect とイベントハンドラを分ける理由」)
 - 開発時の二重実行で見える結果が変わったら、まず後始末を書く。後始末を書いても変わるときは、操作ならイベントハンドラへ、アプリの読み込みならコンポーネントの外へ移す (`docs/guides/react/effects.md`「開発時の二重実行が示すもの」)
 - effect を 1 回しか走らせないための ref を書かない。1 回に抑えても、離れて戻ったときの後始末の欠けは残る。直前に反映した値を ref に持ち、同じなら何もしない形は、何度走っても同じ結果になるのでよい (`docs/guides/react/effects.md`「開発時の二重実行が示すもの」)
-- router の外の変化 (認証など) の購読は router の `InnerWrap` の effect に置き、変化時に `router.invalidate()` を呼ぶ。ルートとページの effect は `errorComponent` の表示中に外れる (`docs/guides/react/effects.md`「router との間の副作用の置き場所」)
-- 遷移を契機にする副作用 (analytics、外部キャッシュの消去、描画後の DOM 操作) は `InnerWrap` のコンポーネントで `router.subscribe` に置く。ページの effect は他のページの間の遷移を見ない (`docs/guides/react/effects.md`「router との間の副作用の置き場所」)
-- `router.subscribe` を張る effect の中で、今のページにも 1 回その処理を行う。SSR で描いた最初のページでは `onResolved` が出ず、`onRendered` は購読より先に出る (`docs/guides/react/effects.md`「router との間の副作用の置き場所」)
-- そのページが出ている間だけ要る router との連携は、ページの effect で購読し、後始末で解除する。router の外の変化の購読と遷移を契機にする副作用を `InnerWrap` に置くのは、ページを離れても途切れてはいけないものに限る (`docs/guides/react/effects.md`「router との間の副作用の置き場所」)
 
 ## Effect が読む最新値は useEffectEvent へ切り出す
 
@@ -40,20 +35,18 @@ lint (`typescript/no-misused-promises`) が止める。直し方 (`docs/guides/r
 - ハンドラは同期関数として宣言し、非同期処理はその内側の関数へ閉じる。JSX の prop に `void` やインラインの `async` を書かない
 - 待たない判断は内側で 1 回だけ表明する。呼び先が失敗を自分で処理するなら `void`、呼び出し側で通知や後始末をするなら `.catch()`
 - 操作の失敗を Error Boundary へ届けない。通知は toast (`src/components/ui/toast.tsx`) か画面内表示で行う。Error Boundary は画面ごと差し替わる (ADR-0016)
-- 実例は `src/hooks/use-route-retry.ts` の `handleRetry`。mutation を伴う操作は「ユーザー操作による更新は Transition の中で行う」に従う
+- mutation を伴う操作は「ユーザー操作による更新は Transition の中で行う」に従う
 
 ## ユーザー操作による更新は Transition の中で行う
 
 lint では見ないのでレビューで見る (ADR-0015、Action 層と `useActionMutation` は ADR-0016、完了点とブロック範囲は ADR-0017)。
 
-| 更新の種類                        | 書き方                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| mutation を伴う操作               | `src/components/action/` の部品に `action` を渡す。Action の中で `useActionMutation` の `runAction` を呼ぶ                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| mutation 成功後のダイアログ close | 閉じる時点は ADR-0017 の完了点の軸で選び、理由を実装近傍に書く。選択肢は ADR-0017                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ナビゲーション                    | Router に任せる。`startTransition` を自分で書かない (`docs/guides/react/updates.md`「ナビゲーションを Router に任せる」)                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Error Boundary からの再試行       | route の errorComponent は `router.invalidate()` だけを呼び、`startTransition` を自分で書かない。ページの区画 (`SectionErrorBoundary`) は境界の `reset()` で描き直し、`router.invalidate()` は呼ばない。Query の失敗は、route の errorComponent では表示した時点の effect で、区画では再試行の click の中で境界の `reset()` の前に `useQueryErrorResetBoundary().reset()` で戻す。しないと loader が取得しない query の失敗が残り、再試行で回復しない (`docs/guides/data-loading.md`「読み込みに失敗した画面から再試行する」) |
-| 制御コンポーネントの入力値        | 緊急更新のまま。Transition は割り込まれるので入力値の反映が遅れる                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| 検索条件の変更                    | URL の `navigate`。打鍵中は debounce した値を `useDeferredValue` に通して `useSuspenseQuery` の key にする (`docs/guides/lists-and-search.md`「検索の入力欄を組む」)                                                                                                                                                                                                                                                                                                                                                          |
+| 更新の種類                        | 書き方                                                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| mutation を伴う操作               | `src/components/action/` の部品に `action` を渡す。Action の中で `useActionMutation` の `runAction` を呼ぶ                                        |
+| mutation 成功後のダイアログ close | 閉じる時点は ADR-0017 の完了点の軸で選び、理由を実装近傍に書く。選択肢は ADR-0017                                                                 |
+| 制御コンポーネントの入力値        | 緊急更新のまま。Transition は割り込まれるので入力値の反映が遅れる                                                                                 |
+| 検索条件の変更                    | 打鍵中は debounce した値を `useDeferredValue` に通して `useSuspenseQuery` の key にする (`docs/guides/lists-and-search.md`「検索の入力欄を組む」) |
 
 - pending 表示は Action 層の `isPending` から取る。例外は項目の busy・楽観表示・close 阻止で、mutation の pending から取る (ADR-0017)
 - mutation は `src/hooks/use-action-mutation.ts` の `useActionMutation` を通す。`onError` は型で必須。`runAction` が reject を吸収するので、無いと失敗が無通知になる (`docs/guides/react/updates.md`「mutation の書き方」)
@@ -68,55 +61,6 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層と `useAc
 - 操作の開始の announce は `onMutate`、完了は `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
 - 決着前の二重発火は Action 層の `isPending` (`aria-disabled`) が塞ぐ。閉包や ref のフラグを足さない (ADR-0016)
 
-## ページは title と見出しを持つ
-
-lint では見ないのでレビューで見る。
-
-- ページの route (自分の component が `RoutePageHeader` で `<h1>` を描く route) を足したら、`pageRouteOptions(<ページ名>)` (`src/lib/page-title.ts`) を route の外で const に受け、options の先頭に spread する。`staticData.pageName` と、そこから title を組む `head` が 1 組で入る。ページの上に重ねるダイアログの route は `dialogRouteOptions(<ダイアログの名前>)` を spread する。`head` が無いと親の title になり、遷移の読み上げで区別できない (ADR-0035)
-- 呼び出しを options の中で直接 spread しない (`...pageRouteOptions(<ページ名>)`)。`tanstack-router/create-route-property-order` が Identifier でない spread で throw し、lint ごと止まる (TanStack/router#8673)
-- 名前の付いたページの route の子に、ダイアログでない名前の付いたページの route を置かない。表示中は `<h1>` が 2 つ並ぶ (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
-- title は `pageRouteOptions` と `dialogRouteOptions` の `head` か `pageTitle` を通し、文字列を直接書かない。直接書くと not found の画面でもそのページの名前になる (ADR-0035)
-- ページの見出しは `RoutePageHeader` で描く。`pageName` が無いと throw する。`PageHeader` の `title` に名前を渡すのは、読み込んだデータで名前が決まる route だけにする。その route は自分の `head()` が返す `meta` の title を `pageTitle(ctx, <名前>)` にする (ADR-0033、`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
-
-## route の失敗の部品は受ける route に置く
-
-lint では見ないのでレビューで見る。
-
-- router に `defaultErrorComponent` を置かない。置くと、どの route もその部品で境界を張り、部品を置いた祖先へ失敗が上がらない (ADR-0044)
-- router に `defaultNotFoundComponent` を置かない。not found の最後の受け手は root の `notFoundComponent` が担う (ADR-0044)
-- ページの位置で読み込みの失敗と描画中の例外を受ける route は、`errorComponent` に `PageRouteError` (`src/components/screens/route-error.tsx`) を自分で置き、`pageRouteOptions` に束ねない。束ねると、受ける必要の無いページまで受け、祖先へ上がる道が塞がる (ADR-0044)
-- `PageRouteError` は `pageName` を持つ route にだけ置く。名前の無い route では見出しの行が throw し、祖先 (無ければ root) のエラーの画面になる (ADR-0044)
-- `notFound()` は loader か beforeLoad で投げ、描画中 (component) には投げない。描画中に投げると、部品の置き方によって、どの route にも受けられずアプリ全体が組み込みの英語の画面になるか、title がページの名前のまま root の not found が出る (ADR-0044)
-
-## フォームのダイアログは子 route にする
-
-lint では見ないのでレビューで見る。
-
-- 入力を保存するフォームのダイアログ (追加、編集) は、開く元のページの route の子 route にし、detached trigger の handle で開かない。handle のダイアログは mount したまま 1 つの mutation を持ち、再取得の完了まで続く pending が、開き直したダイアログの close まで止める (ADR-0041)
-- 保存の pending の間は利用者の close を止め、止める条件はそのダイアログ自身の mutation の pending だけにする。応答の前に閉じると route ごと unmount し、保存に失敗したときに入力が残らない (ADR-0041)
-- ダイアログの route には、ダイアログの形の `pendingComponent` と `errorComponent` を置く。loader を持たない route も component の chunk を待つ。無いと、読み込み中は router の既定の表示が開く元のページの `<Outlet />` の位置に出て、失敗は近い祖先の route のエラーの部品が開く元のページごと置き換える (ADR-0041)
-- Dialog の Root には `open` を固定で渡し、閉じる操作と保存の応答の時点で開く元のページへ離れる。閉じるアニメーションの後まで待たない。待つと、読み込み中のダイアログで待つ間に読み込みが終わり、閉じたはずのダイアログが開く (ADR-0041)
-- ダイアログは `useRouteDialog`、`RouteStatusDialog`、`RoutePendingDialog` で組み、どれにも戻り先 (`returnTo`) と開いた元の要素を探す関数 (`findReturnTarget`) を渡す。離れたか替わったかは `useRouteDialog` が戻り先から判定する (ADR-0041)
-- `returnTo` は `useRouteDialog` が `navigate` にそのまま渡す。開く元のページの search を保つなら `search: (prev) => prev` を書く (`docs/guides/forms-and-inputs.md`「フォームのダイアログを子 route で組む」)
-- 同じ戻り先は `linkOptions` で検査した定数にし、開く元のページの `-lib/` に 1 つ置く。型の無い定数にすると `prev` の型が決まらず型検査を通らない (`docs/guides/forms-and-inputs.md`「フォームのダイアログを子 route で組む」)
-- `ActionDialogContent` (フォームを持たないなら `DialogContent`) には `useRouteDialog` の返り値の `popupProps` を spread する。spread しなくても型は通り、離れたときに開いた元の要素へ戻らず、閉じる遷移の退場も出ない (`docs/guides/forms-and-inputs.md`「フォームのダイアログを子 route で組む」)
-- ダイアログの route の options には `dialogRouteOptions(<ダイアログの名前>)` を const に受けて spread し、`staticData` の `pageName` と `routeDialog: true` を `head` と 1 組で持たせる。`staticData` を手で書いて `routeDialog` が抜けると閉じる遷移の type も `popupProps` の `data-route-dialog` も付かず、ダイアログは退場を見せずにクロスフェードで消える。手で書いた route には `head` も入らず、title は開く元のページのままになり、遷移の読み上げで区別できない。`routeDialog` と `pageName` の抜けは `useRouteDialog` が console に警告するだけで、テストは落ちない (ADR-0041)
-- ダイアログの route を足したら、そのページの route のテストで、閉じる操作で閉じたときと戻るで離れたときに開いた元の要素へ focus が移ることと、別のダイアログに替わったときに開いた元の要素が focus を受けないことを確かめる。`findReturnTarget` が要素を見つけられなくても、`popupProps` を spread し忘れても (Base UI の既定の戻し先へ戻る)、型検査も `useRouteDialog` も気付かない (`docs/guides/forms-and-inputs.md`「フォームのダイアログを子 route で組む」)
-- 閉じる操作で閉じたときの focus は、URL を直接開くか `router.navigate` で開いてから確かめ、開くリンクを押して開かない。リンクを押して開くと、`popupProps` を spread し忘れても Base UI の既定の戻し先でリンクへ戻り、テストが通る (`docs/guides/forms-and-inputs.md`「フォームのダイアログを子 route で組む」)
-
-## 既存の値を編集するダイアログは最新の値を取ってから開く
-
-lint では見ないのでレビューで見る。
-
-- 既存の値を初期値にする編集のダイアログの route は、loader で `queryClient.query({ ...options, staleTime: 0 })` を `staleReloadMode: "blocking"` で待つ。キャッシュや前に取った値で開くと、別のタブや別の利用者の変更より古い値でフォームが始まる (ADR-0041)
-- 1 件の query は一覧の query の先頭キーの下に置かない。保存後の一覧の invalidate が、閉じかけのダイアログの 1 件まで取り直す (ADR-0041)
-- 1 件の query は `staleTime: Infinity` にし、開いている間は取り直さない。取り直すと、触れていないフォームは利用者の目の前で値が替わる (ADR-0041)
-- 開く元のページがキャッシュした一覧に同じ項目があれば、loader は取り直した値と一覧の行の更新日時を比べ、違えば一覧を `invalidateQueries(…, { cancelRefetch: false })` で invalidate し、待たない。1 件が not found なら、同じ項目が一覧に残っているときに同じく invalidate してから not found を投げ直す。取り直した値を `setQueriesData` で一覧へ書き込まない。絞り込みの条件とずれ、他の行の取り直しも遅れる (ADR-0041)
-- ダイアログの route に `remountDeps: ({ params }) => params` を付ける。付けないと、開いたまま別の値の URL へ移ったとき、打ち始めたフォームが前の値のまま残り、移った先の値へ保存する (ADR-0041)
-- `useMatchRoute` で pending を照合するとき、`params.parse` で変換した値を `params` に渡さない。URL の文字列と比べて一致しない。route だけで照合し、返った params を文字列で比べる (ADR-0041)
-- 開くリンクに `preload={false}` を渡す。開くたびに取り直すので、preload は捨てる取得になる (ADR-0041)
-- 行のリンクは操作中に `disabled` を渡し、`tabIndex={0}` は操作中かに関わらず渡す。`disabled` の Link は href を外して focus できなくなり、閉じたときに focus を戻せない。操作中だけ渡すと、操作が終わるとき focus を持ったリンクが blur してから focus を受け直す (ADR-0041)
-
 ## 日付と日時の値は意味で分類して持つ
 
 lint では見ないのでレビューで見る。
@@ -126,7 +70,6 @@ lint では見ないのでレビューで見る。
 - 暦の日付の列には `CHECK (<列> IS date(<列>) AND length(<列>) = 10)` を付ける。入力スキーマの検証は、それを通らない書き込み (手書きの SQL など) に効かない (`docs/guides/dates-and-time-zones.md`「日付の入力を扱う」)
 - 場所に結びつく日付・日時は、TZ が 1 つでも IANA の TZ 名を列に持ち、オフセットでは持たない。値だけで意味が決まり、TZ の定義の変更に追従する (ADR-0031)
 - 「今日」や期限を判定するときは、どの TZ の今日かを明示する (今は `APP_TIME_ZONE`)。明示しないと、サーバーとブラウザで判定が割れる (ADR-0031)
-- Calendar が見せる今日はブラウザの TZ に任せ、Calendar はサーバーで描かない。初めに閉じていて `keepMounted` を付けない Popover の中に置くか、`<ClientOnly>` で囲む。サーバーで描くと、サーバーの TZ の今日が hydration の後も残る (ADR-0031)
 
 ## 日時はタイムゾーンを明示して整形する
 

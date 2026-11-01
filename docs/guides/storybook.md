@@ -16,7 +16,7 @@ story を書くとき、play を書くとき、Storybook の agent 向けツー�
 ### story を置く
 
 - story は部品と同じディレクトリに `<部品>.stories.tsx` で置き、`title` を書かない。見出しはファイルパスから決まる (「story に `title` を書かない理由」)
-- story を置けるのは `src/components/` 配下に限る。`.storybook/main.ts` の `stories` をそこへ絞っているためで、他へ置くと Storybook も vitest の project も拾わず、a11y 検査ごと無言で外れる。範囲を広げるかは、`features/` や `routes/**/-components/` に story を書きたくなった時点で決める
+- story を置けるのは `src/components/` 配下に限る。`.storybook/main.ts` の `stories` をそこへ絞っているためで、他へ置くと Storybook も vitest の project も拾わず、a11y 検査ごと無言で外れる。範囲を広げるかは、`features/` などに story を書きたくなった時点で決める
 - `src/components/ui/` の registry 部品は、消費側からの import が 0 件でもすべて story を書く。理由は「registry 部品を全件カタログにする理由」にある
 - `src/components/ui/` に置いた `*.stories.tsx` は、`*.test.tsx` と同じ「registry 由来でない付随ファイル」として baseline 検査の対象外になる (ADR-0020)
 - 1 つのファイルが複数の部品を export するときは、単独で描画できる部品ごとに story ファイルを分ける。親を要求する部品は親の story で扱う。CSF の meta は 1 ファイルに 1 つなので、まとめると別の部品の meta の配下に並ぶ
@@ -48,19 +48,16 @@ story は部品が取りうる状態を並べるカタログで、振る舞い�
 
 - `ui/` の play は「開く」までにする。開いた先の操作 (選択・送信・閉じる) は書かない。registry 部品の振る舞いは上流が持っていて、こちらの story で固定すると上流の更新のたびに落ちる
 - 対象の層は `ui/` `action/` `parts/` とし、`screens/` は外す (実画面で見るほうが早い)
-- `action/` の pending 表現に server function の stub は要らない。決着する Promise を渡すだけで pending の描画と解除が成立する (2026-09-20 実測)
+- `action/` の pending 表現に stub は要らない。決着する Promise を渡すだけで pending の描画と解除が成立する (2026-09-20 実測)
 
 ### 上流の `write-story` skill との違い
 
 `vp exec storybook skills` が出す `write-story` skill ([Storybook の `storybook-story-instructions.md`][]) は上流の規約で、このリポジトリの決定と食い違う箇所がある。play を書く範囲は [Storybook の `storybook-story-instructions.md`][] の「Simulate key user flows」ではなく「カタログと play の範囲」に従い、操作で状態が変わる部品にだけ書く。このガイドに書かれていない項目は [Storybook の `storybook-story-instructions.md`][] の既定に従う。
 
-### 自動構成の外を手で置く
+### story に要る構成を手で置く
 
-TanStack 専用の framework は、router を memory-backed で自動ラップし、server function を自動で stub する (「framework を TanStack 専用にし、telemetry を切る理由」)。次のものは自動構成が届かない。
-
-- TanStack Query は対象外。Query を使う部品の story を書くようになったら、QueryClient を `.storybook/preview.tsx` の構成へ手で置く
+- Query を使う部品の story を書くようになったら、QueryClient を `.storybook/preview.tsx` の構成へ手で置く
 - server-only の依存を引く部品の story を書くようになったら、その依存を `__mocks__` で遮断する
-- story の URL を組むとき、path の `$name` と `$` の segment だけが展開され、`{-$name}` や `{$id}.json` のような波括弧の segment は展開されない。tanstack-react の path の展開の制限で、その展開を足した上流の修正 ([storybookjs/storybook#36333][]) の本文も `{-$optional}` を未対応と書く。波括弧の segment を持つ route の story を書くようになったら、URL が組めるかをその時点で確かめる
 
 ### play を書く
 
@@ -76,7 +73,7 @@ TanStack 専用の framework は、router を memory-backed で自動ラップ�
 
 1. 移すのは story を書く部品に限り、ファイルごとに移せるかを実測してから進める。一律には移さない
 2. play で書いた検証は、既存のブラウザテストから削る。同じ振る舞いを 2 か所で固定しない
-3. 対象の全 case が移れば、test ファイルごと削る。locator と文言を持つ `*.test-helpers.ts` は残す (`routes/` のテストが同じものを引く)
+3. 対象の全 case が移れば、test ファイルごと削る。locator と文言を持つ `*.test-helpers.ts` は残す (ほかのテストが同じものを引く)
 4. 移せない case (レイアウトと配色の実測 (`getComputedStyle` / `getBoundingClientRect`)、CDP 経由の実イベント) はブラウザテストに残し、残す理由と、実イベントの規律をどのテストが持つかを、そのファイルの JSDoc に書く。書かないと、次に読む人が「移し忘れ」と読んで消す。story へ移した結果、実イベントの検証がリポジトリから消えることも防ぐ。型契約 (`expectTypeOf`) は `*.test-d.ts` に置く (`docs/guides/testing/type-tests.md`「型テストを置く」)。
 5. play を書かない部品 (args だけで状態が決まるもの) では、story が描画と axe しか走らせず何も検証しない。構造の契約もブラウザテストに残し、JSDoc には移せない case と役割分担 (「story とブラウザテストの分担」) のどちらの根拠で残したかを書く
 6. story を書かない部品のテストは触らない
@@ -100,21 +97,11 @@ TanStack 専用の framework は、router を memory-backed で自動ラップ�
 
 ## explanation
 
-### framework を TanStack 専用にし、telemetry を切る理由
-
-framework の選定は `tanstackStart()` plugin と Storybook の Vite builder の衝突 ([storybookjs/storybook#33747][]) が決める。標準の Vite builder はこの衝突を自分で回避する必要があり、server function を呼ぶ部品の story を組めない。TanStack 専用 framework (`@storybook/tanstack-react`) は router を memory-backed で自動ラップし、server function を自動 stub する ([Storybook docs「Storybook for TanStack React」][])。
+### telemetry を切る理由
 
 telemetry は `.storybook/main.ts` の `core.disableTelemetry` で切る。既定で有効で、実行したコマンド・バージョン・addon 一覧・story とコンポーネントの件数を送る ([Storybook docs「Telemetry」][])。このテンプレートから作られる全プロジェクトへ配られる設定なので、`envDir: false` や `disable_tools` (ADR-0004) と同じく明示で潰す側に揃える。
 
 `boot` イベントだけはこの設定で止まらない。`main.ts` を読む前に送られるためで、中身はメタデータを持たない。止めるには環境変数 `STORYBOOK_DISABLE_TELEMETRY` が要る ([Storybook docs「Telemetry」][])。
-
-| 案                               | 評価                                                                                                | 採否     |
-| -------------------------------- | --------------------------------------------------------------------------------------------------- | -------- |
-| 標準の Vite builder を使う       | `tanstackStart()` との衝突を自分で回避することになり、server function を呼ぶ部品の story が組めない | 却下     |
-| TanStack 専用 framework を使う   | router を memory-backed で自動ラップし、server function を自動 stub する                            | **採用** |
-| telemetry を既定のまま有効にする | このテンプレートから作られる全プロジェクトへ配られる設定なので、明示で潰す                          | 却下     |
-
-- Storybook の静的ビルド (`vp exec storybook build`) は、`vp run verify` と CI では走らせていない。`tanstackStart()` plugin と標準の Vite builder の衝突 ([storybookjs/storybook#33747][]) は 2026-10-07 時点で未解決だが、TanStack 専用 framework が `tanstackStart()` の plugin を外すので build は通る (2026-10-07、`@storybook/tanstack-react` 10.6.1)。`lazyPlugins` に async の関数を渡すと外せなくなる (`docs/guides/vite-configuration.md`「plugin を先頭で import する理由」)
 
 ### story を状態のカタログにする理由
 
@@ -127,7 +114,7 @@ story は部品の状態 (variant / tone / disabled) を、アプリの画面を
 | 検証専用 story をサイドバーへ出したまま置く              | 同じ見た目の story が並び、カタログとして読めなくなる (2026-09-20 に 1 部品で実測、9 story 中 4 つが重複)                                  | 却下     |
 | 検証専用 story を別ファイルへ分ける                      | story glob と「部品の隣へ置く」規約の両方を変えることになる                                                                                | 却下     |
 | pending の見た目を決着しない action で作る               | 後続 story の Transition を止める (「story を書く」の実測)                                                                                 | 却下     |
-| `action/` を対象外にする                                 | pending 表現に server function の stub が要るという理由は、実測で成り立たない (2026-09-20)                                                 | 却下     |
+| `action/` を対象外にする                                 | pending 表現に stub が要るという理由は、実測で成り立たない (2026-09-20)                                                                    | 却下     |
 | 状態のカタログに徹し、対話的な部品にだけ play を書く     | 外見確認という目的を満たし、検証の二重化も保守費用の増大も避けられる                                                                       | **採用** |
 
 ### story とブラウザテストの分担
@@ -245,12 +232,9 @@ MCP が優るのは、ツールの説明がエージェントに常に見える�
 [React docs「useTransition」]: https://react.dev/reference/react/useTransition
 [Storybook の `storybook-story-instructions.md`]: https://github.com/storybookjs/storybook/blob/v10.6.0/code/core/src/cli/skills/content/instructions/storybook-story-instructions.md
 [Storybook の `stories/definition.ts`]: https://github.com/storybookjs/storybook/blob/v10.6.0/code/core/src/shared/open-service/toolsets/stories/definition.ts
-[storybookjs/storybook#33747]: https://github.com/storybookjs/storybook/issues/33747
-[Storybook docs「Storybook for TanStack React」]: https://storybook.js.org/docs/get-started/frameworks/tanstack-react
 [Storybook docs「Telemetry」]: https://storybook.js.org/docs/configure/telemetry
 [Storybook docs「Interaction tests」]: https://storybook.js.org/docs/writing-tests/interaction-testing
 [Storybook の `WebView.ts`]: https://github.com/storybookjs/storybook/blob/v10.6.0/code/core/src/preview-api/modules/preview-web/WebView.ts
-[storybookjs/storybook#36333]: https://github.com/storybookjs/storybook/pull/36333
 [Storybook の `viewports.ts`]: https://github.com/storybookjs/storybook/blob/v10.6.1/code/addons/vitest/src/vitest-plugin/viewports.ts
 [Storybook の vitest plugin の `index.ts`]: https://github.com/storybookjs/storybook/blob/v10.6.1/code/addons/vitest/src/vitest-plugin/index.ts
 [Vitest docs「browser.viewport」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/browser/viewport.md

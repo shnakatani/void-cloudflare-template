@@ -20,20 +20,19 @@ oxlint のカテゴリ (`correctness` / `perf` / `pedantic` / `style` / `restric
 
 有効にしていないプラグインも、有効化する時点でこの表の基準に従う。
 
-| プラグイン        | 基準                                                                                                                                       |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| eslint コア       | `@eslint/js` の `recommended` + typescript-eslint の `eslint-recommended` が error にする 4 ルール                                         |
-| `typescript`      | typescript-eslint の `strict` と `strict-type-checked`                                                                                     |
-| `react`           | eslint-plugin-react の `recommended` と `jsx-runtime`。React Compiler 由来のルールだけは eslint-plugin-react-hooks の `recommended-latest` |
-| `import`          | eslint-plugin-import の `recommended`                                                                                                      |
-| `promise`         | eslint-plugin-promise の `recommended`                                                                                                     |
-| `jsdoc`           | eslint-plugin-jsdoc の `recommended-typescript`                                                                                            |
-| `vitest`          | `@vitest/eslint-plugin` の `recommended`                                                                                                   |
-| `jsx-a11y`        | eslint-plugin-jsx-a11y の `recommended`                                                                                                    |
-| `tanstack-query`  | `@tanstack/eslint-plugin-query` の `recommended`。strict から `prefer-query-options` だけを足す。型情報が要る `no-void-query-fn` は除く    |
-| `tanstack-router` | `@tanstack/eslint-plugin-router` の `recommended`                                                                                          |
-| `unicorn`         | 選定しない。`correctness` と `perf` に入る分だけ使う                                                                                       |
-| `oxc`             | 上流に対応する設定がない。`correctness` と `perf` で拾う                                                                                   |
+| プラグイン       | 基準                                                                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| eslint コア      | `@eslint/js` の `recommended` + typescript-eslint の `eslint-recommended` が error にする 4 ルール                                         |
+| `typescript`     | typescript-eslint の `strict` と `strict-type-checked`                                                                                     |
+| `react`          | eslint-plugin-react の `recommended` と `jsx-runtime`。React Compiler 由来のルールだけは eslint-plugin-react-hooks の `recommended-latest` |
+| `import`         | eslint-plugin-import の `recommended`                                                                                                      |
+| `promise`        | eslint-plugin-promise の `recommended`                                                                                                     |
+| `jsdoc`          | eslint-plugin-jsdoc の `recommended-typescript`                                                                                            |
+| `vitest`         | `@vitest/eslint-plugin` の `recommended`                                                                                                   |
+| `jsx-a11y`       | eslint-plugin-jsx-a11y の `recommended`                                                                                                    |
+| `tanstack-query` | `@tanstack/eslint-plugin-query` の `recommended`。strict から `prefer-query-options` だけを足す。型情報が要る `no-void-query-fn` は除く    |
+| `unicorn`        | 選定しない。`correctness` と `perf` に入る分だけ使う                                                                                       |
+| `oxc`            | 上流に対応する設定がない。`correctness` と `perf` で拾う                                                                                   |
 
 `@shadcn/lint` はこの表に載らない。oxlint ネイティブではなく `jsPlugins` 経由で、基準も recommended ではなく設計判断と対にしたルールを名指しするためである (ADR-0023)。
 
@@ -118,7 +117,7 @@ recommended に無くても、規約や他の決定を機械で守るために�
 | ルール                                  | 名指しの理由                                                                                                                                                                                                                                                                                                        |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `typescript/consistent-type-assertions` | `assertionStyle: "never"` の指定が要る                                                                                                                                                                                                                                                                              |
-| `no-restricted-imports`                 | `*.test-helpers.ts` と `src/test/` をアプリのコードから import させない (ADR-0008)。テストの import を重くする依存のバレルを止める (ADR-0032)。テストに router を `createRouter` で直接組ませない (`docs/guides/testing/real-router.md`「テスト用の router の既定をそろえる」)                                      |
+| `no-restricted-imports`                 | `*.test-helpers.ts` と `src/test/` をアプリのコードから import させない (ADR-0008)。テストの import を重くする依存のバレルを止める (ADR-0032)                                                                                                                                                                       |
 | `tanstack-query/prefer-query-options`   | recommended-strict だけにある。useQuery 系にインラインの queryKey / queryFn を書かせず、queryOptions の 1 か所で定義させる                                                                                                                                                                                          |
 | `react/no-unstable-nested-components`   | 描画中の部品の定義 (props に直接渡す形を含む) を止める。React Compiler を通すと症状が消え、Compiler を通す project のテストでは見つからない (`docs/guides/testing/configuration.md`「テストでも React Compiler を通す理由」)。`react/static-components` は props に直接渡す形を止めない (oxlint 1.85.0、2026-10-08) |
 
@@ -144,8 +143,8 @@ recommended に無くても、規約や他の決定を機械で守るために�
 - 名指ししたルールは `rules` に並ぶため、上流 recommended の改訂には自動追随しない。追随の手順は `docs/guides/lint/configuration.md`「上流 recommended の改訂に追随する」にある
 - 名指ししたルールが oxlint 側で改名・廃止されると `vp lint` が設定のパースで落ちる (`Rule 'react-compiler' not found in plugin 'react'`)。取りこぼしは起きないが、更新の PR は lint が動かない状態から始まる
 - 有効カテゴリは `scripts/checks/integrity/lint-config.test.ts` が解決後設定の値で押さえる。カテゴリで有効になったルールは `rules` に名指ししないので、書いたルールとの突き合わせでは脱落を拾えない
-- TanStack の 2 plugin は JS plugin で載せる。oxlint にネイティブの実装は無く、ネイティブ化を求めた oxc-project/oxc#11648 は discussion へ移され、実装は入っていない (2026-09-26 に oxc の issue と PR を検索)。JS plugin は型情報を受け取れないので、型情報を使う `no-void-query-fn` は入れず、`no-rest-destructuring` は型情報を使うケースを見逃す
-- `prefer-query-options` は `QueryClient` のメソッド呼び出しを、client の出どころを同じファイルの `useQueryClient()` か `new QueryClient()` まで辿れたときだけ検査する。引数や router の context で受け取った client の呼び出しと、定数で渡した `queryKey` は検査されない (`@tanstack/eslint-plugin-query` 5.103.2 のルールの実装と、2026-09-26 の probe で確認)
+- TanStack Query の plugin は JS plugin で載せる。oxlint にネイティブの実装は無く、ネイティブ化を求めた oxc-project/oxc#11648 は discussion へ移され、実装は入っていない (2026-09-26 に oxc の issue と PR を検索)。JS plugin は型情報を受け取れないので、型情報を使う `no-void-query-fn` は入れず、`no-rest-destructuring` は型情報を使うケースを見逃す
+- `prefer-query-options` は `QueryClient` のメソッド呼び出しを、client の出どころを同じファイルの `useQueryClient()` か `new QueryClient()` まで辿れたときだけ検査する。引数で受け取った client の呼び出しと、定数で渡した `queryKey` は検査されない (`@tanstack/eslint-plugin-query` 5.103.2 のルールの実装と、2026-09-26 の probe で確認)
 - 上流が warn にしているルールは error で入れる。`vp check` は警告では落ちない
 
 ## 出典
@@ -157,10 +156,8 @@ recommended に無くても、規約や他の決定を機械で守るために�
 - React Compiler 診断の per-category ルール分割 (22 ルールとカテゴリの一覧): https://oxc.rs/blog/2026-08-18-react-compiler-support
 - eslint-plugin-react-hooks のルール一覧と preset: https://react.dev/reference/eslint-plugin-react-hooks
 - Rendering Lists (index を key にする問題に実行時警告がないこと): https://react.dev/learn/rendering-lists
-- `only-throw-error` と TanStack Router の衝突に対する公式の案内: https://tanstack.com/router/latest/docs/eslint/eslint-plugin-router
 - `@tanstack/eslint-plugin-query` のルールと設定: https://tanstack.com/query/latest/docs/eslint/eslint-plugin-query
 - `prefer-query-options`: https://tanstack.com/query/latest/docs/eslint/prefer-query-options
-- `@tanstack/eslint-plugin-router`: https://tanstack.com/router/latest/docs/eslint/eslint-plugin-router
 - oxlint の JS plugin が型情報を扱えないこと: https://oxc.rs/docs/guide/usage/linter/js-plugins
 - oxlint の JS plugin での TanStack Query の適合テスト: https://github.com/oxc-project/oxc/pull/26698
 - oxlint へ `@tanstack/eslint-plugin-query` のネイティブ化を求めた issue: https://github.com/oxc-project/oxc/issues/11648

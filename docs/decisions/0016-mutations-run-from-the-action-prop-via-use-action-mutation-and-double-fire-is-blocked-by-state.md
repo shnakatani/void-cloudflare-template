@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-14
-- 関連: ADR-0015 (ユーザー操作による更新は Transition を既定にする)、ADR-0017 (完了点とブロック範囲の軸)、ADR-0020 (registry コードは触らない。Action 層は registry の外に置く)、ADR-0010 (配置の原則)
+- 関連: ADR-0015 (ユーザー操作による更新は Transition を既定にする)、ADR-0017 (完了点とブロック範囲の軸)、ADR-0020 (registry コードは触らない。Action 層は registry の外に置く)
 
 ## Context
 
@@ -20,11 +20,7 @@ mutation を持つのは、ダイアログのフォームから項目を追加�
 どちらも `onSuccess` の中で `invalidateQueries` を `void` した直後にダイアログを `close()` していた。
 削除の二重発火は `src/components/parts/delete-confirm-dialog.tsx` の `deleteConfirmMutationProps` が閉包のフラグで塞いでいた。コード上の理由は「`isPending` は再レンダー後にしか立たず、それより前に届く再クリックを `disabled` では止められない」だったが、この前提は実測されていなかった (2026-09-13 に React の pending 描画は次のユーザーイベントより前に流れると確認した)。
 
-mutation 以外のユーザー操作由来の更新は、`src/hooks/use-route-retry.ts` の `useRouteRetry` が返す再試行 (Error Boundary の `reset()` と `router.invalidate()`) と、ダイアログの開閉 (Base UI の handle) があった。
-
-ルート遷移は既に Transition である。
-`@tanstack/router-core` は match の commit を `router.startTransition` へ渡し (`load-client.js`)、`@tanstack/react-router` の `Transitioner` がそれを `React.startTransition` で包む。
-2026-09-13 に router-core 1.171.27 と react-router 1.170.32 の dist で確認した。
+mutation 以外のユーザー操作由来の更新は、ダイアログの開閉 (Base UI の handle) があった。
 
 ### 制約: registry の Button に action prop は無い
 

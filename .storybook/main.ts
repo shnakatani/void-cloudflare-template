@@ -5,6 +5,7 @@ const config: StorybookConfig = {
   stories: ["../src/components/**/*.stories.@(ts|tsx)"],
   addons: ["@storybook/addon-a11y", "@storybook/addon-themes", "@storybook/addon-vitest"],
   framework: "@storybook/react-vite",
+  // telemetry の理由は docs/guides/storybook.md「telemetry を切る理由」
   core: { disableTelemetry: true },
 };
 

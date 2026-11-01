@@ -120,7 +120,7 @@ operator を持たない `*` は operator ごと書き換えられるので、�
 
 組の片方だけが上がると、peer の食い違いなら `verify:peers` が `unmet peer` で落ち、exact の依存なら依存先が 2 つの版で入る。`minor-and-patch` は major を束ねないので、組の major は依存ごとの PR に割れる。
 
-`.github/dependabot.yml` に、組ごとに `update-types` を書かないグループを 1 つ置き、その patterns を `minor-and-patch` の `exclude-patterns` にも写す。2026-10-30 に lockfile で確かめた組は、peer で結ばれる storybook、TanStack Router と Start、React、TanStack Query と、exact の依存で結ばれる Tailwind CSS (`@tailwindcss/vite` が `tailwindcss` を exact で依存に持つ) である。TanStack Router と Start は、peer (`@tanstack/router-plugin` と `@tanstack/react-router-devtools`) と exact の依存 (`@tanstack/react-start`) の両方で結ばれる。
+`.github/dependabot.yml` に、組ごとに `update-types` を書かないグループを 1 つ置き、その patterns を `minor-and-patch` の `exclude-patterns` にも写す。2026-10-30 に lockfile で確かめた組は、peer で結ばれる storybook、React と、exact の依存で結ばれる Tailwind CSS (`@tailwindcss/vite` が `tailwindcss` を exact で依存に持つ) である。
 
 グループの PR は、組の major と minor と patch を 1 本に混ぜて上げる。Dependabot はどの依存も最新の版へ上げ、今の major の中の最新の版を別に出さない (dependabot-core の npm の update checker は、`ignore` で外した版を除いた最新の版を 1 つ決める)。組の major を見送るときは、組の依存ごとに `dependency-name` と `update-types: ["version-update:semver-major"]` の `ignore` を足す。`@types/node` の行と同じ形である。外した major は候補から落ちるので、今の major の中の最新の版が届く。この `ignore` は pin なので、「pin には出口条件を書く」のとおり撤去条件を書く。
 
@@ -159,7 +159,6 @@ version update の PR の上限 (`open-pull-requests-limit`) の既定は 5 で�
 - Dependabot PR の処理が「依存更新の取り込み」と「pin の出口確認」を兼ねる。手順が 1 段増えるが、独立した定期タスクを管理するより忘れにくい
 - 再評価の条件は、GitHub が cooldown の既定値を変えたとき、pnpm のメジャー更新で strict 挙動の既定が変わったとき、Vite+ が自身の抱えるパッケージの exact pin をやめたとき、Vite+ が bot 向けの設定例を docs に載せたとき (voidzero-dev/vite-plus#2463、2026-09-29 に draft)、vite の alias と CLI の版のずれを検知して `vp` を止めるようになったとき (voidzero-dev/vite-plus#2462、2026-09-29 に draft)。`vitest` 系の `ignore` は、`vite-plus` の新しい版が npm の latest に載り、cooldown を過ぎたあとの Dependabot の実行でも `vite-plus` の PR ができないときにも見直す。Dependabot の PR を処理するとき (トリガ B) に、`docs/guides/dependencies-and-toolchain.md`「Vite+ を上げる」の手順で確かめる
 - `package.json` の `playwright` は caret で持つ。`*` にして版追随を `@vitest/browser-playwright` へ委任する形は成り立たない。その peer 自身が `playwright: "*"` (`optional: false`) で何も制約しておらず、委任先が存在しない (2026-09-02 実測)。実際に版を決めているのは lockfile と待機ゲートで、そこは caret でも変わらない。caret にすると major が Dependabot の別 PR になり判断が挟まる。exact pin ではないため出口条件は無い
-- `package.json` の `nitro` は nitro 3 の beta 版に exact pin する。TanStack Start の hosting ガイドが使う `nitro/vite` の plugin は nitro 3 にしかなく、nitro 3 は使える stable 版が出ていない (2026-09-27 に `npm view nitro dist-tags` の `latest` は `3.0.260903-beta`。`3.0.0` は公開されているが非推奨)。出口条件は nitro 3 の stable 版が `latest` に載ること。そのとき範囲指定か `catalog:` へ移せるかを見直す
 
 ## 出典
 
@@ -179,4 +178,3 @@ version update の PR の上限 (`open-pull-requests-limit`) の既定は 5 で�
 - dependabot-core: npm の update checker が最新の版を 1 つ決める処理: https://github.com/dependabot/dependabot-core/blob/3c3831767e12ff236e00bacdc5c5f69556824468/npm_and_yarn/lib/dependabot/npm_and_yarn/update_checker.rb 、`update-types` を持つグループが最新の版の semver の段で依存を受け取る処理: https://github.com/dependabot/dependabot-core/blob/3c3831767e12ff236e00bacdc5c5f69556824468/updater/lib/dependabot/updater/semver_grouping_rules.rb 、`update-types` の重ならないグループの割り当て: https://github.com/dependabot/dependabot-core/blob/3c3831767e12ff236e00bacdc5c5f69556824468/updater/lib/dependabot/dependency_group_engine.rb 、PR の開いているグループの依存を処理済みにする処理: https://github.com/dependabot/dependabot-core/blob/3c3831767e12ff236e00bacdc5c5f69556824468/updater/lib/dependabot/updater/operations/group_update_all_versions.rb
 - dependabot-core: `ignore` の `update-types` が security update で使われないこと: https://github.com/dependabot/dependabot-core/blob/3c3831767e12ff236e00bacdc5c5f69556824468/common/lib/dependabot/config/ignore_condition.rb
 - GitHub Docs: 設定ファイルで ignore を定義する推奨: https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security/managing-pull-requests-for-dependency-updates
-- TanStack Start の hosting ガイド (nitro/vite の plugin): https://tanstack.com/start/latest/docs/framework/react/guide/hosting

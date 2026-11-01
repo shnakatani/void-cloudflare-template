@@ -43,7 +43,7 @@ Why: token 経由なら dark mode 対応とデザイン変更が `styles.css` �
 | 本文・フォームラベル         | `text-base` / `text-sm`   |
 | 補足・タイムスタンプ・バッジ | `text-xs` 可              |
 
-- ページ見出しは `RoutePageHeader` (`route-page-header.tsx`)、カードの中は `CardPageTitle` (`page-title.tsx`) で描き、class を書き直さない (`docs/guides/styling-and-tokens.md`「文字の階層を選ぶ」)
+- ページ見出しは `PageHeader` (`page-header.tsx`)、カードの中は `CardPageTitle` (`page-title.tsx`) で描き、class を書き直さない (`docs/guides/styling-and-tokens.md`「文字の階層を選ぶ」)
 - 本文に `text-xs` を使わない (タブレット可読性)。ページ見出しとセクション見出しを同サイズにしない (階層が消える) (`docs/guides/styling-and-tokens.md`「文字の階層を選ぶ」)
 
 ## spacing 基準
@@ -103,17 +103,14 @@ Why: token 経由なら dark mode 対応とデザイン変更が `styles.css` �
 
 ## 状態表示
 
-- ページのローディングは、欠かせない query を route loader での取得の待ち合わせ + `useSuspenseQuery` + route の `pendingComponent` で、副次的な query をページの中の `<Suspense>` で出し、その失敗は `SectionErrorBoundary` で区画の中に出す (ADR-0033)
-- route に `pendingComponent` が無い画面は、router の `defaultPendingComponent` (`PendingContent`) が受ける。消さない。無いと suspend が root まで巻き上がって何も描かれない (ADR-0029)
-- ページ内で `useQuery` の `isPending` / `isLoading` を見て skeleton を出す分岐を書かず、`useSuspenseQuery` で読む。`useQuery` はサーバーで走らず、loader で取得していない query は hydration の後まで取得が始まらない (`docs/guides/data-loading.md`「`isPending` の分岐で読み込み中を出さない理由」)
 - skeleton はレイアウトを模倣し (`table-skeleton.tsx`)、図形を `aria-hidden` にして「読み込み中」の文言を区画に 1 つだけ置く。図形ごとに置くと同じ文言が数だけ読まれる (`docs/guides/accessibility.md`「読み込み中の表示を組む」)
 - 表の skeleton は本物の列見出しを持つ table として見せ、`<table>` に role を載せない。載せると `th` と `td` が role を失う (`docs/guides/accessibility.md`「読み込み中の表示を組む」)
-- route の pending 表示 (skeleton と `PendingContent`) に `aria-busy` を付けない。JAWS が要素ごと読み飛ばす (`docs/guides/accessibility.md`「読み込み中の表示を組む」)
+- 読み込み中の表示 (skeleton と `PendingContent`) に `aria-busy` を付けない。JAWS が要素ごと読み飛ばす (`docs/guides/accessibility.md`「読み込み中の表示を組む」)
 - 項目 (行、`StaleContent`、ボタン) に `aria-busy` を付けない。JAWS が要素ごと読み飛ばす (ADR-0026)
-- 列見出しと列の幅など skeleton と本体で合わせる値は、両方が参照する定数に置く。別々に持つと、読み込みが終わって本体へ置き換わるときにレイアウトがずれる (`docs/guides/data-loading.md`「読み込み中の表示を出す」)
-- 表の skeleton の列見出しと幅は列の定数から採り、列定義からは採らない。`pendingComponent` は code-split されず、列定義を import すると cell 部品ごと main bundle に入る (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
+- 列見出しと列の幅など skeleton と本体で合わせる値は、両方が参照する定数に置く。別々に持つと、読み込みが終わって本体へ置き換わるときにレイアウトがずれる (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
+- 表の skeleton の列見出しと幅は列の定数から採り、列定義からは採らない (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
 - ボタン内の送信中表示は `Spinner` (Skeleton にしない)。使う側は必ず `aria-hidden` を渡し、状態は `aria-disabled` で持つ (ADR-0026)
-- ボタンの children に `Spinner` を並べない。`PendingLabel` で label に重ねる (Action 層の部品と `ButtonLink` の `isPending` が使う)。並べると pending の間だけボタンが広がる (ADR-0042)
+- ボタンの children に `Spinner` を並べない。`PendingLabel` で label に重ねる (Action 層の部品が使う)。並べると pending の間だけボタンが広がる (ADR-0042)
 - データなしは `Empty` で組み、何が無いか (`EmptyTitle`) と次に取れる操作 (`EmptyContent` のボタンか、`EmptyDescription` で操作の場所を案内) をそろえる (`docs/guides/lists-and-search.md`「空状態を出す」)
 - 状態による見た目の分岐は、1 箇所なら `cn()` + 三項で書く。同型の分岐が 2 箇所以上に重なったら、ui 部品自身の見た目なら手段を「部品の見た目を変える」の表で選び、`ui/` の外の見た目なら部品に切り出す。`ui/` の外で `cva` の variant にしない (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
 
@@ -142,14 +139,14 @@ lint は custom `<Button>` の中身を見ない。テストが画面を見る�
 | テーブルの列見出し (`th`) | `scope="col"`。暗黙の role は locator と一部の支援技術で columnheader に解決されない (ADR-0018)                  |
 | ローディング等の状態表示  | `announce()` (`src/lib/live-announcer.ts`) で通知する。項目に `<output>` / `role="status"` を足さない (ADR-0026) |
 
-- 状態表示の例外は route の pending 表示の `PendingContent` (ADR-0026、ADR-0029)
+- 状態表示の例外は読み込み中の表示の `PendingContent` (ADR-0026)
 - live region は初期マークアップに置いて消さない。条件付きで mount した region は読まれないか挙動が揺れる (ADR-0026)
 - pending の検証は項目の状態 (行の静的テキスト、ボタンの `aria-disabled`) と announcer の通知で行う。`getByRole("status")` で項目を掴まない (`docs/guides/testing/waiting-and-assertions.md`「状態と通知を検証する」)
 - 取得結果の通知は、ページの effect が取得の決着で `announce()` し、直前と同じ条件なら出さない。取得中に出すと古い件数を読む (ADR-0027)
 - メニュー全体を包む単一の `DropdownMenuGroup` に、トリガーの名前を繰り返す `DropdownMenuLabel` を置かない。menu はトリガーを名前に持つので区別が増えない (`docs/guides/accessibility.md`「メニューの項目をグループに分ける」)
 - メニューのグループの見出し (`DropdownMenuLabel`) はグループごとに要否を決め、全グループには求めない。「迷ったら与える側に倒す」はグループの見出しには及ばない。見出しの無いグループも区切りで分かれる (`docs/guides/accessibility.md`「メニューの項目をグループに分ける」)
 - ナビゲーションは `<nav>` で包み、複数あるならそれぞれに区別できる名前を与える。同じリンクの組なら同じ名前にする (`docs/guides/accessibility.md`「ナビゲーションを組む」)
-- 1 つのまとまり (`<nav>` など) の中では、現在地の項目 1 つだけに `aria-current="page"` を付ける。`Link` は active で自動で付けるので、手で書くのは `Link` を使わないときだけ。`Link` の active は既定で前方一致なので、同じ `<nav>` に親と子へのリンクが並ぶなら親に `activeOptions={{ exact: true }}` を渡す (`docs/guides/accessibility.md`「ナビゲーションを組む」)
+- 1 つのまとまり (`<nav>` など) の中では、現在地の項目 1 つだけに `aria-current="page"` を付ける (`docs/guides/accessibility.md`「ナビゲーションを組む」)
 
 ### accessible name の落とし穴
 

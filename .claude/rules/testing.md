@@ -54,12 +54,6 @@ paths:
 - テストの中で `vi.stubEnv("TZ", …)` で TZ を切り替えず、TZ ごとの実行はスクリプト (`scripts/time-zones/run-tests.ts`) に任せる。threads / vmThreads の pool ではテストの中の切り替えが `Date` に効かず、無言で通る (`docs/guides/testing/time-zones.md`「TZ ごとにプロセスを分ける理由」)
 - ブラウザテストの TZ の切り替えは CDP の `Emulation.setTimezoneOverride` で行い、`afterEach` で `timezoneId: ""` を送って戻す。`vi.stubEnv` はブラウザの TZ を変えない (`docs/guides/testing/time-zones.md`「ブラウザテストで切り替える」)
 
-## テスト用の router
-
-- テストで既定にしたい router の options は、各テストに書かずに `createRouterWithTestDefaults` (`src/test/app/create-router-with-test-defaults.ts`) の既定に足す (`docs/guides/testing/real-router.md`「テスト用の router の既定をそろえる」)
-- `createRouterWithTestDefaults` の既定に本番の設定 (`src/router.tsx`) の値を写さない。本番と同じ設定を通したいテストは、その option (`notFoundMode` など) を自分で渡す (`docs/guides/testing/real-router.md`「テスト用の router の既定をそろえる」)
-- route の wrapper のテストで route tree の root を差し替えるなら、root に本番の root と同じ shell と失敗の部品を持たせ (`shellComponent` は `<HeadContent />` と children を描く関数、`errorComponent` は `FullScreenRouteError`、`notFoundComponent` は `NotFoundContent`)、router に `notFoundMode: "root"` を渡す。部品が無いと、どの route も受けない失敗で組み込みの部品と warn が出る。`HeadContent` が無いと、root が受けた失敗で title が変わらない (`docs/guides/testing/real-router.md`「route の wrapper をテストする」)
-
 ## a11y の検査は tag で分ける
 
 - `axe` で「アクセシブルか」を問うテストに `{ tags: ["a11y"] }` を付ける。単独実行は `--tags-filter a11y`。`--tags-filter '!a11y'` で外しても、挙動テストに相乗りした assert は走る (`docs/guides/accessibility.md`「a11y の tag を付ける」)
@@ -150,7 +144,7 @@ paths:
 | -   | 無効化された要素が反応しないことの検証                | `pointer-events` と状態属性で見る。ライブラリ内部のガードまで見に行かない         |
 | -   | 決着前の二重発火の検証                                | 1 → 2 の実イベントを 2 回。同一要素への同期 2 連射は実イベントで起きない          |
 
-- Base UI の popup を開いた直後に、開いたときの focus が当たる要素へキーを送るときは、`expect.element(x).toHaveFocus()` で focus を待ってから送る。route の announcer (ADR-0035) を置いた router で、開く操作をした要素から route として開いたダイアログを離れ、そのあとの focus を確かめるときも、同じく待ってから離れる。Base UI は開いたときの focus を 1 フレーム後に当て、届く前に離れると announcer が見出しへ移す (`docs/guides/testing/user-interactions.md`「popup を開いた直後にキーを送る」)
+- Base UI の popup を開いた直後に、開いたときの focus が当たる要素へキーを送るときは、`expect.element(x).toHaveFocus()` で focus を待ってから送る。Base UI は開いたときの focus を 1 フレーム後に当てる (`docs/guides/testing/user-interactions.md`「popup を開いた直後にキーを送る」)
 - `force: true` はブラウザのヒットテストを越えない。`pointer-events: none` の対象ではイベントが下の要素へ落ち、ハンドラは呼ばれない (`docs/guides/testing/user-interactions.md`「クリックを発火する」)
 - 合成イベント (`element.dispatchEvent(new MouseEvent(...))`) は使わない。実物では起きない経路を固定する (`docs/guides/testing/user-interactions.md`「クリックを発火する」)
 - `sr-only` のテキストは 1px + clip で viewport 判定に落ちる。`getByRole(..., { name })` で本体を掴む (`docs/guides/testing/user-interactions.md`「クリックを発火する」)

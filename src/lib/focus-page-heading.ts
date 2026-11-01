@@ -9,12 +9,12 @@ export const statusHeadingProps = { [STATUS_HEADING_ATTRIBUTE]: "" } as const;
  * キーボードの次の Tab は新しいページの先頭から始まる。
  * 移し先は `findFocusTarget` が選ぶ。レイアウトに h1 を置くと、遷移のたびにそちらへ移る。
  *
- * 遷移中にアプリか利用者が focus を移していたら奪わない (Navigation API の explainer の「Focus management」の条件。ADR-0035)。
+ * 遷移中にアプリか利用者が focus を移していたら奪わない (Navigation API の explainer の「Focus management」の条件)。
  * 移した先が遷移前と同じ要素でも、移したとみなす。移すのは、focus している要素が無い (body か null) ときと、
  * 遷移中に focus が一度も移らなかったときだけ。
  * 移し先が支援技術から隠れているときと、`role` と `aria-modal="true"` を持つダイアログが開いているときも移さない。
- * モーダルのダイアログは開くと focus を自分の中へ移すので、その背後の見出しを経由させない (ADR-0035)。
- * スクロール位置は router の scrollRestoration が決めるので、focus ではスクロールさせない。
+ * モーダルのダイアログは開くと focus を自分の中へ移すので、その背後の見出しを経由させない。
+ * スクロール位置は遷移の側が決めるので、focus ではスクロールさせない。
  */
 export function focusPageHeading(focusChangedDuringNavigation: boolean): void {
   const active = document.activeElement;
@@ -34,7 +34,7 @@ export function focusPageHeading(focusChangedDuringNavigation: boolean): void {
 /**
  * 遷移の後の focus の移し先。状態の見出しの印 (`statusHeadingProps`) の付いた要素を、文書順で先の h1 より先に選び、
  * 無ければ文書順で最初の h1 を選ぶ。ページの位置の失敗の画面では、ページの名前の h1 の下に失敗の見出しが出る。
- * h1 へ移すと、描画中の throw では失敗が title にも focus にも出ない (ADR-0035)
+ * h1 へ移すと、描画中の throw では失敗が title にも focus にも出ない
  */
 function findFocusTarget(): HTMLElement | null {
   return (

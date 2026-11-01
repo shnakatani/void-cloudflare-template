@@ -140,7 +140,8 @@ export const lintConfig = {
     "typescript/no-unsafe-return": "error",
     "typescript/no-useless-constructor": "error",
     // allowThrowingAny と allowThrowingUnknown を既定の true から外し、型が any か unknown の値の throw も
-    // 止める (catch で受けた値の投げ直しは止めない。ADR-0038「Error でない値の throw を止める lint のオプション」)
+    // 止める (catch で受けた値の投げ直しは止めない)。`throw await res.json()` のような Error でない値の throw を通さない。
+    // ADR-0007 の基準から外れる。共有の設定 (eslint-config-love) も 2 つを false にしている
     "typescript/only-throw-error": [
       "error",
       {

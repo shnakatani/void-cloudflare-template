@@ -1,14 +1,13 @@
 # tanstack-start-template
 
-TanStack Start と Vite+ で組んだ Web アプリケーションの template repository。
-バックエンドサービス・認証・デプロイ先は選定しておらず、DB をローカルの SQLite に仮置きしたうえで、それぞれ置き換える箇所だけを用意してある。
+Vite+ で組んだ Web アプリケーションの template repository。
+バックエンドサービス・認証・デプロイ先は選定していない。
 テンプレートから始めたら、`TEMPLATE_SETUP.md` の手順を済ませてから、その文書ごと消す。
 
 ## 技術スタック
 
-- TanStack Start (React 19 + TanStack Router / Query / Form / Table)
+- React 19 + TanStack Query / Form / Table
 - shadcn/ui (Base UI) + Tailwind CSS v4
-- Drizzle ORM + SQLite
 - Vite+ (`vp`) + mise
 
 ## セットアップ
@@ -27,7 +26,6 @@ mise のシェル hook を入れる。hook の走らないシェルでの打ち�
 mise trust && mise install                        # .mise.toml を信頼して [env] と port を読ませ、[tools] のツールを入れる
 vp install                                        # 依存パッケージ
 vp exec playwright install chromium --only-shell  # vp install では入らない。無いと browser project のテストが落ちる
-vp run db:migrate                                 # drizzle/ の migration を DB へ適用する
 mise run serve                                    # dev server。port は worktree ごとに変わる (.mise.toml の daemons)
 mise run storybook                                # 部品とデザイントークンのカタログ (docs/guides/storybook.md)
 ```
@@ -41,14 +39,11 @@ mise run storybook                                # 部品とデザイントー�
 | `vp run verify`                | マージ前の検証をまとめて実行する。手順は `vite.config.ts` の `verifySteps` が持つ                         |
 | `vp run contrast`              | トークンからコントラスト比を測る。引数は `docs/guides/styling-and-tokens.md`「比を測る」                  |
 | `vp run a11y:incomplete`       | axe を回すテストを verbose で走らせ、axe が判定できなかった項目の注釈を読む                               |
-| `vp run db:generate`           | `src/server/db/schema.ts` から `drizzle/` へ migration を生成する                                         |
-| `vp run db:migrate`            | `drizzle/` の migration を `DB_FILE_NAME` の DB へ適用する                                                |
-| `vp run db:seed`               | migration を当ててから、DB の行を消して `scripts/db/` の見本のデータを入れ直す                            |
 | `vp test run --project <名前>` | project 単位で実行する。`unit` / `browser` / `browser-no-compiler` / `checks-integrity` / `scripts-tools` |
 | `vp check --fix`               | コミット前に format・lint・型検査を通す                                                                   |
-| `vp build`                     | 本番ビルド。出力は `.output/`、起動は `vp run start`                                                      |
+| `vp build`                     | 本番ビルド                                                                                                |
 
-`vp <name>` は組み込みコマンド (一覧は `vp help`)、`vp run <name>` は `package.json` の script か `vite.config.ts` のタスクを走らせる。組み込みと同名の script は、`start` と対の `build` だけを置く (ADR-0004)。
+`vp <name>` は組み込みコマンド (一覧は `vp help`)、`vp run <name>` は `package.json` の script か `vite.config.ts` のタスクを走らせる。組み込みと同名の script は `build` だけを置く (ADR-0004)。
 
 ## ドキュメント
 

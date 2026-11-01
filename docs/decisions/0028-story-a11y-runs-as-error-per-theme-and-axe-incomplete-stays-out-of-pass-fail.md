@@ -9,10 +9,10 @@
 
 story を書いた部品は、`parameters.a11y.test` の設定しだいで axe の対象になる。同じ axe を 2 つの層が回すので、それぞれの合否に何を入れるかを決める。
 
-| 層                       | きっかけ                       | 対象                     |
-| ------------------------ | ------------------------------ | ------------------------ |
-| `addon-a11y`             | 全 story × light dark          | story を書いた部品       |
-| `expectNoA11yViolations` | `src/routes/` のブラウザテスト | テストに書いたケースだけ |
+| 層                       | きっかけ              | 対象                     |
+| ------------------------ | --------------------- | ------------------------ |
+| `addon-a11y`             | 全 story × light dark | story を書いた部品       |
+| `expectNoA11yViolations` | ブラウザテスト        | テストに書いたケースだけ |
 
 `addon-a11y` の `test` は 3 値で、既定の `todo` では違反が出ても合否へ入らない。Storybook の docs「Accessibility testing」は次のように書く。
 
@@ -96,10 +96,10 @@ a11y を light と dark の両方へ当てるため、`tooling/test/storybook-pr
 
 `incomplete` は、Storybook も axe も手で確かめる対象として返す。合否は `violations` だけで決め、`incomplete` は層ごとに読む場所を決める。
 
-| 層                               | 合否                         | `incomplete` を読む場所                     |
-| -------------------------------- | ---------------------------- | ------------------------------------------- |
-| story (`src/components/**`)      | `addon-a11y` の `violations` | Storybook の UI の a11y パネルの Incomplete |
-| ブラウザテスト (`src/routes/**`) | `violations`                 | 該当テストの行に付く warning の注釈         |
+| 層                          | 合否                         | `incomplete` を読む場所                     |
+| --------------------------- | ---------------------------- | ------------------------------------------- |
+| story (`src/components/**`) | `addon-a11y` の `violations` | Storybook の UI の a11y パネルの Incomplete |
+| ブラウザテスト              | `violations`                 | 該当テストの行に付く warning の注釈         |
 
 story の層は `addon-a11y` の判定をそのまま使い、読み直す層を足さない。足すと Context の「`incomplete` を名指しのルールで落としたときの代償」が全部戻る。
 

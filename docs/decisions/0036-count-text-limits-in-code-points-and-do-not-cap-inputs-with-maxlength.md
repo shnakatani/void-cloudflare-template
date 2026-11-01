@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-29
-- 関連: ADR-0013 (ドメイン型は valibot のスキーマから導出する)、ADR-0019 (検索語の上限は reject せず切り詰める)
+- 関連: ADR-0013 (ドメイン型は valibot のスキーマから導出する)
 
 ## Context
 
@@ -10,7 +10,7 @@
 
 | 前提                       | 中身                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 上限の判定はスキーマが持つ | server function の validator とフォームのフィールド検証が同じスキーマを使う (ADR-0013)                                                                                                                                                                                                                                                                                                                               |
+| 上限の判定はスキーマが持つ | server の検証とフォームのフィールド検証が同じスキーマを使う (ADR-0013)                                                                                                                                                                                                                                                                                                                                               |
 | DB は SQLite               | `length()` と `substr` は code point で数える (sqlite.org の lang_corefunc)                                                                                                                                                                                                                                                                                                                                          |
 | HTML の `maxlength`        | Infra の length (「the number of code units」) で数える。超えないように止めるかはブラウザの任意 (「User agents may prevent」)                                                                                                                                                                                                                                                                                        |
 | valibot の長さの action    | `maxLength` は `.length` と同じ UTF-16 の code unit、`maxCodePoints` は code point、`maxGraphemes` は `Intl.Segmenter` の grapheme で数える。切り詰めの action は無く、Zod 4.6.5・Effect 3.22.2 の Schema・ArkType 2.2.5・TypeBox 1.3.34 の string の API にも無い。組み込みで持つ Joi 18.2.9 の `string.truncate()` は code unit で切る (valibot は 1.5.0。2026-09-29 に各 docs と同梱の型定義、Joi のソースで確認) |
@@ -48,7 +48,7 @@
 
 ## 調査結果
 
-2026-09-29 に Node v24.21.0、valibot 1.5.0、better-sqlite3 で測った。
+2026-09-29 に Node v24.21.0、valibot 1.5.0、SQLite で測った。
 
 | 文字列        | code unit | code point | grapheme | SQLite の `length()` |
 | ------------- | --------- | ---------- | -------- | -------------------- |
