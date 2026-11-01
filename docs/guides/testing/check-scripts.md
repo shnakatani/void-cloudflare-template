@@ -19,10 +19,11 @@
 4. `src/` 全体へ当てるソース検査なら、`scripts/checks/source/` と `checks-source` project を対で作る。project は `tooling/test/config.ts` の `projects` に足す
 5. 判定を `scripts/lib/` の純粋関数へ分け、単体テストを別に持つ
 
-| 手順                   | 実例                                                                                                                                                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1 (判断が要る検査)     | `scripts/checks/integrity/lint-config.test.ts` の緩和の適用先とルールの検査 (広げたのが意図なら期待値へ足し、誤りなら設定を直す)、`scripts/checks/integrity/registry-baseline.test.ts` の 3-way の判別 |
-| 5 (判定と適用を分ける) | 実行側の `scripts/checks/runtime/security-headers.ts` と、判定の `scripts/lib/response-headers.ts`                                                                                                     |
+| 手順                     | 実例                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 (判断が要る検査)       | `scripts/checks/integrity/lint-config.test.ts` の緩和の適用先とルールの検査 (広げたのが意図なら期待値へ足し、誤りなら設定を直す)、`scripts/checks/integrity/registry-baseline.test.ts` の 3-way の判別                                                                                                                                                     |
+| 5 (判定と適用を分ける)   | 実行側の `scripts/checks/runtime/security-headers.ts` と、判定の `scripts/lib/response-headers.ts`                                                                                                                                                                                                                                                         |
+| 3 (成果物を起動する検査) | `scripts/checks/runtime/auth-redirect.ts` と `scripts/checks/runtime/security-headers.ts`。どちらも `scripts/lib/preview-server.ts` の `startPreview` で成果物を `vp preview` に載せ、検査のあと `stop()` で止める。`startPreview` は、成果物が `void.config.ts` より古いときと、`dist/ssr/.dev.vars` に `BETTER_AUTH_SECRET` が無いときに起動の前に止まる |
 
 - 成果物をサーバとして起動する検査は、OS に選ばせた空きの port で、使用中なら別の port へずらさない形 (`--strictPort`) で起動する。固定の port だと、前回の残骸や別の worktree の検査が同じ port で答え、こちらの起動が失敗しても古い成果物を検査して緑になる (`scripts/lib/preview-server.ts`)
 

@@ -41,6 +41,7 @@
 | `durable-objects/`             | 置けない     | `durable/scan.ts` の `scanDurableObjectModules` が、`.d.ts` 以外の直下の `.ts` をすべて durable object のモジュールとして読む。`_` を見ない                                                                                                                                                                                                                     |
 | `db/`                          | 置けない     | `cli/db.ts` の `collectSchemaModuleFiles` が `db/schema/` の `.ts` をすべて import し、`drizzle/discover.ts` の `schemaSpecifier` が `./db/schema/*.ts` を Drizzle Kit に渡す。`_` を見ない。`db/` の直下の他のファイルと `db/migrations/` は走査の対象が `schema.ts`・`seed.*`・`*.sql` なので、テストが拾われるかは確かめていない。ディレクトリ単位で置かない |
 
+- D1 を読む query のテストは、query の関数と同じ `src/features/<domain>/` に `*.test.ts` で置き、unit project で走らせる。D1 は `src/test/app/d1.ts` の `createTestD1()` が Miniflare で作る。`db/` には置かない (上の表。手順は `docs/guides/database.md`「テストで D1 を使う」)
 - 種別を足すときは、置き場所と project を対で作る (「project を足す」)
 
 ### テストの API を import する
