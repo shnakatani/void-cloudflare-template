@@ -39,15 +39,18 @@ function recordFocusChanges(): FocusChangeRecord {
  * `document.title` を読み上げる (ADR-0049)。root の layout に置き、DOM を描かない。
  *
  * Void は遷移の開始と完了を購読させないので、`useNavigation()` が idle 以外の新しい値になった描画から focus の記録を始め、
- * `useRouter().path` が変わった描画の effect で伝える。Void は新しいページの commit の layout effect の後に
- * `document.title` を書き換えるので、passive effect の時点では title が新しい値になっている。
+ * `useRouter().path` が変わった描画 (新しいページの描画) の effect で見出しへ focus を移し、`useNavigation()` が
+ * idle に戻った描画 (遷移の完了) の effect で title を読み上げる。Void は新しいページを描いた後、遷移を完了する前に
+ * `document.title` を書き換えるので、完了の時点の title は新しいページの値になっている。
+ * 新しいページの描画の effect で読むと、ページの layout effect が同期の更新を起こしたときに前の title を読む。
  * query だけの変化と最初の描画では伝えない。
  */
 export function RouteAnnouncer(): null {
   const { path } = useRouter();
   const navigation = useNavigation();
   const focusChanges = useRef<FocusChangeRecord | null>(null);
-  const announcedPath = useRef(path);
+  const handledPath = useRef(path);
+  const titlePending = useRef(false);
 
   // 依存は state ではなく値そのものに置く。Void は遷移を始めるたびに新しい値を作り、ページの描画では同じ値を保つ
   // (pages-client.ts の appReducer)。state で見ると、遷移が重なったときに前の遷移の記録が残る
@@ -62,17 +65,22 @@ export function RouteAnnouncer(): null {
   }, [navigation]);
 
   useEffect(() => {
-    // 伝えた path を ref に持ち、同じなら何もしない。最初の描画と StrictMode の付け直しはここで止まる
-    if (path === announcedPath.current) {
-      return;
+    // 扱った path を ref に持ち、同じなら focus を動かさない。最初の描画と StrictMode の付け直しはここで止まる
+    if (path !== handledPath.current) {
+      handledPath.current = path;
+      const record = focusChanges.current;
+      focusChanges.current = null;
+      record?.stop();
+      focusPageHeading(record?.changed ?? false);
+      titlePending.current = true;
     }
-    announcedPath.current = path;
-    const record = focusChanges.current;
-    focusChanges.current = null;
-    record?.stop();
-    focusPageHeading(record?.changed ?? false);
-    announce(document.title);
-  }, [path]);
+    // Void の遷移では、新しいページの描画と遷移の完了は別の描画に来る。path の変化と idle が同じ描画に来たら
+    // (commit が失敗して前のページへ戻るとき) ここで続けて読み上げる
+    if (titlePending.current && navigation.state === "idle") {
+      titlePending.current = false;
+      announce(document.title);
+    }
+  }, [path, navigation]);
 
   return null;
 }

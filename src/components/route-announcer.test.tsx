@@ -66,6 +66,19 @@ describe("RouteAnnouncer", () => {
     await expectAnnouncements(["B — アプリ"]);
   });
 
+  it("新しいページが描かれた後、遷移が終わってから title を読み上げる", async () => {
+    const router = createFakeRouter("/a");
+    setDocumentTitle("A — アプリ");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={loading} />);
+    router.navigate("/b");
+    await expect.element(screen.getByRole("heading", { name: "/b" })).toHaveFocus();
+    // Void は新しいページを描いた後、遷移を終える前に document.title を書き換える
+    setDocumentTitle("B — アプリ");
+    await screen.rerender(<Harness router={router} />);
+    await expectAnnouncements(["B — アプリ"]);
+  });
+
   it("押した要素に focus が残ったまま path が変わっても、見出しへ移す", async () => {
     const router = createFakeRouter("/a");
     const screen = await render(<Harness router={router} />);
@@ -102,11 +115,11 @@ describe("RouteAnnouncer", () => {
     before.element().focus();
     setDocumentTitle("B — アプリ");
     router.navigate("/b");
+    await screen.rerender(<Harness router={router} />);
     await expectAnnouncements(["B — アプリ"]);
     await expect.element(before).toHaveFocus();
 
     // 次の遷移では記録が空から始まり、focus が動かなければ見出しへ移す
-    await screen.rerender(<Harness router={router} />);
     await screen.rerender(<Harness router={router} navigation={loading} />);
     router.navigate("/c");
     await expect.element(screen.getByRole("heading", { name: "/c" })).toHaveFocus();
