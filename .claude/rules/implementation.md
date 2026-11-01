@@ -47,7 +47,7 @@ lint (`typescript/no-misused-promises`) が止める。直し方 (`docs/guides/r
 
 ## ユーザー操作による更新は Transition の中で行う
 
-lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-0016、完了点と止める範囲は ADR-0017)。
+lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-0016、完了点と後の送信による取り消しは ADR-0017)。
 
 | 更新の種類                        | 書き方                                                                                           |
 | --------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -59,8 +59,8 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 - mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` は `action()` の `ok: false` を toast かフィールドのエラーに、throw (401・403・500 など) を toast に出し、reject しない。取り消し (`AbortError`) は何も出さない。呼び出し側が通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`docs/guides/react/updates.md`「mutation の書き方」)
 - `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
-- 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
-- page の action の起点は、どの項目のものも `useNavigation().state === "submitting"` の間は `aria-disabled` で止める。2 つ目の action が 1 つ目を中断し、1 つ目の Action が境界に届く。busy の表現は対象の項目だけに付ける (`docs/guides/react/updates.md`「走っている action のあいだ、ほかの起点を止める」)
+- 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける。Action の中で閉じるのは `handle.close()` で行う。同期区間で React の state (`open`) を false にしても、ダイアログは Action の終わりまで残る (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
+- 送信中にほかの項目の起点を止める仕組みを足さない。後から始めた送信が前の送信を取り消し、取り消された `run` は何も出さずに `false` を返す。`useNavigation().state` は Action から始めた送信の間 `"submitting"` を描かないので、止める信号にならない。busy の表現は対象の項目だけに付ける (ADR-0017)
 - Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず action の応答で入れ替わる props に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)
 - 楽観表示は loader の props を元に `useOptimistic` で出し、reducer で書く。reducer は元の値に変更がすでに入っていても同じ結果を返す形にする。新しい props が Action の途中で commit されると、素直に足した reducer は同じ項目を 2 つ並べる (`docs/guides/react/updates.md`「楽観表示を出す」)
 - 操作の開始の announce は Action の中の `run` より前、完了は `usePageAction` の `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
