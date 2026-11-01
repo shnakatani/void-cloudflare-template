@@ -1,7 +1,7 @@
-# ADR-0048: Void の router に依存する部品は、export された router の context を通して story とブラウザテストで描く
+# ADR-0048: Void のページの context に依存する部品は、export された router・navigation・shared の context を通して story とブラウザテストで描く
 
 - Status: Accepted
-- Date: 2026-11-01
+- Date: 2026-11-02
 
 ## Context
 
