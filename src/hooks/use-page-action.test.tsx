@@ -116,6 +116,25 @@ describe("usePageAction", () => {
     );
   });
 
+  it("422 のフィールドのエラーが空なら、警告を残して toast に出す", async () => {
+    vi.mocked(action).mockResolvedValue({
+      ok: false,
+      error: actionError(422, { errors: {} }),
+    });
+    const onValidationError = vi.fn();
+    const { result } = await renderHook(() => usePageAction(ACTION_URL, { onValidationError }), {
+      wrapper: WithToaster,
+    });
+
+    await expect(result.current.run({ title: "", memo: "" })).resolves.toBe(false);
+    await expect.element(page.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
+    expect(onValidationError).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledWith(
+      "[usePageAction] 422 にフィールドのエラーがありません",
+      { url: ACTION_URL, body: { errors: {} } },
+    );
+  });
+
   it("action が throw した失敗は捕まえない", async () => {
     vi.mocked(action).mockRejectedValue(actionError(500, null));
     const { result } = await renderHook(() => usePageAction(ACTION_URL, {}));

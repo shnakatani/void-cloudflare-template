@@ -34,7 +34,8 @@ export type PageActionFormOptions<U extends ActionUrl> = ActionCallOptions<U> &
  * `run` は `action()` を await し、結果ごとに次を行う。
  *
  * - 成功: `onSuccess` を await して `true`
- * - 422 のフィールドのエラー: `onValidationError` に渡して `false`。渡していなければ警告を残し、次の行と同じく toast に出す
+ * - 422 のフィールドのエラー: `onValidationError` に渡して `false`。渡していないときと、エラーが空のときは、
+ *   警告を残して次の行と同じく toast に出す
  * - それ以外の、呼び出し側で扱う失敗 (`ok: false`): 固定の文言の toast に出して `false`
  *
  * 失敗の通知を `run` が持つので、呼び出し側が書き忘れても無通知にならない。
@@ -61,6 +62,15 @@ export function usePageAction<U extends ActionUrl>(
     }
     // Void の useForm と同じく、フィールドのエラーとして読むのは 422 だけにする
     const fieldErrors = result.error.status === 422 ? getValidationErrors(result.error.body) : null;
+    if (fieldErrors && Object.keys(fieldErrors).length === 0) {
+      // `{ errors: {} }` を field に写すと何も出ないので、フィールドのエラーを持たない失敗と同じく toast に出す
+      console.warn("[usePageAction] 422 にフィールドのエラーがありません", {
+        url,
+        body: result.error.body,
+      });
+      toastMutationError(result.error);
+      return false;
+    }
     if (fieldErrors && onValidationError) {
       onValidationError(fieldErrors);
       return false;
