@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-14
-- 関連: ADR-0020 (registry コードは触らない)、ADR-0014 (手動メモ化の増減)、ADR-0015 / ADR-0017 (楽観表示の置き場)
+- 関連: ADR-0020 (registry コードは触らない)、ADR-0014 (手動メモ化の増減)、ADR-0015 (楽観表示)、ADR-0017 (完了点)
 
 ## Context
 
