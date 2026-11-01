@@ -9,7 +9,11 @@ import { CardPageTitle } from "@/components/parts/page-title";
 import { CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 import { HOME_PATH, LOGIN_PATH } from "@/features/auth/access";
-import { CREDENTIAL_FIELD_LABELS, signUpSchema } from "@/features/auth/credentials";
+import {
+  CREDENTIAL_FIELD_LABELS,
+  SIGN_UP_PASSWORD_DESCRIPTION,
+  signUpSchema,
+} from "@/features/auth/credentials";
 import { requestAuth } from "@/features/auth/request-auth";
 import { useAppForm } from "@/hooks/use-app-form";
 import { submitClearingServerFieldErrors } from "@/lib/server-field-errors";
@@ -62,6 +66,7 @@ export default function SignUpPage() {
               {(field) => (
                 <field.FormTextField
                   label={CREDENTIAL_FIELD_LABELS.password}
+                  description={SIGN_UP_PASSWORD_DESCRIPTION}
                   type="password"
                   autoComplete="new-password"
                   fieldValue={field.state.value}

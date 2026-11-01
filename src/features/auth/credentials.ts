@@ -7,6 +7,9 @@ import * as v from "valibot";
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
+/** 登録のパスワードの欄に、エラーの前から出す説明 (WCAG 3.3.2) */
+export const SIGN_UP_PASSWORD_DESCRIPTION = `${PASSWORD_MIN_LENGTH} 文字以上`;
+
 /** 項目の呼称。検証メッセージと各項目の `v.metadata({ label })` が同じ定数を使う (ADR-0013) */
 const NAME_LABEL = "名前";
 const EMAIL_LABEL = "メールアドレス";

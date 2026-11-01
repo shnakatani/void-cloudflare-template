@@ -7,7 +7,7 @@ import { ja } from "react-day-picker/locale/ja";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -57,6 +57,8 @@ interface FormTextFieldProps
     >,
     FieldValueTypeCheckProps<string> {
   label: string;
+  /** 入力の条件など、エラーの前から見せる説明 (WCAG 3.3.2)。エラーと並んで入力の説明になる */
+  description?: string;
   /** handleChange 前に入力値を整形する (例: 数字のみに制限する) */
   sanitize?: (raw: string) => string;
 }
@@ -92,6 +94,7 @@ function useFormFieldState<T>() {
 
 export function FormTextField({
   label,
+  description,
   placeholder,
   type,
   inputMode,
@@ -101,6 +104,10 @@ export function FormTextField({
   sanitize,
 }: FormTextFieldProps) {
   const { field, id, errorId, errors, invalid } = useFormFieldState<string>();
+  const descriptionId = useId();
+  const describedBy = [description === undefined ? null : descriptionId, invalid ? errorId : null]
+    .filter((value) => value !== null)
+    .join(" ");
 
   return (
     <Field
@@ -125,8 +132,11 @@ export function FormTextField({
         }
         onBlur={field.handleBlur}
         aria-invalid={invalid}
-        aria-describedby={invalid ? errorId : undefined}
+        aria-describedby={describedBy === "" ? undefined : describedBy}
       />
+      {description === undefined ? null : (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      )}
       <FieldError id={errorId} errors={errors} />
     </Field>
   );
