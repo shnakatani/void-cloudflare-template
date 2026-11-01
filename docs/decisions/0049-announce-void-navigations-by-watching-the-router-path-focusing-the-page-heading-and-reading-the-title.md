@@ -31,7 +31,7 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 伝え方           | 新しいページの見出しへの focus 移動と、title の読み上げを併用する                                                                                                                                                          |
 | 伝える遷移       | `useRouter().path` が変わる遷移。戻る・進むも同じに扱う                                                                                                                                                                    |
-| 伝えない遷移     | query だけの変化と、最初の描画                                                                                                                                                                                             |
+| 伝えない遷移     | query か hash だけの変化と、最初の描画                                                                                                                                                                                     |
 | 検出             | root の layout に置いた部品 (`src/components/route-announcer.tsx`) の `useEffect` で `path` の変化を見る。伝えた path を ref に持ち、同じなら何もしない                                                                    |
 | focus の移し先   | `focusPageHeading` (`src/lib/focus-page-heading.ts`) が選ぶ。失敗の見出しの印の要素、無ければ最初の `<h1>`、どちらも無ければ `<body>`。`focus({ preventScroll: true, focusVisible: false })` で枠を出さない                |
 | focus を奪わない | `useNavigation().state` が idle 以外になってから path が変わるまでに、利用者かアプリが focus を動かしていたら移さない。そのとき focus が `<body>` か `null` に落ちていれば移す。モーダルのダイアログが開いていれば移さない |
@@ -62,7 +62,7 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 
 条件は Navigation API の explainer の「Focus management」に合わせる: "this focus reset will not take place if the user or developer has manually changed focus while the promise was settling, and that element is still visible and focusable"。
 
-- 記録は `useNavigation().state` が idle 以外になった描画の effect で始める。Void は開始を購読させないので、これが取れる最も早い時点である
+- 記録は `useNavigation().state` が idle 以外になった描画の effect で始める。Void は開始を購読させないので、公開の hook で取れる最も早い時点である
 - 動いたかは、直前に `focusin` を受けた要素 (始めは記録を始めたときに focus していた要素) と違う要素が `focusin` を受けたかで見る。同じ要素へ戻っても、動いたとみなす。戻るまでの間に利用者かアプリが focus を動かしている
 - `focusin` に出ない動き (`blur()` で viewport へ外すなど) は見えない
 - 遷移中に動いた focus の先が消えて `<body>` に落ちたら、見出しへ移す。explainer の条件の "still visible and focusable" に当たらない
@@ -70,6 +70,7 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 ### 伝えない遷移
 
 - query だけの変化は伝えない。focus を動かすと検索の入力欄から外れ、件数は ADR-0027 の通知が伝える
+- hash だけの変化 (同じページの中の移動) は path を変えないので伝えない。ページは変わっていない
 - 最初の描画はブラウザが読むので伝えない。layout の最初の描画の path を ref の初期値にし、StrictMode の付け直しでも走らない
 
 ### title の組み方
