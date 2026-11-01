@@ -2,7 +2,6 @@
 
 - Status: Accepted
 - Date: 2026-11-01
-- 関連: ADR-0039 (story とブラウザテストの描き方)
 
 ## Context
 
