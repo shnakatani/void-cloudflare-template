@@ -50,7 +50,13 @@ export default defineConfig({
   lint: lintConfig,
   fmt: {
     sortImports: true,
-    ignorePatterns: [".claude/worktrees/**", ".agents/**", ".claude/skills/**"],
+    // db/migrations/meta/ は drizzle-kit の生成物。手で直さず、format し直すと次の生成でまた崩れる
+    ignorePatterns: [
+      ".claude/worktrees/**",
+      ".agents/**",
+      ".claude/skills/**",
+      "db/migrations/meta/**",
+    ],
   },
   resolve: {
     tsconfigPaths: true,
