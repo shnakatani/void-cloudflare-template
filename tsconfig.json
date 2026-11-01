@@ -1,17 +1,12 @@
-// 実行環境ごとに型を分ける (ADR-0047)。ここはどのファイルも持たず、`files: []`・`references`・shadcn の CLI のための
-// `paths` だけを持って、4 つの tsconfig をつなぐ
+// 実行環境ごとに型を分ける (ADR-0047)。ここはどのファイルも持たず、`references` で 4 つの tsconfig をつなぐ。
+// `extends` は、ルートの `paths` を読む shadcn の CLI のためにある
 {
+  "extends": "./tsconfig.paths.json",
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.test.json" },
     { "path": "./tsconfig.worker.json" },
     { "path": "./tsconfig.node.json" }
-  ],
-  "compilerOptions": {
-    // shadcn の CLI はこのファイルの paths だけを読む (shadcn-ui/ui#11466)。tsconfig.paths.json の `@/*` と同じ値にする
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  }
+  ]
 }

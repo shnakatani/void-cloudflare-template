@@ -4,7 +4,7 @@
 {
   "compilerOptions": {
     "paths": {
-      // tsconfig.json と同じ値にする。shadcn の CLI は tsconfig.json の paths だけを読む
+      // ルートの tsconfig.json もこのファイルを extends する。shadcn の CLI はルートの tsconfig.json の paths を読む
       "@/*": ["./src/*"],
       // .void/tsconfig.json の paths の写し。パスはこのファイルからの相対で書く
       "void/routes": ["./.void/routes.d.ts"]
