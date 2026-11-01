@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-02
-- 関連: ADR-0016 (Action 層と `usePageAction`)、ADR-0020 (registry コードは触らない。Action 層は registry の外に置く)、ADR-0017 (完了点と、同時に走らせる action の数)
+- 関連: ADR-0016 (Action 層と `usePageAction`)、ADR-0020 (registry コードは触らない。Action 層は registry の外に置く)、ADR-0017 (完了点と、後の送信による前の送信の取り消し)
 
 ## Context
 
@@ -31,10 +31,29 @@ Void の React の adapter は、page の props を React の state で持ち、
 | 遷移は Transition として予約される                                                                  | `node_modules/void/docs/reference/api/pages.md`「React Runtime」の `useRouter()`「React navigations are scheduled as transitions.」                                                                                                          |
 | action の応答は、loader を走らせ直した props を同じ応答で返す                                       | `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`「Defining an Action」の表。`void/src/pages/navigation-engine.ts` の `loadNavigationShell` は、POST でも 1 回の fetch で page data を受ける (v1.4.0 のソースで確認)         |
 | 新しい props は `useReducer` の state で、`useTransition` の `startTransition` の中で dispatch する | `@void/react` 1.4.0 の `runtime/pages-client.ts` の `App` (`schedule` の `reveal`。v1.4.0 のソースで確認)。`navigationFallback` を渡したときは、shell が次の描画までに届かないと Transition の外で dispatch する。テンプレートは渡していない |
-| `action()` は、新しい props が commit された後に resolve する                                       | `pages-client.ts` の `finishNavigation` は `RouteResource` の `useLayoutEffect` から呼ばれ、`resource.commit()` の後に `action()` の Promise を resolve する (v1.4.0 のソースで確認。docs に記述は無い)                                      |
+| `action()` は応答 (shell) の到着で resolve し、新しい props は Action の終わりに commit される      | 下の「`action()` は shell の到着で resolve する」                                                                                                                                                                                            |
 
 `useOptimistic` は、Action の間に元の値が変わると reducer を新しい値で走らせ直す (react.dev `useOptimistic`「If `items` changes while the Action is pending, React re-runs your `reducer` with the new `items`」)。
-上の最後の行と合わせると、Action が `run` を await している間に新しい props が commit され、楽観値は Action が終わるまで新しい props の上に重なる (推論。上の 2 つの出典から導いた)。
+新しい props は Action の終わりに commit されるので、楽観値は Action の終わりに action の応答の props へ入れ替わる。
+
+### `action()` は shell の到着で resolve する
+
+`@void/react` 1.4.0 の `action()` は、新しい props の commit の後に resolve する (`pages-client.ts` の `finishNavigation`。v1.4.0 のソースで確認)。
+一方、新しい props を描く Void の Transition は、走っている Action が終わるまで commit されない (下の観測)。
+そのため Action の中で `await action()` すると、Action は `action()` を、`action()` は commit を、commit は Action の終わりを待ち、決着しない。
+patch を当てない 1.4.0 で、`ActionButton` の Action の `await run()` は 12 秒待っても resolve せず、props も入れ替わらなかった (2026-11-02 に dev で確認)。
+上流は voidzero-dev/void#643 を受けて main の commit 5fd23eb で直し、React の `action()` を shell の到着で resolve する形にした (`createActionClient({ _resolveOnShell: true })`)。
+テンプレートは同じ変更を `patches/void.patch` と `patches/@void__react.patch` で 1.4.0 の dist に当てている (`pnpm-workspace.yaml` の `patchedDependencies`)。
+
+patch を当てた状態で、2 秒待つ action を `ActionButton` の Action から送ると、次の順に決着した (2026-11-02、dev、30 ms ごとの標本、react 19.3.1)。
+
+| 時点 (送信の開始から) | 起きたこと                                       |
+| --------------------- | ------------------------------------------------ |
+| 2040 ms               | `run` が `true` を返す                           |
+| 2059 ms の標本        | 新しい props が描かれ、ボタンの pending が解ける |
+
+- `run` の `true` は、新しい props の commit の前に返る。`await run()` の後の処理と `onSuccess` は、新しい props が描かれる前に走る
+- 新しい props の Transition が Action の終わりを待つのは、React が走っている Transition を束ねる挙動 (`useTransition` リファレンスの Caveats「If there are multiple ongoing Transitions, React currently batches them together」) と合う (推論)。「React 側の方針」の React 19.3 の行は Transition を独立して描くと書くが、react 19.3.1 のテンプレートでは束ねられて見えた
 
 ### 制約: ダイアログの close は Transition に参加しない
 
@@ -55,12 +74,12 @@ page の props の入れ替わりは Transition の中なので対象になり�
 
 **ユーザー操作に起因する更新は Transition の中で行い、pending は Transition から取る。楽観表示は loader の props を元の値にして `useOptimistic` で出す。**
 
-| 更新の種類                 | 扱い                                                                                                                      | 担う場所                 |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| mutation                   | 非同期 Transition (Action)。`usePageAction` の `run` を await する                                                        | `src/components/action/` |
-| loader の再実行            | Void が action の応答で行い、props を Transition の中で入れ替える。`run` が resolve した時点で新しい props は commit 済み | Void                     |
-| ダイアログの開閉           | 緊急更新のまま (「制約: ダイアログの close は Transition に参加しない」)。閉じる時点は ADR-0017 の完了点の軸で選ぶ        | Action か `onSuccess`    |
-| 制御コンポーネントの入力値 | 緊急更新のまま。Transition は他の更新に割り込まれるため、入力値の反映が遅れる                                             | 各部品                   |
+| 更新の種類                 | 扱い                                                                                                                                                | 担う場所                 |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| mutation                   | 非同期 Transition (Action)。`usePageAction` の `run` を await する                                                                                  | `src/components/action/` |
+| loader の再実行            | Void が action の応答で行い、props を Transition の中で入れ替える。`run` は応答の到着で resolve し、新しい props は Action の終わりに commit される | Void                     |
+| ダイアログの開閉           | 緊急更新のまま (「制約: ダイアログの close は Transition に参加しない」)。閉じる時点は ADR-0017 の完了点の軸で選ぶ                                  | Action か `onSuccess`    |
+| 制御コンポーネントの入力値 | 緊急更新のまま。Transition は他の更新に割り込まれるため、入力値の反映が遅れる                                                                       | 各部品                   |
 
 ### 楽観表示
 
@@ -70,7 +89,7 @@ page の props の入れ替わりは Transition の中なので対象になり�
 | props を経由しない部品のローカル値 | `useOptimistic` を Action の中で set する                                        |
 
 - reducer の形で書き、updater (`set(prev => …)`) で書かない。updater は Transition が始まった時点の値しか見ず、Action の間に入れ替わった props を見落とす (react.dev `useOptimistic`「Choosing between updaters and reducers」)
-- reducer は、元の値に変更がすでに入っていても同じ結果を返す形にする (足す項目は id で重複を除く、消す項目は id で除く)。Void は `run` が resolve する前に新しい props を commit し、React は Action が終わるまで reducer を新しい props で走らせ直す (Context「page の props は Transition の中で入れ替わる」)
+- reducer は、元の値に変更がすでに入っていても同じ結果を返す形にする (足す項目は id で重複を除く、消す項目は id で除く)。新しい props が Action の終わりに commit されるのは、React が Transition を束ねる挙動に乗っている (Context「`action()` は shell の到着で resolve する」)。束ねられずに Action の途中で commit されると、reducer は変更の入った props で走り直し、素直に足すと同じ項目が 2 つ並ぶ (推論)
 
 `useOptimistic` の書き方は `docs/guides/react/updates.md`「楽観表示を出す」にある。
 
@@ -81,7 +100,7 @@ page の props の入れ替わりは Transition の中なので対象になり�
 | pending を部品ごとの state (`useState`) で持ち、Action を使わない              | Transition の意味論 (割り込み) を持たず、pending の切り替えが `<ViewTransition>` の対象にならない。React チームの区分 (Context) から外れる    | 却下     |
 | ユーザー操作による更新を Transition の中で行い、pending を Transition から取る | React チームの前提 (「React 側の方針」) に沿い、Void の遷移と同じく Transition に乗る                                                         | **採用** |
 | 楽観値を `useState` に持ち、成功と失敗のあとに手で消す                         | 失敗時の戻しと、新しい props との重なりの除き方を箇所ごとに書く。`useOptimistic` は Action が終わると元の値に戻る (react.dev `useOptimistic`) | 却下     |
-| loader の props を元に `useOptimistic` で出す                                  | props の入れ替わりが Transition の中で起き、Action の終わりと同じ描画で楽観値と実際の値がそろう                                               | **採用** |
+| loader の props を元に `useOptimistic` で出す                                  | props が Action の終わりに入れ替わり、楽観値はそのまま action の応答の props へ替わる (Context「`action()` は shell の到着で resolve する」)  | **採用** |
 
 ### 他の文書との関係
 
@@ -94,7 +113,8 @@ page の props の入れ替わりは Transition の中なので対象になり�
 - pending の源が Transition の `isPending` に一本化される。項目の busy は `useOptimistic` の値から描く
 - Transition 化で得るのは pending の自動管理、部品契約の統一、pending の切り替えと props の入れ替わりを `<ViewTransition>` で装飾できること (推論) の 3 つ。Action の実行順は Transition が保証しない (`useTransition` リファレンスの Troubleshooting「My state updates in Transitions are out of order」)。順序を保つのは `useActionState` と `<form>` の action である (同)
 - props が Transition の外で入れ替わる設定 (`navigationFallback`) を入れると、楽観値と新しい props が別の描画になりうる。入れるときはこの ADR を決め直す
-- 再評価条件: Void を上げて、`action()` が resolve する時点や props を入れ替える Transition が変わったら、楽観表示の reducer の前提を確かめ直す
+- Action の中で `await run()` が決着するのは patch に依っている。patch を外したら (5fd23eb を含む版に上げたとき)、`ActionButton` の Action で `run` を await し、pending が解けて props が入れ替わることを dev で確かめる。`src/hooks/use-page-action.test.tsx` は `action()` を mock するので、`vp run verify` はこの決着を確かめない
+- 再評価条件: Void か React を上げて、`action()` が resolve する時点や、props を入れ替える Transition が Action の終わりを待つかが変わったら、楽観表示の reducer の前提と ADR-0017 の完了点を確かめ直す
 
 ## 出典
 
@@ -112,3 +132,5 @@ page の props の入れ替わりは Transition の中なので対象になり�
 - `useOptimistic` リファレンス: https://react.dev/reference/react/useOptimistic
 - Void docs「Actions & Forms」: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
 - Void docs「Pages API」(React Runtime): `node_modules/void/docs/reference/api/pages.md`
+- voidzero-dev/void#643 React: `action()` and `router.visit()` never resolve when awaited in a transition: https://github.com/voidzero-dev/void/issues/643
+- Void の commit 5fd23eb (React の `action()` を shell の到着で resolve する): https://github.com/voidzero-dev/void/commit/5fd23ebc03a33aab12270cde3d460bd1c83863dc

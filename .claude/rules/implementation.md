@@ -62,7 +62,7 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 - 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
 - page の action の起点は、どの項目のものも `useNavigation().state === "submitting"` の間は `aria-disabled` で止める。2 つ目の action が 1 つ目を中断し、1 つ目の Action が境界に届く。busy の表現は対象の項目だけに付ける (`docs/guides/react/updates.md`「走っている action のあいだ、ほかの起点を止める」)
 - Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず action の応答で入れ替わる props に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)
-- 楽観表示は loader の props を元に `useOptimistic` で出し、reducer で書く。reducer は元の値に変更がすでに入っていても同じ結果を返す形にする。`run` が resolve する前に新しい props が commit されるので、素直に足すと同じ項目が 2 つ並ぶ (`docs/guides/react/updates.md`「楽観表示を出す」)
+- 楽観表示は loader の props を元に `useOptimistic` で出し、reducer で書く。reducer は元の値に変更がすでに入っていても同じ結果を返す形にする。新しい props が Action の途中で commit されると、素直に足した reducer は同じ項目を 2 つ並べる (`docs/guides/react/updates.md`「楽観表示を出す」)
 - 操作の開始の announce は Action の中の `run` より前、完了は `usePageAction` の `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
 - 決着前の二重発火は Action 層の `isPending` (`aria-disabled`) が塞ぐ。閉包や ref のフラグを足さない (ADR-0016)
 

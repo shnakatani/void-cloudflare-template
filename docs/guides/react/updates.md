@@ -22,10 +22,10 @@
 
 ### page の props は Transition で入れ替わり、ダイアログの close は乗らない
 
-Void は action の応答で loader を走らせ直し、新しい props を Transition の中で入れ替える。`run` が resolve した時点で、新しい props は commit 済みである。
+Void は action の応答で loader を走らせ直し、新しい props を Transition の中で入れ替える。`run` は応答の到着で resolve し、新しい props は Action の終わりに commit される。`await run()` の後の処理と `onSuccess` は、新しい props が描かれる前に走る。
 Base UI のダイアログの handle は `useSyncExternalStore` で購読されていて、React はその更新を Transition の中で起きても緊急更新として描く。`handle.close()` によるアンマウントは即座に起きる。
 Transition から得られるのは、pending の管理と、pending の切り替えと props の入れ替わりを `<ViewTransition>` で装飾できること (推論) である (ADR-0015)。Transition は Action の実行順を保証しない ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)。
-出典は ADR-0015「page の props は Transition の中で入れ替わる」「制約: ダイアログの close は Transition に参加しない」が持つ。
+出典は ADR-0015「page の props は Transition の中で入れ替わる」「`action()` は shell の到着で resolve する」「制約: ダイアログの close は Transition に参加しない」が持つ。
 
 ### `await` の後の更新の扱いを選んだ理由
 
@@ -88,7 +88,7 @@ mutation は `src/hooks/use-page-action.ts` を通す。
 | 呼び出し                  | Action の中で `run(data)` を await する。成功で `true`、呼び出し側で扱う失敗で `false` を返す                                                                                                                                                                                                                                                                                  |
 | 失敗の通知                | `ok: false` は `run` が出す。422 のフィールドのエラーは `onValidationError` (form では各 field) へ、それ以外は固定の文言の toast へ。呼び出し側で通知を書かない                                                                                                                                                                                                                |
 | throw する失敗            | `action()` が throw する失敗 (401・403・500・502・通信の失敗) も、`run` が固定の文言の toast に出して `false` を返す。取り消し (`AbortError`。送信中の遷移、`router.refresh()`、次の送信) は何も出さずに `false` を返す。どちらも reject しない (ADR-0016「mutation の書き方」)                                                                                                |
-| 成功のあと                | `onSuccess` に書く。返した Promise の決着まで `run` は resolve せず、Transition も続く。`onSuccess` の throw だけは `run` が reject する                                                                                                                                                                                                                                       |
+| 成功のあと                | `onSuccess` に書く。返した Promise の決着まで `run` は resolve せず、Transition も続く。`onSuccess` は新しい props が描かれる前に走る (ADR-0015)。`onSuccess` の throw だけは `run` が reject する                                                                                                                                                                             |
 | form から送る             | `usePageActionForm` が返す `submit` を `ActionForm` の `submitAction` に渡し、`run` は form の `onSubmit` で呼ぶ。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが submit の検証で消えず、form が二度と送れない。`onSubmitAsync` などの validator の中で `run` を呼ぶと、form-core が throw を form のエラーに変え、401・500 が境界に届かない |
 | 送信の成否                | `run` の戻り値で判断する。422 でも `onSubmit` は resolve するので、form-core の `isSubmitSuccessful` は `true` になる                                                                                                                                                                                                                                                          |
 | `await` の後の state 更新 | 上から順に当てる。サーバーの値は set せず、action の応答で入れ替わる props に任せる。Action の結果を state に持つなら `useActionState` を使う。どちらでもなく `await` の後に set するなら、その set を `startTransition` で包む ([React docs「useTransition」][] の Caveats)。理由は「`await` の後の更新の扱いを選んだ理由」                                                   |
@@ -130,8 +130,8 @@ const [optimisticItems, addOptimistic] = useOptimistic(items, (current, added: I
 
 - set は Action の中で、`run` より前に呼ぶ。Action の外で呼ぶと React がエラーにする ([React docs「useOptimistic」][] の Troubleshooting「An optimistic state update occurred outside a Transition or Action」)
 - reducer の形で書き、updater (`set(prev => …)`) で書かない。updater は Transition が始まった時点の値しか見ず、Action の間に入れ替わった props を見落とす ([React docs「useOptimistic」][] の「Choosing between updaters and reducers」)
-- reducer は、元の値に変更がすでに入っていても同じ結果を返す形にする。足す項目は id で重複を除き、消す項目は id で除く。`run` が resolve する前に新しい props が commit され、React は Action が終わるまで reducer を新しい props で走らせ直すので、素直に足すと同じ項目が 2 つ並ぶ (ADR-0015)
-- 失敗で `run` が `false` を返すか reject すると、Action の終わりで楽観値は元の props に戻る。戻すための処理を書かない ([React docs「useOptimistic」][])
+- reducer は、元の値に変更がすでに入っていても同じ結果を返す形にする。足す項目は id で重複を除き、消す項目は id で除く。新しい props は Action の終わりに commit されるが、それは React が Transition を束ねる挙動に乗っている。束ねられずに Action の途中で commit されると、React は reducer を変更の入った props で走らせ直し、素直に足すと同じ項目が 2 つ並ぶ (ADR-0015「楽観表示」)
+- 失敗で `run` が `false` を返すと、Action の終わりで楽観値は元の props に戻る。戻すための処理を書かない ([React docs「useOptimistic」][])
 
 ### 操作の型ごとの当て方
 
