@@ -263,6 +263,8 @@ function NoteForm() {
   );
 }
 
+const LABEL_OF: Record<string, string> = { title: "タイトル", memo: "メモ" };
+
 describe("usePageAction を TanStack Form から使う", () => {
   beforeEach(() => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -306,8 +308,11 @@ describe("usePageAction を TanStack Form から使う", () => {
     await screen.getByRole("button", { name: "保存" }).click();
     await expect.element(screen.getByText("サーバーが受け付けませんでした")).toBeVisible();
 
+    // 決着後の focus は、エラーの欄へ移っている。ボタンを押すと欄の blur が server のエラーを消して
+    // 行がずれ、最初の click が外れるので、focus のある欄から Enter で送る
+    await expect.element(screen.getByRole("textbox", { name: LABEL_OF[name] })).toHaveFocus();
     vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
-    await screen.getByRole("button", { name: "保存" }).click();
+    await userEvent.keyboard("{Enter}");
     await expect.poll(() => action).toHaveBeenCalledTimes(2);
     expect(action).toHaveBeenLastCalledWith(ACTION_URL, {
       data: { title: "買い物", memo: "" },

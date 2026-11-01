@@ -3,7 +3,6 @@ import {
   use,
   useEffect,
   useRef,
-  useState,
   useTransition,
   type ComponentProps,
   type ReactNode,
@@ -34,15 +33,15 @@ type ActionFormProps = Omit<ComponentProps<"form">, "onSubmit" | "children"> & {
 function ActionForm({ submitAction, children, ...props }: ActionFormProps) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  // 決着の回数。0 は未送信で、変わったときだけ描画後の DOM を見て focus を移す
-  const [settledCount, setSettledCount] = useState(0);
+  const wasPendingRef = useRef(false);
 
+  // pending が終わった commit には、action が置いたエラーの描画が含まれる。その DOM を見て focus を移す
   useEffect(() => {
-    if (settledCount === 0) {
-      return;
+    if (wasPendingRef.current && !isPending) {
+      formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
     }
-    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
-  }, [settledCount]);
+    wasPendingRef.current = isPending;
+  }, [isPending]);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,13 +49,7 @@ function ActionForm({ submitAction, children, ...props }: ActionFormProps) {
     if (isPending) {
       return;
     }
-    startTransition(async () => {
-      await submitAction();
-      // await の後は Transition の外になる。startTransition で包み、action が置いたエラーの描画と同じ commit にする
-      startTransition(() => {
-        setSettledCount((count) => count + 1);
-      });
-    });
+    startTransition(submitAction);
   }
 
   return (
