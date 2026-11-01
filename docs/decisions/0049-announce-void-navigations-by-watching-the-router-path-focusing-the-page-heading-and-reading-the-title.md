@@ -62,7 +62,8 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 
 条件は Navigation API の explainer の「Focus management」に合わせる: "this focus reset will not take place if the user or developer has manually changed focus while the promise was settling, and that element is still visible and focusable"。
 
-- 記録は `useNavigation().state` が idle 以外になった描画の effect で始める。Void は開始を購読させないので、公開の hook で取れる最も早い時点である
+- 記録は `useNavigation()` が idle 以外の新しい値になった描画の effect で始める。Void は開始を購読させないので、公開の hook で取れる最も早い時点である
+- 遷移が重なったら、記録を次の遷移の開始から取り直す。Void は遷移を始めるたびに `useNavigation()` の値を新しく作り、新しいページの描画では同じ値を保つ (`pages-client.ts` の `appReducer` の `begin` と `reveal`、v1.4.0 のソースで確かめた)。`state` の値で見ると、`loading` のまま次の遷移が始まったときに前の遷移の記録が残り、前の遷移で消費した後に始まった遷移では記録が無いまま focus を奪う
 - 動いたかは、直前に `focusin` を受けた要素 (始めは記録を始めたときに focus していた要素) と違う要素が `focusin` を受けたかで見る。同じ要素へ戻っても、動いたとみなす。戻るまでの間に利用者かアプリが focus を動かしている
 - `focusin` に出ない動き (`blur()` で viewport へ外すなど) は見えない
 - 遷移中に動いた focus の先が消えて `<body>` に落ちたら、見出しへ移す。explainer の条件の "still visible and focusable" に当たらない
@@ -88,7 +89,7 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 - ページ名を持つページは、`.server.ts` の `head()` で `pageTitle` を返す必要がある。書き忘れると title がアプリ名だけになり、遷移の読み上げでホームと区別できない
 - 各ページは `<h1>` を持つ必要がある。無いと focus は `<body>` に落ち、`focusPageHeading` が `console.warn` を出す
 - 遷移の直後は、Tab を押すまで focus の位置が目では見えない
-- 検出は、新しいページの描画で `useRouter().path` が変わり、その後の passive effect の時点で `document.title` が新しい値になっている、という Void の内部の順序に乗る。どちらも docs に書かれていない。Void を上げたら、dev server で 2 つのページの間を遷移し、読み上げの region に新しいページの title が入ることを確かめる
+- 検出は、新しいページの描画で `useRouter().path` が変わり、その後の passive effect の時点で `document.title` が新しい値になっている、という Void の内部の順序に乗る。focus の記録は、遷移の開始ごとに `useNavigation()` の値が新しくなることに乗る。どれも docs に書かれていない。Void を上げたら、dev server で 2 つのページの間を遷移し、読み上げの region に新しいページの title が入ることを確かめる
 - Void が遷移の開始と完了を購読する API を持ったら、この検出を作り直す
 - 偽の router (ADR-0048) は title の書き換えを再現しない。`src/components/route-announcer.test.tsx` は遷移の前に `document.title` を置いて確かめる。title の順序は下の「調査結果」の dev server の実測が持つ
 

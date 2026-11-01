@@ -8,11 +8,12 @@ import { expectAnnouncements, readAnnouncements } from "@/test/assert/live-annou
 
 import { RouteAnnouncer } from "./route-announcer";
 
-const loading: NavigationState = {
-  state: "loading",
-  location: new URL("http://localhost/b"),
-  method: "GET",
-};
+/** 遷移中の状態。Void は遷移を始めるたびに新しい値を作るので、遷移の重なりは別の値を作って描き直す */
+function loadingTo(path: string): NavigationState {
+  return { state: "loading", location: new URL(path, "http://localhost"), method: "GET" };
+}
+
+const loading = loadingTo("/b");
 
 /** ページの見出し。名前は現在の path で、遷移の後は新しいページの見出しになる */
 function PageHeading() {
@@ -120,6 +121,31 @@ describe("RouteAnnouncer", () => {
     before.element().dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
     router.navigate("/b");
     await expect.element(screen.getByRole("heading", { name: "/b" })).toHaveFocus();
+  });
+
+  it("前の遷移の途中で次の遷移が始まったら、次の遷移の間の focus の動きだけを見る", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.getByRole("button", { name: "前" }).click();
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/b")} />);
+    await screen.getByRole("button", { name: "後" }).click();
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/c")} />);
+    router.navigate("/c");
+    await expect.element(screen.getByRole("heading", { name: "/c" })).toHaveFocus();
+  });
+
+  it("前の遷移のページが描かれた後に次の遷移が始まり、その間に focus が動いたら、見出しへ移さない", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/b")} />);
+    router.navigate("/b");
+    await expect.element(screen.getByRole("heading", { name: "/b" })).toHaveFocus();
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/c")} />);
+    const after = screen.getByRole("button", { name: "後" });
+    await after.click();
+    router.navigate("/c");
+    await expect.element(screen.getByRole("heading", { name: "/c" })).toBeInTheDocument();
+    await expect.element(after).toHaveFocus();
   });
 
   it("遷移中でないときに動いた focus は、遷移中の動きに数えない", async () => {

@@ -38,26 +38,28 @@ function recordFocusChanges(): FocusChangeRecord {
  * path の変わる遷移を利用者に伝える。新しいページの見出し (`focusPageHeading` が選ぶ) へ focus を移し、
  * `document.title` を読み上げる (ADR-0049)。root の layout に置き、DOM を描かない。
  *
- * Void は遷移の開始と完了を購読させないので、`useNavigation()` が idle 以外になった描画から focus の記録を始め、
+ * Void は遷移の開始と完了を購読させないので、`useNavigation()` が idle 以外の新しい値になった描画から focus の記録を始め、
  * `useRouter().path` が変わった描画の effect で伝える。Void は新しいページの commit の layout effect の後に
  * `document.title` を書き換えるので、passive effect の時点では title が新しい値になっている。
  * query だけの変化と最初の描画では伝えない。
  */
 export function RouteAnnouncer(): null {
   const { path } = useRouter();
-  const navigating = useNavigation().state !== "idle";
+  const navigation = useNavigation();
   const focusChanges = useRef<FocusChangeRecord | null>(null);
   const announcedPath = useRef(path);
 
+  // 依存は state ではなく値そのものに置く。Void は遷移を始めるたびに新しい値を作り、ページの描画では同じ値を保つ
+  // (pages-client.ts の appReducer)。state で見ると、遷移が重なったときに前の遷移の記録が残る
   useEffect(() => {
-    if (!navigating) {
+    if (navigation.state === "idle") {
       return;
     }
     const record = recordFocusChanges();
     focusChanges.current = record;
     // 記録は消さない。遷移の終わりと path の変化が同じ描画に来ると、この後始末が下の effect より先に走る
     return record.stop;
-  }, [navigating]);
+  }, [navigation]);
 
   useEffect(() => {
     // 伝えた path を ref に持ち、同じなら何もしない。最初の描画と StrictMode の付け直しはここで止まる
