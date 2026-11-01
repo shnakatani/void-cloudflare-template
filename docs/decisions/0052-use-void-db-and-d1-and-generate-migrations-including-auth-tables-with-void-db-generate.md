@@ -56,7 +56,7 @@ Void は、schema と migration のずれ (drift) を CI で止める command �
 - `db` の型は schema を持たない。`void/db` の `paths` を写さないので、型は package の `DrizzleD1Database` (schema なし) になる (ADR-0047)。Vitest の中の `db` も schema と `database.casing` を持たない (ADR-0054)。query は列名を明示し、`db.query.*` と `database.casing` に頼らない。casing を設定しても、テストの `db` には効かない
 - schema かルートの `auth.ts` (auth の plugin を含む) を変えたら、`vp exec void db generate` を打って生成された `.sql` を読み、`db/migrations/` ごと commit する。手順は `docs/guides/database.md`「schema を変える」
 - migration を入れる前に dev を起動して auth の table ができた D1 では、dev の起動ログに `Local database already has application tables but no Void migration history` が出る。dev は ready になるが migration の適用はその error で止まるので、`vp exec void db reset` で作り直す (2026-11-02、Void 1.4.0)
-- `db-migrations.test.ts` は `void db generate` を spawn するので、integrity のテストの中で時間がかかる。60 秒の timeout を持たせている
+- `db-migrations.test.ts` は `void db generate` を spawn するので、integrity のテストの中で時間がかかる。テストに長い timeout を持たせている
 - migration のファイル名は drizzle-kit のランダムな名前で、名前から中身は読めない
 
 ## 出典
