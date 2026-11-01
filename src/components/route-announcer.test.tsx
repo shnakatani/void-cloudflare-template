@@ -83,7 +83,11 @@ describe("RouteAnnouncer", () => {
     router.navigate("/a?q=x");
     await expect.element(screen.getByText("検索条件: q=x")).toBeInTheDocument();
     await expect.element(before).toHaveFocus();
-    expect(readAnnouncements()).toEqual([]);
+
+    // 読み上げが無かったことは、後に来る path の遷移の読み上げまでの並びで見る
+    setDocumentTitle("B — アプリ");
+    router.navigate("/b");
+    await expectAnnouncements(["B — アプリ"]);
   });
 
   it("遷移中に focus が別の要素を経て遷移前の要素へ戻ったら、見出しへ移さず、title は読み上げる", async () => {
