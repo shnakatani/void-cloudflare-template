@@ -2,10 +2,10 @@
 
 ブラウザテストでユーザー操作を発火する手段と、animation・マウスの位置・入力部品・debounce の扱いを持つ。
 
-| 決定                                                                                               | ADR      |
-| -------------------------------------------------------------------------------------------------- | -------- |
-| mutation は Action 層の `action` prop から `useActionMutation` で呼び、二重発火は state だけで塞ぐ | ADR-0016 |
-| 数値入力に `type="number"` を使わず Base UI の NumberField に寄せる                                | ADR-0021 |
+| 決定                                                                                           | ADR      |
+| ---------------------------------------------------------------------------------------------- | -------- |
+| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ | ADR-0016 |
+| 数値入力に `type="number"` を使わず Base UI の NumberField に寄せる                            | ADR-0021 |
 
 ## how-to
 

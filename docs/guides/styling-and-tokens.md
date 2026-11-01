@@ -6,7 +6,7 @@
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | ドキュメントは rules・設計ガイド・決定・docstring・履歴の層に分け、ADR は構造・品質特性・戻しにくさに効く選択に限り、参照は rules の側から一方向に張る | ADR-0001 |
 | `src/components/` を役割で分け、design system の著作と消費の境界をディレクトリで表す                                                                   | ADR-0011 |
-| mutation は Action 層の `action` prop から `useActionMutation` で呼び、二重発火は state だけで塞ぐ                                                     | ADR-0016 |
+| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                                         | ADR-0016 |
 | registry との乖離は生成時 baseline との 3-way で判別し、許容リスト (registry コードと `src/styles.css`) の行に限る                                     | ADR-0020 |
 | design system の層から外へ class 文字列を配らず、共有する外見は部品・prop・variant で配る                                                              | ADR-0022 |
 | 色は `@theme` と `@shadcn/lint` の 2 層で semantic token に閉じ込める                                                                                  | ADR-0023 |

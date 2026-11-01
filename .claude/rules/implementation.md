@@ -42,7 +42,7 @@ lint (`typescript/no-misused-promises`) が止める。直し方 (`docs/guides/r
 
 - ハンドラは同期関数として宣言し、非同期処理はその内側の関数へ閉じる。JSX の prop に `void` やインラインの `async` を書かない
 - 待たない判断は内側で 1 回だけ表明する。呼び先が失敗を自分で処理するなら `void`、呼び出し側で通知や後始末をするなら `.catch()`
-- 操作の失敗を Error Boundary へ届けない。通知は toast (`src/components/ui/toast.tsx`) か画面内表示で行う。Error Boundary は画面ごと差し替わる (ADR-0016)
+- 呼び出し側で扱える操作の失敗は Error Boundary へ届けない。通知は toast (`src/components/ui/toast.tsx`) か画面内表示で行う。Error Boundary は画面ごと差し替わる。`action()` が throw する 401・403・500 は境界に届けてよい (ADR-0016)
 - mutation を伴う操作は「ユーザー操作による更新は Transition の中で行う」に従う
 
 ## ユーザー操作による更新は Transition の中で行う
@@ -58,8 +58,8 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 
 - pending 表示は Action 層の `isPending` から取る。例外は項目の busy・楽観表示・close 阻止で、mutation の pending から取る (ADR-0017)
 - mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` は `action()` の `ok: false` を toast かフィールドのエラーに出し、throw (401・403・500 など) は Error Boundary へ届ける。どちらも、通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
-- TanStack Form から送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`src/hooks/use-page-action.ts` の docstring)
-- Action の reject は最寄りの Error Boundary へ届く。`usePageAction` を通さない Action は、失敗を Action の中で処理し切る (ADR-0016)
+- TanStack Form から送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`docs/guides/react/updates.md`「mutation の書き方」)
+- `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
 - `onSuccess` は再取得の Promise を返す。再取得完了前に close するなら、対象の項目にその pending から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
 - 止めるのは対象の項目だけにする。並行操作が整合を壊すときだけ全体を止め、理由を実装近傍に書く (ADR-0017)
 - Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず query の再取得に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)

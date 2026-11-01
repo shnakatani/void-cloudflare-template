@@ -5,7 +5,7 @@
 | 決定                                                                                                | ADR      |
 | --------------------------------------------------------------------------------------------------- | -------- |
 | ユーザー操作による更新は Transition を既定にし、query 由来の楽観表示は mutation の variables で出す | ADR-0015 |
-| mutation は Action 層の `action` prop から `useActionMutation` で呼び、二重発火は state だけで塞ぐ  | ADR-0016 |
+| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ      | ADR-0016 |
 | ユーザー操作の完了点とブロック範囲は機能ごとに選び、既定は対象の項目だけを止める                    | ADR-0017 |
 | 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ   | ADR-0026 |
 
@@ -18,7 +18,7 @@
 | Transition | `startTransition` に渡した関数の中で行う state 更新。割り込み可能で、Suspense の fallback を出さずに待てる              |
 | 緊急更新   | Transition でない state 更新。React は即座に描画へ反映する                                                              |
 | Action     | `startTransition` に渡す非同期関数。`await` した Promise の決着まで Transition が続く ([React docs「useTransition」][]) |
-| mutation   | `useMutation` を通してサーバーへ書き込む操作 (POST 相当)。GET 相当のデータ取得は含まない                                |
+| mutation   | page の action を呼んでサーバーへ書き込む操作 (POST 相当)。GET 相当のデータ取得は含まない                               |
 
 ### query のキャッシュとダイアログの close は Transition に乗らない
 
@@ -63,7 +63,7 @@ Action の中で `await` の後に state を set する書き方には、公式�
 
 ### mutation を Action 層から呼ぶ
 
-mutation を伴う操作は、`src/components/action/` の部品 (`ActionButton` / `AlertDialogActionButton` / `ActionForm` / `ActionDialogContent`) に `action` を渡し、Action の中で `useActionMutation` の `runAction` を呼ぶ (ADR-0016)。
+mutation を伴う操作は、`src/components/action/` の部品 (`ActionButton` / `AlertDialogActionButton` / `ActionForm` / `ActionDialogContent`) に `action` を渡し、Action の中で `usePageAction` の `run` を呼ぶ (ADR-0016)。
 
 #### Action 層の部品が守る契約
 
@@ -74,22 +74,25 @@ mutation を伴う操作は、`src/components/action/` の部品 (`ActionButton`
 | `action`     | `() => Promise<void> \| void`。`startTransition` に直接渡す。同期と非同期のどちらも受け、決着まで pending が続く                                                                                                                                                                                                                                                                                                                                                                           |
 | pending      | `useTransition` の `isPending`。`aria-disabled` と `focusableWhenDisabled` でフォーカスを保つ。名前は `aria-labelledby` で children に固定する。`Spinner` は視覚専用 (`aria-hidden`) で、`PendingLabel` が label の場所に重ねて幅を保つ (ADR-0042)。状態は要素自身の `aria-disabled` で持ち、通知は feature 側が announcer で出す (ADR-0026)。button の子孫はユーザーエージェントが accessibility API に露出すべきでない (SHOULD NOT。[WAI-ARIA 1.2「Presentational Children」][]、§5.2.9) |
 | 二重発火     | 決着前の再クリックは `isPending` (`aria-disabled`) が塞ぐ。ref や閉包のフラグは持たない (ADR-0016「二重発火は state だけで塞ぐ」)                                                                                                                                                                                                                                                                                                                                                          |
-| 失敗         | 部品は握らない。呼び出し側が Action の中で処理し切る。mutation は `useActionMutation` を通す                                                                                                                                                                                                                                                                                                                                                                                               |
+| 失敗         | 部品は握らない。`run` が `ok: false` を通知し、throw は Action の reject として境界に届く。mutation は `usePageAction` を通す                                                                                                                                                                                                                                                                                                                                                              |
 | 基盤への依存 | 契約は Base UI に依存しない。Base UI ([mui/base-ui#5133][]) か React Aria ([adobe/react-spectrum#9894][]) が `action` prop を出荷したら、内部の実装だけを差し替える                                                                                                                                                                                                                                                                                                                        |
 
 #### mutation の書き方
 
-mutation は `src/hooks/use-action-mutation.ts` の `useActionMutation` を通す。`useMutation` の薄い wrapper で、次を持つ。
+mutation は `src/hooks/use-page-action.ts` を通す。
 
-| 項目                      | 書き方                                                                                                                                                                                                                                                                                                     |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 入力                      | `useMutation` の options。`onError` は型で必須。省略すると、reject の吸収が通知の無い失敗になる                                                                                                                                                                                                            |
-| 出力                      | `mutate` / `mutateAsync` は型で外してあり、`runAction(variables): Promise<void>` を使う。`runAction` は `mutateAsync` を await して reject を吸収し、通知は `onError` (`toastMutationError`) が出す                                                                                                        |
-| 呼び出し                  | `action` から `runAction` を呼ぶ。`mutate` は Promise を返さず、reject も `.catch(noop)` で握るので ([`@tanstack/react-query` の `useMutation.ts`][])、Transition が完了も失敗も観測できない                                                                                                               |
-| 再取得と close            | `onSuccess` は完了点によらず再取得の Promise を返す。TanStack Query は `onSuccess` の Promise を待つので、その間 `isPending` が続く。閉じる時点は「完了点ごとに Transition を終える」                                                                                                                      |
-| `await` の後の state 更新 | 上から順に当てる。サーバーの値は set せず、query の再取得に任せる。Action の結果を state に持つなら `useActionState` を使う。どちらでもなく `await` の後に set するなら、その set を `startTransition` で包む ([React docs「useTransition」][] の Caveats)。理由は「`await` の後の更新の扱いを選んだ理由」 |
+| 項目                      | 書き方                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 入口                      | ボタンと確認ダイアログからは `usePageAction(url, options)`、TanStack Form からは `usePageActionForm(form, url, options)`。`url` は page の action の URL で、動的な page では `params` が型で必須になる                                                                                                                                                                        |
+| 呼び出し                  | Action の中で `run(data)` を await する。成功で `true`、呼び出し側で扱う失敗で `false` を返す                                                                                                                                                                                                                                                                                  |
+| 失敗の通知                | `ok: false` は `run` が出す。422 のフィールドのエラーは `onValidationError` (form では各 field) へ、それ以外は固定の文言の toast へ。呼び出し側で通知を書かない                                                                                                                                                                                                                |
+| 境界に届く失敗            | `action()` が throw する失敗 (401・403・500・502・通信の失敗) を `run` は捕まえない。Action の reject として最寄りの Error Boundary に届く (ADR-0016「制約: `action()` の失敗は 2 つの経路に分かれる」)                                                                                                                                                                        |
+| 成功のあと                | `onSuccess` に書く。返した Promise の決着まで `run` は resolve せず、Transition も続く                                                                                                                                                                                                                                                                                         |
+| form から送る             | `usePageActionForm` が返す `submit` を `ActionForm` の `submitAction` に渡し、`run` は form の `onSubmit` で呼ぶ。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが submit の検証で消えず、form が二度と送れない。`onSubmitAsync` などの validator の中で `run` を呼ぶと、form-core が throw を form のエラーに変え、401・500 が境界に届かない |
+| 送信の成否                | `run` の戻り値で判断する。422 でも `onSubmit` は resolve するので、form-core の `isSubmitSuccessful` は `true` になる                                                                                                                                                                                                                                                          |
+| `await` の後の state 更新 | 上から順に当てる。サーバーの値は set せず、query の再取得に任せる。Action の結果を state に持つなら `useActionState` を使う。どちらでもなく `await` の後に set するなら、その set を `startTransition` で包む ([React docs「useTransition」][] の Caveats)。理由は「`await` の後の更新の扱いを選んだ理由」                                                                     |
 
-`runAction` を通さない Action の reject は、最寄りの Error Boundary へ届き画面ごと差し替わる。lint では見つからないので、Action を書くときはレビューで「失敗を Action の中で処理し切っているか」を見る。
+`usePageAction` を通さずに `action()` を呼ぶと、`ok: false` が通知の無い失敗になる。lint では見つからないので、レビューで見る。
 
 ### 完了点ごとに Transition を終える
 
