@@ -61,8 +61,9 @@ type ActionButtonProps = Omit<ActionButtonShellProps, "isPending" | "onClick"> &
 
 /**
  * `action` prop を受ける Button (ADR-0016「Action 層」)。pending は `useTransition` の `isPending` から取る。
- * Action の reject はここでは握らない。呼び出し側が Action の中で処理し切る
- * (呼び出し側で扱う失敗は `usePageAction` の `run` が toast に出す)。
+ * Action の reject はここでは握らず、Transition を通って最も近い error boundary に届く。
+ * `usePageAction` の `run` は、`action()` の `ok: false` を toast かフィールドのエラーに出して resolve し、
+ * `action()` の throw (401・403・500 など) は捕まえずに reject する。
  */
 function ActionButton({ action, ...props }: ActionButtonProps) {
   const [isPending, startTransition] = useTransition();

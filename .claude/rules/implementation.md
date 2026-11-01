@@ -57,7 +57,7 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 | 検索条件の変更                    | 打鍵中は debounce した値を `useDeferredValue` に通して `useSuspenseQuery` の key にする (`docs/guides/lists-and-search.md`「検索の入力欄を組む」) |
 
 - pending 表示は Action 層の `isPending` から取る。例外は項目の busy・楽観表示・close 阻止で、mutation の pending から取る (ADR-0017)
-- mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` が呼び出し側で扱う失敗を toast に出すので、通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
+- mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` は `action()` の `ok: false` を toast かフィールドのエラーに出し、throw (401・403・500 など) は Error Boundary へ届ける。どちらも、通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`src/hooks/use-page-action.ts` の docstring)
 - Action の reject は最寄りの Error Boundary へ届く。`usePageAction` を通さない Action は、失敗を Action の中で処理し切る (ADR-0016)
 - `onSuccess` は再取得の Promise を返す。再取得完了前に close するなら、対象の項目にその pending から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
