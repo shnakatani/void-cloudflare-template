@@ -14,6 +14,8 @@
 | Cloudflare Workers | `routes/`、`middleware/`、`crons/`、`queues/`、`db/`、`email/`、`durable-objects/`、`pages/**/*.server.ts`、`auth.ts`、`env.ts` |
 | Node.js            | `scripts/`、`tooling/`、`vite.config.ts`、`void.config.ts`、`.storybook/main.ts`、unit のテスト                                 |
 
+この表は動く場所の区分で、tsconfig の区分とは一致しない。テストと story は、ブラウザと Node.js のどちらで走るものも 1 つの tsconfig にまとめる (Decision の境界の判断)。
+
 1 つの tsconfig に全部を入れると、次の 2 つがぶつかる。
 
 - Void の docs「Type Safety」の Setup は `types: ["void/env"]` を求める。`void/env` の型 (`void/dist/runtime/env-public.d.mts`) の 1 行目は `/// <reference types="@cloudflare/workers-types" />` で、Workers の型を program 全体へ読み込む。同じ triple-slash は `void/dist/runtime/` の `email`・`handler`・`live`・`live-server`・`sandbox`・`sandbox-container` の型にもある (Void 1.4.0)
