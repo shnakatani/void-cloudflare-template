@@ -34,16 +34,8 @@ export type VoidSourceDir = (typeof VOID_SOURCE_DIRS)[number];
 
 /**
  * ディレクトリごとに、`_` で始まる名前のテストを置けるか。Void 1.4.0 の走査で決まる。
- * 新しいディレクトリを足すと型エラーになるので、走査のソースを読んで埋める。
- *
- * | ディレクトリ | 置ける | 走査 (`packages/void/src/` 以下) |
- * | --- | --- | --- |
- * | `pages` | 置ける | `pages/scan.ts` の `scanPages`。`_` の部分を外す (`_layouts/` は除く) |
- * | `routes` `crons` `queues` | 置ける | `shared/convention-files.ts` の `isConventionPath`。`_` の部分を外す |
- * | `middleware` | 置ける | `router/scan.ts` の `parseMiddlewareDefinitions`。相対パスの先頭が `_` のものを外す |
- * | `email` | 置ける | `router/email.ts` の `parseEmailFiles`。直下だけを読み、`_` で始まる名前を外す |
- * | `durable-objects` | 置けない | `durable/scan.ts` の `scanDurableObjectModules`。`.d.ts` 以外の直下の `.ts` をすべて読む |
- * | `db` | 置けない | `cli/db.ts` の `collectSchemaModuleFiles` と `drizzle/discover.ts` の `schemaSpecifier`。`db/schema/` の `.ts` をすべて schema として読む |
+ * 新しいディレクトリを足すと型エラーになるので、走査のソースを読んで埋め、
+ * `docs/guides/testing/configuration.md`「テストの種別と置き場所」の表にも行を足す。表が走査の出典を持つ。
  */
 const TEST_ALLOWED: Record<VoidSourceDir, boolean> = {
   pages: true,
