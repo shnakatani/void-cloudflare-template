@@ -1,7 +1,7 @@
 # ADR-0047: tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ
 
 - Status: Accepted
-- Date: 2026-11-01
+- Date: 2026-11-02
 - 関連: ADR-0004 (ツールチェーンを Vite+ に寄せる)
 
 ## Context
@@ -25,14 +25,14 @@
 
 ## Decision
 
-**tsconfig を実行環境ごとに `tsconfig.app.json`・`tsconfig.test.json`・`tsconfig.worker.json`・`tsconfig.node.json` の 4 つに分ける。ルートの `tsconfig.json` は `files: []`・`references`・shadcn の CLI のための `paths` だけを持ち、4 つをつなぐ。共有する compiler の設定は `tsconfig.base.json` に置く。**
+**tsconfig を実行環境ごとに `tsconfig.app.json`・`tsconfig.test.json`・`tsconfig.worker.json`・`tsconfig.node.json` の 4 つに分ける。ルートの `tsconfig.json` は `files: []`・`references`・shadcn の CLI のための `paths` だけを持ち、4 つをつなぐ。共有する compiler の設定は `tsconfig.base.json` に、`paths` は `tsconfig.paths.json` に置く。**
 
-| tsconfig               | 入れるファイル                                                                                                                                                                         | `lib`                                                                                                                                     | `types`                                                         | `.void/tsconfig.json` |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------- |
-| `tsconfig.app.json`    | `src/` と `pages/` の、付随ファイルと `src/test/` と `*.server.ts` 以外                                                                                                                | DOM あり                                                                                                                                  | `vite-plus/client`                                              | 継承する              |
-| `tsconfig.test.json`   | 付随ファイル (`**/*.<種別>.<拡張子>`。種別は `scripts/lib/companion-files.ts`) のうち Worker のディレクトリと `scripts/`・`tooling/` の外のもの、`src/test/`、`.storybook/preview.tsx` | DOM あり                                                                                                                                  | `vite-plus/client`、`vite-plus/test/browser-playwright`、`node` | 継承する              |
-| `tsconfig.worker.json` | 上の表の Cloudflare Workers の行と、そのディレクトリに置いたテスト。ディレクトリは `.ts` と `.tsx` の両方を入れる                                                                      | DOM なし                                                                                                                                  | `void/env`                                                      | 継承する              |
-| `tsconfig.node.json`   | `scripts/`、`tooling/`、`vite.config.ts`、`void.config.ts`、`.storybook/main.ts`                                                                                                       | `lib` には DOM を書かない。依存の型から DOM が入る (`scripts/contrast/` が import する `colorjs.io` の型の `/// <reference lib="dom" />`) | `node`                                                          | 継承しない            |
+| tsconfig               | 入れるファイル                                                                                                                                                                         | `lib`                                                                                                                                     | `types`                                                         | `extends` の並び                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `tsconfig.app.json`    | `src/` と `pages/` の、付随ファイルと `src/test/` と `*.server.ts` 以外                                                                                                                | DOM あり                                                                                                                                  | `vite-plus/client`                                              | `tsconfig.base.json`、`.void/tsconfig.json`、`tsconfig.paths.json` |
+| `tsconfig.test.json`   | 付随ファイル (`**/*.<種別>.<拡張子>`。種別は `scripts/lib/companion-files.ts`) のうち Worker のディレクトリと `scripts/`・`tooling/` の外のもの、`src/test/`、`.storybook/preview.tsx` | DOM あり                                                                                                                                  | `vite-plus/client`、`vite-plus/test/browser-playwright`、`node` | `tsconfig.base.json`、`.void/tsconfig.json`、`tsconfig.paths.json` |
+| `tsconfig.worker.json` | 上の表の Cloudflare Workers の行と、そのディレクトリに置いたテスト。ディレクトリは `.ts` と `.tsx` の両方を入れる                                                                      | DOM なし                                                                                                                                  | `void/env`                                                      | `tsconfig.base.json`、`.void/tsconfig.json`、`tsconfig.paths.json` |
+| `tsconfig.node.json`   | `scripts/`、`tooling/`、`vite.config.ts`、`void.config.ts`、`.storybook/main.ts`                                                                                                       | `lib` には DOM を書かない。依存の型から DOM が入る (`scripts/contrast/` が import する `colorjs.io` の型の `/// <reference lib="dom" />`) | `node`                                                          | `tsconfig.base.json` だけ                                          |
 
 境界の判断:
 
@@ -41,8 +41,11 @@
 - unit のテストは Node で走るが、app のコードを読むので test に入れる。test は DOM の型も Node の型も持つ
 - テストは `src/` の外の Void の規約のディレクトリにも置ける。`pages/` のテストは test に入れる。Worker のディレクトリのテストは worker に入れる。test に入れると、テストが import する Worker のコードを通して Workers の型が test の program に入り、`src/` のテストの DOM の `append` が TS2345 で落ちた (2026-11-01、`routes/x.ts` が `void/env` を import し、`routes/x.test.ts` がそれを import する形で実測)
 - `.void/tsconfig.json` は `void prepare` が書く。Void が生成する型 (`.void/routes.d.ts` など) の `files` と、その型へ向ける `paths` (`void/routes` など) を持つ。生成する型はブラウザのコード (typed fetch) と Worker のコードの両方が読むので、app・test・worker が継承する。node は Void の生成する型を読まない
-- `paths` の `@/*` は、ルートの `tsconfig.json`・app・test に書く。shadcn の CLI はルートの `tsconfig.json` の `paths` しか読まない (shadcn-ui/ui#11466)。shadcn の docs「Installation > Vite」も、ルートと `tsconfig.app.json` の両方に同じ alias を書くよう案内している。ルートの `paths` を消して `shadcn add avatar --dry-run` を打つと、出力先が `@/components/ui/avatar.tsx` という字面のパスになった (2026-11-01、shadcn 4.22.2)
-- worker には `paths` を書かない。書くと `.void/tsconfig.json` の `paths` を丸ごと上書きする。`void/db` の型は、`paths` で `void/db` を `.void/db.d.ts` へ向けて効かせる (`void/dist/db-types-*.mjs` の `generateDbDts` の docstring)
+- app・test・worker の `paths` は `tsconfig.paths.json` 1 つに置き、3 つが `extends` の最後に読む。3 つは自分の `paths` を書かない。TypeScript は `paths` を継承でマージせず、後に読んだ config の値で丸ごと置き換える (TSConfig Reference「extends」。マージを求める microsoft/TypeScript#44589 は 2026-11-02 時点で open)。自分の `paths` を書いた tsconfig では `.void/tsconfig.json` の `paths` が隠れる
+- `tsconfig.paths.json` は `@/*` と、`.void/tsconfig.json` の `paths` の写しを持つ。写しのパスは `.void/` を前に付けてルートからの相対にする。Void の `void init --tsconfig` も、自分の `paths` を持つ tsconfig には `.void/tsconfig.json` の `paths` を写して合わせる (`packages/void/src/cli/init.ts` の `setupTsconfig`、1.4.0)
+- worker も `@/*` を持つ。Vite の `resolve.tsconfigPaths` は、ファイルを `files` か `include` に持つ tsconfig の `paths` だけで解決する (Vite docs「resolve.tsconfigPaths」)。worker に `@/*` が無いと、`pages/x.server.ts` の `@/lib/…` の import が `vp check` で TS2307 になり、dev の SSR が 500 を返した (2026-11-02、Void 1.4.0)
+- `@/*` はルートの `tsconfig.json` にも書く。shadcn の CLI はルートの `tsconfig.json` の `paths` しか読まない (shadcn-ui/ui#11466)。shadcn の docs「Installation > Vite」も、ルートと `tsconfig.app.json` の両方に同じ alias を書くよう案内している。ルートの `paths` を消して `shadcn add avatar --dry-run` を打つと、出力先が `@/components/ui/avatar.tsx` という字面のパスになった (2026-11-01、shadcn 4.22.2)
+- `.void/tsconfig.json` の `paths` の写しが要るのは、写さないと型が付かない別名のためである。`void/db` の型は、`paths` で `void/db` を `.void/db.d.ts` へ向けて効かせる (`void/dist/db-types-*.mjs` の `generateDbDts` の docstring)。`void/routes` は `.void/routes.d.ts` の `declare module "void/routes"` が `files` から効くので、写しが無くても型が付く (2026-11-02 に、写しを外して `vp check` が通ることを確かめた)。それでも写しは `.void/tsconfig.json` の `paths` と同じ組にそろえ、突き合わせを全部一致かどうかで済ませる
 
 | 案                                                                            | 評価                                                                                                                                                                                                        | 採否     |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -50,6 +53,16 @@
 | A'. A のうちテストと story を app に入れ、3 つに分ける                        | Workers の型と DOM の型は分かれる。ただし app の program に Vitest と Storybook の型経由で Node の型が入り、`src/lib/` に書いた `process.env` と `Buffer.from()` が `vp check` を通った (2026-11-01 に実測) | 却下     |
 | B. 1 つの tsconfig のまま、`void/env` を入れない                              | `vp check` は通る。Void の docs「Type Safety」の Setup から外れる。Worker のコードが `void/env` や上の subpath を import した時点で、Workers の型が同じ program に入り、同じ衝突が起きる                    | 却下     |
 | C. 1 つの tsconfig のまま、`void/env` を入れる                                | `vp check` が 16 件のエラーで落ちる (Context)                                                                                                                                                               | 却下     |
+
+`paths` の置き場所:
+
+| 案                                                                                                                 | 評価                                                                                                                                                 | 採否     |
+| ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| P. `tsconfig.paths.json` に `@/*` と `.void/tsconfig.json` の `paths` の写しを置き、app・test・worker が最後に読む | 写しの置き場所が 1 つで済む。node の `extends` は変わらない                                                                                          | **採用** |
+| Q. Void の docs「Type Safety」の Setup どおり、自分の `paths` を持たずに `.void/tsconfig.json` を継承する          | `.void/tsconfig.json` の `paths` がそのまま見える。`@/*` を持てず、shadcn の alias と `src/` の import の書き方が成り立たない                        | 却下     |
+| R. app・test・worker のそれぞれに `@/*` と写しを書く (`void init --tsconfig` がルートの tsconfig に対して行う形)   | 写しが 3 か所に分かれ、1 つだけ古くなっても気付きにくい                                                                                              | 却下     |
+| S. ルートの `tsconfig.json` に写しを置き、`void init --tsconfig` に保たせる。app・test・worker はルートを継承する  | init はルートに `extends` と `types: ["void/env"]` を足してコメントを消すので (Consequences)、打つたびに手で戻すことになり、写しを保つ手間が減らない | 却下     |
+| T. `tsconfig.base.json` に置き、`.void/tsconfig.json` より後に読む                                                 | ファイルは増えない。node も `tsconfig.base.json` を継承するので、Void の生成する型への `paths` が node に入る                                        | 却下     |
 
 ## Consequences
 
@@ -66,9 +79,8 @@
 - どの tsconfig の `include` にも入らないファイルは、tsgolint が推論した program で検査する。報告されるのは、その program の既定の設定で出る誤りだけである。`lib`・`types`・`paths` は 4 つのどれとも違うので、置き場所の実行環境に合った誤りは出ない (2026-11-01、どこにも入らない `misc/x.ts` で `number` に文字列を入れると TS2322 が出た)
 - `tsconfig.app.json` の `exclude` と `tsconfig.test.json` の `include` は、付随ファイルの種別を字面で並べる。`tsconfig.test.json` の `exclude` は、`tsconfig.worker.json` の `include` のディレクトリと `scripts/`・`tooling/` を字面で並べる。ずれると、そのファイルはどの tsconfig にも入らず推論した program で検査されるか、2 つの tsconfig に入る
 - ページが companion の `.server.ts` から `import type` すると、その `.server.ts` も app の program に入る。`.server.ts` が `void/env` を import していると、Workers の型が app に入り、DOM の衝突が戻る。2026-11-01 に、`pages/x.server.ts` が `void/env` を import し、`pages/x.tsx` がそこから `import type` する形で試した。`src/lib/live-announcer.ts` の `append` が TS2345 で落ちた。Void の starter のページはこの形 (`import type { Props } from "./index.server"`) をとるので、ページに loader を足すときに型の受け渡し方を決める
-- worker は `@/*` を持たないので、Worker のコードは `src/` を相対パスで import する
-- app と test の `paths` は `.void/tsconfig.json` の `paths` を上書きする。`void/routes` の型は `declare module "void/routes"` の augmentation で、`files` に入れば効くので、今は影響しない。`void/db` を app や test から読むようになったら、`paths` の持ち方を決め直す
-- `void init --tsconfig` は、ルートの `tsconfig.json` に `extends: "./.void/tsconfig.json"` と `types: ["void/env"]` を足し、コメントを消す。打ち直したら、ルートの変更を戻し、必要な変更を 4 つの tsconfig へ手で写す
+- Void が `.void/tsconfig.json` に `paths` を足しても、`tsconfig.paths.json` に写すまで app・test・worker からは見えない。2026-11-02 に `.void/tsconfig.json` へ別名を 1 つ足すと、それを import する `src/lib/` と `routes/` のファイルが TS2307 で落ち、`tsconfig.paths.json` に写すと通った。Void 1.4.0 が足す別名は、DB を使うと `void/db`・`@schema`・`@schema/*`、`queues/` を置くと `void/queues`、`.void/md.d.ts` ができると `@void/md/pages` である (`packages/void/src/codegen/project-tsconfig.ts` の `createProjectTsconfig`)。`.void/tsconfig.json` の `paths` と `tsconfig.paths.json` の写しは、`vp exec tsc --showConfig -p tsconfig.worker.json` の `paths` と `.void/tsconfig.json` を並べて突き合わせる
+- `void init --tsconfig` は、ルートの `tsconfig.json` に `extends: "./.void/tsconfig.json"` と `types: ["void/env"]` を足し、コメントを消す。打ち直したら、ルートの変更を戻し、必要な変更を 4 つの tsconfig と `tsconfig.paths.json` へ手で写す
 - 型の program が増えた分だけ `vp check` の時間が延びる余地がある。4 つに分けた状態で、`vp check` の lint と型検査は 2.5 秒だった (2026-11-01、273 ファイル)
 
 ## 出典
@@ -79,3 +91,8 @@
 - Worker のコードを `tsconfig.worker.json` に分ける Cloudflare の雛形: https://github.com/cloudflare/workers-sdk/blob/99454f030043317b2465021a8f6e080339bf1196/packages/create-cloudflare/templates/react/workers/ts/tsconfig.worker.json
 - ルートの `tsconfig.json` と `tsconfig.app.json` の両方に alias を書く (shadcn docs「Installation > Vite」): https://ui.shadcn.com/docs/installation/vite
 - shadcn の CLI が `tsconfig.app.json` の `paths` を読まない: shadcn-ui/ui#11466
+- 継承した config の値を後の config が上書きする (TSConfig Reference「extends」): https://www.typescriptlang.org/tsconfig/#extends
+- `paths` を継承でマージする提案: microsoft/TypeScript#44589
+- `paths` はファイルを `files` か `include` に持つ tsconfig のものだけが効く (Vite docs「resolve.tsconfigPaths」): https://vite.dev/config/shared-options#resolve-tsconfigpaths
+- 自分の `paths` を持つ tsconfig へ `.void/tsconfig.json` の `paths` を写す `void init --tsconfig` (1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/packages/void/src/cli/init.ts
+- `.void/tsconfig.json` に足す `paths` の条件 (1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/packages/void/src/codegen/project-tsconfig.ts
