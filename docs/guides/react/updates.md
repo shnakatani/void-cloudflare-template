@@ -2,12 +2,12 @@
 
 ユーザー操作で状態を変えるコード (イベントハンドラ、mutation、楽観表示、ダイアログの close) を書くときの手順と落とし穴を持つ。
 
-| 決定                                                                                                | ADR      |
-| --------------------------------------------------------------------------------------------------- | -------- |
-| ユーザー操作による更新は Transition を既定にし、query 由来の楽観表示は mutation の variables で出す | ADR-0015 |
-| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ      | ADR-0016 |
-| ユーザー操作の完了点とブロック範囲は機能ごとに選び、既定は対象の項目だけを止める                    | ADR-0017 |
-| 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ   | ADR-0026 |
+| 決定                                                                                                     | ADR      |
+| -------------------------------------------------------------------------------------------------------- | -------- |
+| ユーザー操作による更新は Transition を既定にし、楽観表示は loader の props を元に `useOptimistic` で出す | ADR-0015 |
+| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ           | ADR-0016 |
+| ユーザー操作の完了点とブロック範囲は機能ごとに選び、既定は対象の項目だけを止める                         | ADR-0017 |
+| 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ        | ADR-0026 |
 
 ## explanation
 
@@ -20,21 +20,22 @@
 | Action     | `startTransition` に渡す非同期関数。`await` した Promise の決着まで Transition が続く ([React docs「useTransition」][]) |
 | mutation   | page の action を呼んでサーバーへ書き込む操作 (POST 相当)。GET 相当のデータ取得は含まない                               |
 
-### query のキャッシュとダイアログの close は Transition に乗らない
+### page の props は Transition で入れ替わり、ダイアログの close は乗らない
 
-TanStack Query の `useQuery` / `useMutation`、Base UI のダイアログの handle は、どれも `useSyncExternalStore` で購読されている。React はこの購読の更新を、Transition の中で起きても緊急更新として描く。
-そのため mutation を Action にしても、query の再取得による一覧の描き直しと `handle.close()` によるアンマウントは即座に起き、「古い画面を保ったまま待つ」効果も `<ViewTransition>` のアニメーションも付かない。Transition から得られるのは、pending の管理と、pending の切り替えを `<ViewTransition>` で装飾できることである (ADR-0015)。Transition は Action の実行順を保証しない ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)。
-出典と実測は ADR-0015「制約: TanStack Query のストアは Transition に参加しない」が持つ。`useOptimistic` に query の値を渡せない理由もここにある (「楽観表示を出す」)。
+Void は action の応答で loader を走らせ直し、新しい props を Transition の中で入れ替える。`run` が resolve した時点で、新しい props は commit 済みである。
+Base UI のダイアログの handle は `useSyncExternalStore` で購読されていて、React はその更新を Transition の中で起きても緊急更新として描く。`handle.close()` によるアンマウントは即座に起きる。
+Transition から得られるのは、pending の管理と、pending の切り替えと props の入れ替わりを `<ViewTransition>` で装飾できること (推論) である (ADR-0015)。Transition は Action の実行順を保証しない ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)。
+出典は ADR-0015「page の props は Transition の中で入れ替わる」「制約: ダイアログの close は Transition に参加しない」が持つ。
 
 ### `await` の後の更新の扱いを選んだ理由
 
 Action の中で `await` の後に state を set する書き方には、公式が 2 つの問題を挙げる。`await` の後の更新は Transition として扱われない ([React docs「useTransition」][] の Caveats と Troubleshooting「React doesn't treat my state update after `await` as a Transition」)。Transition の中の Action は実行順を保証しない ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)。そこで、set する値の種類ごとに手段を選ぶ。
 
-| set する値                            | 手段                                           | 理由                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| サーバーの値                          | set せず、query の再取得に任せる               | ページのデータは Query が持つ。手で set すると同じ値を query のキャッシュと state の 2 か所に持ち、再取得で query だけが新しくなる                                                                                                                                                                                                                                     |
-| Action の結果                         | `useActionState`                               | 呼び出しを順に処理し、前の呼び出しの結果を次へ渡す ([React docs「useActionState」][])。順序を保つ手段として公式が挙げる ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)                                                                                                                                       |
-| どちらでもない値 (ローカルの段階など) | `await` の後の set を `startTransition` で包む | 公式の直し方 ([React docs「useTransition」][] の Troubleshooting「React doesn't treat my state update after `await` as a Transition」)。順序は保証されず、先に始めた呼び出しが後から終わると新しい値を上書きしうる。順序が要るときは自前の queue と中断が要る ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」) |
+| set する値                            | 手段                                               | 理由                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| サーバーの値                          | set せず、action の応答で入れ替わる props に任せる | ページのデータは loader の props が持つ。手で set すると同じ値を props と state の 2 か所に持ち、次の action や遷移で props だけが新しくなる                                                                                                                                                                                                                           |
+| Action の結果                         | `useActionState`                                   | 呼び出しを順に処理し、前の呼び出しの結果を次へ渡す ([React docs「useActionState」][])。順序を保つ手段として公式が挙げる ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)                                                                                                                                       |
+| どちらでもない値 (ローカルの段階など) | `await` の後の set を `startTransition` で包む     | 公式の直し方 ([React docs「useTransition」][] の Troubleshooting「React doesn't treat my state update after `await` as a Transition」)。順序は保証されず、先に始めた呼び出しが後から終わると新しい値を上書きしうる。順序が要るときは自前の queue と中断が要る ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」) |
 
 ### ハンドラを同期関数にする理由
 
@@ -48,7 +49,7 @@ Action の中で `await` の後に state を set する書き方には、公式�
 | `checksVoidReturn.attributes` を off にする             | 本当に rejection を落としている箇所も検出できなくなる                                       | 却下     |
 
 - React 公式もこの構造を採っている。React 19 の `startTransition` は非同期の Action を受け取るが、`onClick` に渡すハンドラ自体は同期である ([React docs「useTransition」][])
-- mutation を伴う操作は、同期ハンドラの内側で `startTransition` に非同期関数を渡す形 (Action) にし、pending は Transition から取る (ADR-0015)。`startTransition` を併用すると pending の源が mutation の `isPending` と二重になるが、源を Transition 側へ一本化してこれを避ける
+- mutation を伴う操作は、同期ハンドラの内側で `startTransition` に非同期関数を渡す形 (Action) にし、pending は Transition から取る (ADR-0015)
 - 非同期イベントハンドラの書き方は typescript-eslint のメンテナの回答に沿う ([typescript-eslint/typescript-eslint#11008][])
 
 ## how-to
@@ -90,7 +91,7 @@ mutation は `src/hooks/use-page-action.ts` を通す。
 | 成功のあと                | `onSuccess` に書く。返した Promise の決着まで `run` は resolve せず、Transition も続く                                                                                                                                                                                                                                                                                         |
 | form から送る             | `usePageActionForm` が返す `submit` を `ActionForm` の `submitAction` に渡し、`run` は form の `onSubmit` で呼ぶ。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが submit の検証で消えず、form が二度と送れない。`onSubmitAsync` などの validator の中で `run` を呼ぶと、form-core が throw を form のエラーに変え、401・500 が境界に届かない |
 | 送信の成否                | `run` の戻り値で判断する。422 でも `onSubmit` は resolve するので、form-core の `isSubmitSuccessful` は `true` になる                                                                                                                                                                                                                                                          |
-| `await` の後の state 更新 | 上から順に当てる。サーバーの値は set せず、query の再取得に任せる。Action の結果を state に持つなら `useActionState` を使う。どちらでもなく `await` の後に set するなら、その set を `startTransition` で包む ([React docs「useTransition」][] の Caveats)。理由は「`await` の後の更新の扱いを選んだ理由」                                                                     |
+| `await` の後の state 更新 | 上から順に当てる。サーバーの値は set せず、action の応答で入れ替わる props に任せる。Action の結果を state に持つなら `useActionState` を使う。どちらでもなく `await` の後に set するなら、その set を `startTransition` で包む ([React docs「useTransition」][] の Caveats)。理由は「`await` の後の更新の扱いを選んだ理由」                                                   |
 
 `usePageAction` を通さずに `action()` を呼ぶと、`ok: false` が通知の無い失敗になる。lint では見つからないので、レビューで見る。
 
@@ -126,9 +127,21 @@ mutation は `src/hooks/use-page-action.ts` を通す。
 
 ### 楽観表示を出す
 
-- query が持つデータとその派生値の楽観表示は、mutation の pending (`variables` / `useMutationState`) から描く。複数の表示箇所を同時に更新するなら `onMutate` でキャッシュを書き換え、失敗時に rollback する (ADR-0015、ADR-0017)
-- `useOptimistic` の第 1 引数に `useQuery` / `useSuspenseQuery` の `data` と、そこから計算した値を渡さない。query のストアは Transition に乗らないので、楽観値と再取得の結果が揺れる ([TanStack/query#9742][])
-- `useOptimistic` を使うのは、query を経由しない部品のローカル値だけにする
+楽観表示は、loader の props を元の値にして `useOptimistic` で出す (ADR-0015)。
+
+```tsx
+const [optimisticItems, addOptimistic] = useOptimistic(items, (current, added: Item) =>
+  current.some((item) => item.id === added.id)
+    ? current
+    : [...current, { ...added, pending: true }],
+);
+// Action の中: addOptimistic(item); await run(item);
+```
+
+- set は Action の中で、`run` より前に呼ぶ。Action の外で呼ぶと React がエラーにする ([React docs「useOptimistic」][] の Troubleshooting「An optimistic state update occurred outside a Transition or Action」)
+- reducer の形で書き、updater (`set(prev => …)`) で書かない。updater は Transition が始まった時点の値しか見ず、Action の間に入れ替わった props を見落とす ([React docs「useOptimistic」][] の「Choosing between updaters and reducers」)
+- reducer は、元の値に変更がすでに入っていても同じ結果を返す形にする。足す項目は id で重複を除き、消す項目は id で除く。`run` が resolve する前に新しい props が commit され、React は Action が終わるまで reducer を新しい props で走らせ直すので、素直に足すと同じ項目が 2 つ並ぶ (ADR-0015)
+- 失敗で `run` が `false` を返すか reject すると、Action の終わりで楽観値は元の props に戻る。戻すための処理を書かない ([React docs「useOptimistic」][])
 
 ### 操作の型ごとの当て方
 
@@ -148,6 +161,7 @@ mutation は `src/hooks/use-page-action.ts` を通す。
 
 [React docs「useTransition」]: https://react.dev/reference/react/useTransition
 [React docs「useActionState」]: https://react.dev/reference/react/useActionState
+[React docs「useOptimistic」]: https://react.dev/reference/react/useOptimistic
 [typescript-eslint/typescript-eslint#11008]: https://github.com/typescript-eslint/typescript-eslint/issues/11008
 [WAI-ARIA 1.2「Presentational Children」]: https://www.w3.org/TR/wai-aria-1.2/#childrenArePresentational
 [mui/base-ui#5133]: https://github.com/mui/base-ui/issues/5133
@@ -155,4 +169,3 @@ mutation は `src/hooks/use-page-action.ts` を通す。
 [`@tanstack/react-query` の `useMutation.ts`]: https://github.com/TanStack/query/blob/@tanstack/react-query@5.104.0/packages/react-query/src/useMutation.ts
 [TkDodo「Concurrent Optimistic Updates in React Query」]: https://tkdodo.eu/blog/concurrent-optimistic-updates-in-react-query
 [`@tanstack/query-core` の `utils.ts`]: https://github.com/TanStack/query/blob/@tanstack/query-core@5.104.0/packages/query-core/src/utils.ts
-[TanStack/query#9742]: https://github.com/TanStack/query/issues/9742
