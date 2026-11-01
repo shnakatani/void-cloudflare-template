@@ -63,7 +63,7 @@ paths:
 - 落ちたときに判断が要らない検査は作らない。期待値の書き換えしか選択肢が無い検査は上流更新のたびに鳴り、判断を鈍らせる (`docs/guides/testing/check-scripts.md`「検査スクリプトを分けて置く理由」)
 - ビルド成果物が要る検査は vitest の project にせず、`vite.config.ts` の `verifySteps` で `verify:build` の後に置き、CI の step にも足す。project は build との順序を持てない (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
 - 成果物の検査の判定ロジックは `scripts/lib/` へ切り出して単体テストを持つ (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
-- 固定 port を使う検査は、起動前にその origin が応答しないことを確かめる。前回の残骸が答えると古い成果物の検査が緑になる (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
+- 成果物をサーバとして起動する検査は、固定の port を使わず、OS に選ばせた空きの port を `--strictPort` で使う。固定の port だと前回の残骸が答え、古い成果物の検査が緑になる (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
 - テスト全体の TZ は root の globalSetup (`tooling/test/global-setup.ts`) で決め、`APP_TIME_ZONE` と違う値にする。一致すると、ローカル TZ に依存する実装を壁時計の値のテストが見逃す (`docs/guides/testing/time-zones.md`「基準のタイムゾーンを決める理由」)
 - `Intl.DateTimeFormat` で整形した日時を固定の文字列と比べない。`format()` の出力は実装ごとに違ってよい。壁時計は数字の並びで比べ、画面の期待値は `formatDateTime` で作る。date-fns の `format` は Intl を使わないので、固定の文字列と比べてよい (`docs/guides/dates-and-time-zones.md`「整形した日時をテストで確かめる」)
 - Node で動くテスト (unit project) のうち、`Date` のローカルの getter や TZ を指定しない date-fns を直接呼ぶモジュールと、ローカルの TZ に依存しないことを保証するモジュールのテストは、ファイルごと `src/**/*.tz.test.ts` にする。1 件ずつ分けると、分け損ねたテストが基準の TZ でしか走らない (`docs/guides/testing/time-zones.md`「Node で動くテストを TZ ごとに走らせる」)

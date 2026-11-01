@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
 
@@ -40,6 +40,8 @@ const EXPECTED_HEADERS: readonly ExpectedHeader[] = [
 
 /** `vp build` が書き、`vp preview` が Worker の設定として読むファイル */
 const BUILD_OUTPUT = join(REPO_ROOT, "dist", "ssr", "wrangler.json");
+/** `routing.headers` を持つ設定。ヘッダの rule は `vp build` のときに成果物へ取り込まれる */
+const VOID_CONFIG = join(REPO_ROOT, "void.config.ts");
 const HOST = "127.0.0.1";
 /** 検査する path と、その path が返すはずの status */
 const CHECKED_RESPONSES = [
@@ -50,6 +52,11 @@ const CHECKED_RESPONSES = [
 const STARTUP_TIMEOUT_MS = 30_000;
 const SHUTDOWN_TIMEOUT_MS = 5000;
 const POLL_INTERVAL_MS = 250;
+/**
+ * 1 回の要求を待つ上限。接続を受けて何も返さない相手だと、上限の無い fetch は返らず、
+ * 起動の上限 (`STARTUP_TIMEOUT_MS`) も効かなくなる
+ */
+const REQUEST_TIMEOUT_MS = 2000;
 
 /** 検査の失敗。プロセスの終了はサーバを止めたあとで行う */
 class CheckFailure extends Error {}
@@ -101,7 +108,11 @@ async function waitForServer(origin: string, getExit: () => ExitStatus | undefin
     }
     try {
       // oxlint-disable-next-line eslint/no-await-in-loop -- 起動を待つ逐次ポーリング。並列化すると「起動したか」を観測する意味が消える
-      await fetch(origin);
+      await fetch(origin, {
+        signal: AbortSignal.timeout(
+          Math.max(1, Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now())),
+        ),
+      });
       return;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
@@ -155,6 +166,11 @@ async function run(): Promise<void> {
   if (!existsSync(BUILD_OUTPUT)) {
     throw new CheckFailure(`${BUILD_OUTPUT} が無い。先に vp build を実行する`);
   }
+  // build し直さずに設定だけを変えると、古い設定の成果物を検査して緑になる。
+  // git checkout で更新日時だけが変わったときも落ちるが、緑を見逃すより安い
+  if (statSync(VOID_CONFIG).mtimeMs > statSync(BUILD_OUTPUT).mtimeMs) {
+    throw new CheckFailure(`void.config.ts がビルド (${BUILD_OUTPUT}) より新しい。vp build し直す`);
+  }
   const port = await findFreePort();
   const origin = `http://${HOST}:${port.toString()}`;
 
@@ -199,7 +215,14 @@ async function run(): Promise<void> {
     for (const { path, status } of CHECKED_RESPONSES) {
       // redirect を追うと、移り先の応答を検査してしまう
       // oxlint-disable-next-line eslint/no-await-in-loop -- 1 つのサーバへ数件を順に聞くだけで、並列にしても得るものが無い
-      const response = await fetch(`${origin}${path}`, { redirect: "manual" });
+      const response = await fetch(`${origin}${path}`, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      }).catch((error: unknown) => {
+        throw new CheckFailure(
+          `${path} の応答を得られない: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
       if (response.status !== status) {
         // 期待と違う status の応答を検査しても、その path の経路を確かめたことにならない
         throw new CheckFailure(
