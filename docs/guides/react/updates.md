@@ -6,7 +6,7 @@
 | -------------------------------------------------------------------------------------------------------- | -------- |
 | ユーザー操作による更新は Transition を既定にし、楽観表示は loader の props を元に `useOptimistic` で出す | ADR-0015 |
 | mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ           | ADR-0016 |
-| ユーザー操作の完了点とブロック範囲は機能ごとに選び、既定は対象の項目だけを止める                         | ADR-0017 |
+| ユーザー操作の完了点は機能ごとに選び、ページの action は同時に 1 つだけ走らせる                          | ADR-0017 |
 | 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ        | ADR-0026 |
 
 ## explanation
@@ -97,33 +97,23 @@ mutation は `src/hooks/use-page-action.ts` を通す。
 
 ### 完了点ごとに Transition を終える
 
-完了点のどれを選ぶかは ADR-0017 の軸で決める。選んだら、次の形で組む。ダイアログの無い操作では、Action が return する時点が close の時点に当たる。
+完了点のどれを選ぶかは ADR-0017 の軸で決める。選んだら、次の形で組む。どちらの完了点でも、Action は `run` を await して決着まで続く。
 
-| 完了点         | Transition の終え方                                                                                                                                                                        | Transition の pending                                       |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| 確定操作の直後 | Action は `handle.close()` だけを含み (ダイアログが無ければ何もしない)、mutation は Transition の外で `void runAction(...)` として走らせる。失敗は `onError` の toast と項目の復帰で伝える | 確定操作で終わる                                            |
-| サーバー応答   | `onSuccess` の先頭でダイアログを閉じ (`handle.close()` を呼ぶ)、その後に再取得の Promise を返す (ダイアログが無ければ `mutateAsync` を await して return)                                  | 再取得の完了まで続くが、閉じた後は見えない                  |
-| 再取得完了     | `onSuccess` で再取得を await した後にダイアログを閉じる                                                                                                                                    | 再取得の完了まで続き、ダイアログの pending 表示として見える |
+| 完了点         | Action の組み方                                                                                                                                               | ダイアログの pending                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 確定操作の直後 | 楽観値を set し (「楽観表示を出す」)、ダイアログを閉じ (`handle.close()`)、`run` を await する。失敗は `run` の toast と、Action の終わりで戻る楽観値で伝わる | 閉じるので見えない。対象の項目の楽観値が busy を表す |
+| action の決着  | `run` を await し、`true` が返ったらダイアログを閉じる (`onSuccess` に書いてもよい)。`false` なら開いたまま、エラーはフィールドか toast に出ている            | 新しい props の commit まで、ダイアログの中に見える  |
 
-- 完了点「確定操作の直後」では Transition が確定の直後に終わるので、close の animate-out の間やダイアログの無い操作では `isPending` の dedupe が効かない。同じ対象の mutation が pending なら action を no-op にする。判定は `queryClient.isMutating` か `useMutationState` で取る
-- 完了点「サーバー応答」で handle を複数の対象で共有するときは、閉じる前に、開いている対象がこの mutation の対象と同じかを確かめる。先行する操作の `onSuccess` が、別の対象で開き直したダイアログを閉じてしまう
-- 再取得の完了より前に閉じるなら、対象の項目にその pending から busy の表現を付ける。付け忘れると、古い一覧が pending の表示なしで見える
+- ダイアログの無い操作では、楽観値を出すかどうかが完了点の選択に当たる
+- 確定操作の直後に閉じるなら、対象の項目に楽観値から busy の表現を付ける。付け忘れると、古い一覧が pending の表示なしで見える
 
-並行実行を許す操作では `mutationKey` を付ける。
+### 走っている action のあいだ、ほかの起点を止める
 
-- `variables` / `useMutationState` で UI 側に描く方式では、各 mutation が自分の再取得の Promise を返して待つ。再取得は重なりうるが、巻き戻される楽観状態が無い
-- `onMutate` でキャッシュを書き換える方式で並行実行を許すときだけ、`onSettled` で `queryClient.isMutating({ mutationKey }) === 1` のときに再取得する。先に終わった mutation の再取得が、後の楽観表示を巻き戻すのを防ぐ ([TkDodo「Concurrent Optimistic Updates in React Query」][])
+page の action は同時に 1 つしか走らない (ADR-0017)。2 つ目を始めると、Void が 1 つ目の要求を中断し、1 つ目の `run` が `AbortError` で reject して境界に届く。
 
-### mutation の pending を読む
-
-| 場面                               | 読み方                                                                                                     |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 1 件ずつ                           | `mutation.isPending && mutation.variables === id`。`variables` は決着後も残るので `isPending` でゲートする |
-| 並行、または別のコンポーネントから | `mutationKey` を付け、`useMutationState` (`status: "pending"`) で読む                                      |
-
-- `mutationKey` は既定で前方一致に当たる。`useMutationState` と `isMutating` の `filters` には `exact: true` を付ける ([`@tanstack/query-core` の `utils.ts`][] の `matchMutation`)
-- `variables` の型は `unknown` のままなので、行へ渡す前にスキーマで `safeParse` して型へ絞り、失敗は `console.warn` に raw input ごと残して除外する。絞り込みは `src/lib/parse-each.ts` の `parseEach` が持つ
-- `useMutationState` の `select` の中で throw しない。`select` は描画中に走るので、throw すると一覧ごと Error Boundary へ落ちる
+- action の起点 (ボタン、確認ダイアログを開くトリガー、submit) は、`useNavigation()` (`@void/react`) の `state` が `"submitting"` の間は止める。押した部品自身は自分の `isPending` で止まるが、ほかの項目の起点はこの値でしか止まらない
+- 止め方は `aria-disabled` にし、フォーカスを保つ (「Action 層の部品が守る契約」の pending 行と同じ形)
+- busy の表現 (半透明、静的テキスト) は対象の項目だけに付ける。ほかの項目は起点が止まるだけで、見た目は変えない
 
 ### 楽観表示を出す
 
@@ -147,13 +137,12 @@ const [optimisticItems, addOptimistic] = useOptimistic(items, (current, added: I
 
 一覧の行の削除 (確認ダイアログあり) には、ADR-0017 の軸を次のように当てる。新しい操作を足すときの見本になる。
 
-| 操作 | 完了点                 | 表現                                                                                                                                                                                                                                | 理由                                                                                                                 |
-| ---- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 削除 | 確定操作の直後に閉じる | 行を半透明にし、行のトリガーだけを無効にする。mutation に `mutationKey` を付け、一覧側で `useMutationState` (`status: "pending"`) の `variables` を配列で読み、行ごとに判定する。同時の削除を許し、各 mutation は自分の再取得を待つ | 失敗は toast と行の復帰で戻せる。確定で閉じるので、共有の handle を先行する削除の `onSuccess` が閉じる問題も起きない |
+| 操作 | 完了点                 | 表現                                                                                                                                       | 理由                            |
+| ---- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| 削除 | 確定操作の直後に閉じる | 削除中の id を `useOptimistic` で持ち、その行を半透明にする。送信中は、どの行の削除トリガーも `useNavigation()` の `"submitting"` で止める | 失敗は toast と行の復帰で戻せる |
 
 - 半透明は `src/lib/busy-opacity.ts` の `BUSY_OPACITY_CLASS` を使う。値の理由と、当たる対の測り方は同じ定数の docstring が持つ
 - 半透明は読み上げに出ない。通知は announcer で出し、行には仮想カーソル用の静的テキスト (「削除中」) を置く (ADR-0026)
-- `variables` を行へ絞るスキーマ (削除中の id) と mutation の filters は `src/features/<domain>/` に置く
 
 ## 出典
 
@@ -166,6 +155,3 @@ const [optimisticItems, addOptimistic] = useOptimistic(items, (current, added: I
 [WAI-ARIA 1.2「Presentational Children」]: https://www.w3.org/TR/wai-aria-1.2/#childrenArePresentational
 [mui/base-ui#5133]: https://github.com/mui/base-ui/issues/5133
 [adobe/react-spectrum#9894]: https://github.com/adobe/react-spectrum/pull/9894
-[`@tanstack/react-query` の `useMutation.ts`]: https://github.com/TanStack/query/blob/@tanstack/react-query@5.104.0/packages/react-query/src/useMutation.ts
-[TkDodo「Concurrent Optimistic Updates in React Query」]: https://tkdodo.eu/blog/concurrent-optimistic-updates-in-react-query
-[`@tanstack/query-core` の `utils.ts`]: https://github.com/TanStack/query/blob/@tanstack/query-core@5.104.0/packages/query-core/src/utils.ts

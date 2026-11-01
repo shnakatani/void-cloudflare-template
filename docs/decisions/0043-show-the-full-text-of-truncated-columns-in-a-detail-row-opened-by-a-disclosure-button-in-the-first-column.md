@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-15
-- 関連: ADR-0017 (止めるのは対象の項目の操作だけ)、ADR-0018 (一覧テーブルは registry の Table に描く)、ADR-0022 (外見は部品・prop・variant で配る)、ADR-0026 (項目の状態は静的テキストで持ち、live region を足さない)、ADR-0042 (列幅と切り詰めの条件)
+- 関連: ADR-0017 (止めるのはデータを変える操作)、ADR-0018 (一覧テーブルは registry の Table に描く)、ADR-0022 (外見は部品・prop・variant で配る)、ADR-0026 (項目の状態は静的テキストで持ち、live region を足さない)、ADR-0042 (列幅と切り詰めの条件)
 
 ## Context
 

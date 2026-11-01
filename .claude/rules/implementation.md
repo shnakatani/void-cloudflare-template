@@ -47,26 +47,22 @@ lint (`typescript/no-misused-promises`) が止める。直し方 (`docs/guides/r
 
 ## ユーザー操作による更新は Transition の中で行う
 
-lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-0016、完了点とブロック範囲は ADR-0017)。
+lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-0016、完了点と止める範囲は ADR-0017)。
 
-| 更新の種類                        | 書き方                                                                                                                                            |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| mutation を伴う操作               | `src/components/action/` の部品に `action` を渡す。Action の中で `usePageAction` の `run` を呼ぶ                                                  |
-| mutation 成功後のダイアログ close | 閉じる時点は ADR-0017 の完了点の軸で選び、理由を実装近傍に書く。選択肢は ADR-0017                                                                 |
-| 制御コンポーネントの入力値        | 緊急更新のまま。Transition は割り込まれるので入力値の反映が遅れる                                                                                 |
-| 検索条件の変更                    | 打鍵中は debounce した値を `useDeferredValue` に通して `useSuspenseQuery` の key にする (`docs/guides/lists-and-search.md`「検索の入力欄を組む」) |
+| 更新の種類                        | 書き方                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| mutation を伴う操作               | `src/components/action/` の部品に `action` を渡す。Action の中で `usePageAction` の `run` を呼ぶ |
+| mutation 成功後のダイアログ close | 閉じる時点は ADR-0017 の完了点の軸で選び、理由を実装近傍に書く。選択肢は ADR-0017                |
+| 制御コンポーネントの入力値        | 緊急更新のまま。Transition は割り込まれるので入力値の反映が遅れる                                |
 
-- pending 表示は Action 層の `isPending` から取る。例外は項目の busy・楽観表示・close 阻止で、mutation の pending から取る (ADR-0017)
+- pending 表示は Action 層の `isPending` から取る。項目の busy は `useOptimistic` の楽観値から取る (ADR-0015)
 - mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` は `action()` の `ok: false` を toast かフィールドのエラーに出し、throw (401・403・500 など) は Error Boundary へ届ける。どちらも、通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`docs/guides/react/updates.md`「mutation の書き方」)
 - `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
-- `onSuccess` は再取得の Promise を返す。再取得完了前に close するなら、対象の項目にその pending から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
-- 止めるのは対象の項目だけにする。並行操作が整合を壊すときだけ全体を止め、理由を実装近傍に書く (ADR-0017)
+- 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
+- page の action の起点は、どの項目のものも `useNavigation().state === "submitting"` の間は `aria-disabled` で止める。2 つ目の action が 1 つ目を中断し、1 つ目の Action が境界に届く。busy の表現は対象の項目だけに付ける (`docs/guides/react/updates.md`「走っている action のあいだ、ほかの起点を止める」)
 - Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず action の応答で入れ替わる props に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)
 - 楽観表示は loader の props を元に `useOptimistic` で出し、reducer で書く。reducer は元の値に変更がすでに入っていても同じ結果を返す形にする。`run` が resolve する前に新しい props が commit されるので、素直に足すと同じ項目が 2 つ並ぶ (`docs/guides/react/updates.md`「楽観表示を出す」)
-- mutation の pending は、1 件ずつなら `isPending && variables === id`、並行か別コンポーネントなら `mutationKey` + `useMutationState` で読む (`docs/guides/react/updates.md`「mutation の pending を読む」)
-- `useMutationState` と `isMutating` の `filters` に `exact: true` を付ける。`variables` は `parseEach` (`src/lib/parse-each.ts`) で絞る (`docs/guides/react/updates.md`「mutation の pending を読む」)
-- `useMutationState` の `select` の中で throw しない。描画中に走るので一覧ごと Error Boundary へ落ちる (`docs/guides/react/updates.md`「mutation の pending を読む」)
 - 操作の開始の announce は `onMutate`、完了は `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
 - 決着前の二重発火は Action 層の `isPending` (`aria-disabled`) が塞ぐ。閉包や ref のフラグを足さない (ADR-0016)
 

@@ -40,7 +40,7 @@ paths:
 
 | 配置先                   | 内容                                                                                                                                                                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/features/<domain>/` | 1 つのドメインに属し、複数の画面から使うものか、ドメインの形と同じ場所に居るべきもの (スキーマ / query options / mutation options / 共有 UI) (`docs/guides/placement.md`「features か lib・hooks か」)                                   |
+| `src/features/<domain>/` | 1 つのドメインに属し、複数の画面から使うものか、ドメインの形と同じ場所に居るべきもの (スキーマ / 共有 UI) (`docs/guides/placement.md`「features か lib・hooks か」)                                                                      |
 | `src/hooks/`             | どのドメインにも属さない React 依存のカスタム hook (`use-*`) と、複数のファイルから使う React 依存の context 定義。1 つの部品のファイルだけで使う context はそのファイルに置く (`docs/guides/placement.md`「features か lib・hooks か」) |
 | `src/lib/`               | ドメインに属さない汎用ロジック・型 (React 非依存) (`docs/guides/placement.md`「features か lib・hooks か」)                                                                                                                              |
 
