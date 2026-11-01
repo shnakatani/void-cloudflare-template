@@ -22,9 +22,14 @@ describe("createTestD1", () => {
   });
 
   it("呼ぶたびに別の D1 を作る", async () => {
-    const a = await createTestD1();
-    const b = await createTestD1();
+    const created = await Promise.allSettled([createTestD1(), createTestD1()]);
+    const instances = created.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value] : [],
+    );
     try {
+      // 片方が落ちても、できた方の workerd を finally で dispose する
+      const [a, b] = instances;
+      if (!a || !b) throw new Error("createTestD1 が 2 回続けて成功しなかった");
       await a.d1
         .prepare(
           "insert into user (id, name, email, emailVerified, createdAt, updatedAt) values ('u1', 'a', 'a@example.com', 0, 0, 0)",
@@ -33,8 +38,7 @@ describe("createTestD1", () => {
       const row = await b.d1.prepare("select count(*) as n from user").first<{ n: number }>();
       expect(row?.n).toBe(0);
     } finally {
-      await a.dispose();
-      await b.dispose();
+      await Promise.all(instances.map((instance) => instance.dispose()));
     }
   });
 });
