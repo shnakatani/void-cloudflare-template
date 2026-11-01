@@ -1,8 +1,10 @@
 import tailwindcss from "@tailwindcss/vite";
+import { voidReact } from "@void/react/plugin";
 import { defineConfig, lazyPlugins } from "vite-plus";
+import { voidPlugin } from "void";
 
 import { lintConfig } from "./tooling/lint/config";
-import { reactPlugin } from "./tooling/plugins/react";
+import { reactPluginOptions } from "./tooling/plugins/react";
 import { testConfig } from "./tooling/test/config";
 
 // CI はこの手順を 1 つずつ別の step で打つ。足したら .github/workflows/ci.yml にも step を足す。
@@ -64,8 +66,9 @@ export default defineConfig({
     if (process.env.VITEST === "true") return [];
     return [
       tailwindcss(),
+      voidPlugin(),
       // bail out はビルドログへ出す (ADR-0014)
-      reactPlugin({ compiler: true, reportDiagnostics: true }),
+      voidReact({ react: reactPluginOptions({ compiler: true, reportDiagnostics: true }) }),
     ];
   }),
 });

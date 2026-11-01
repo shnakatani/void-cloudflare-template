@@ -174,3 +174,5 @@ storybook-static
 .claude/worktrees/
 .claude/settings.local.json
 .superpowers/
+.void
+.void-wrangler.jsonc

@@ -98,7 +98,16 @@ const EXPECTED_OVERRIDES = [
     // (ui/) だけで、parts/ と action/ の中でも ui 部品への上書きを検査する。広げると、広げた先で
     // className の上書きと動的な className が無診断で通る。.storybook/ も消費側として扱う
     // (decorator が design system component を包む置き場になる)
-    files: ["src/**", ".storybook/**"],
+    files: [
+      "src/**",
+      ".storybook/**",
+      "pages/**",
+      "routes/**",
+      "middleware/**",
+      "crons/**",
+      "queues/**",
+      "db/**",
+    ],
     excludeFiles: ["src/components/ui/**"],
     rules: { "shadcn/no-restyle": "deny", "shadcn/require-static-classes": "deny" },
   },
@@ -121,7 +130,16 @@ const EXPECTED_OVERRIDES = [
     // テスト専用のコードの import 禁止。緩和ではなく適用先を絞った有効化なので、テスト側は
     // off ではなく excludeFiles で外す (ADR-0008)。付随ファイルぶんは
     // 下で差し引くので、ここに残るのは src/test/** だけになる
-    files: ["src/**", "scripts/**"],
+    files: [
+      "src/**",
+      "scripts/**",
+      "pages/**",
+      "routes/**",
+      "middleware/**",
+      "crons/**",
+      "queues/**",
+      "db/**",
+    ],
     excludeFiles: ["src/test/**"],
     rules: { "no-restricted-imports": "deny" },
   },
@@ -131,7 +149,18 @@ const EXPECTED_OVERRIDES = [
 const COMPANION_GLOBS = new Set(companionGlobs("**/"));
 
 /** lint が見に行くべきソースの所在 */
-const SOURCE_ROOTS = ["src", "scripts", ".storybook", "tooling"];
+const SOURCE_ROOTS = [
+  "src",
+  "scripts",
+  ".storybook",
+  "tooling",
+  "pages",
+  "routes",
+  "middleware",
+  "crons",
+  "queues",
+  "db",
+];
 
 /** 追跡されているのに lint されなくてよいソース (生成物) */
 const ALLOWED_INVISIBLE: string[] = [];
@@ -258,7 +287,18 @@ describe("書いた設定が解決後も残っている", () => {
       holders.map(({ files }) => files),
       "付随ファイルの除外が想定外の override に付いた。その override の規則が" +
         "テストと story で無診断になる (ADR-0008 / ADR-0011 / ADR-0022)",
-    ).toEqual([["src/**", "scripts/**"]]);
+    ).toEqual([
+      [
+        "src/**",
+        "scripts/**",
+        "pages/**",
+        "routes/**",
+        "middleware/**",
+        "crons/**",
+        "queues/**",
+        "db/**",
+      ],
+    ]);
     expect(
       holders[0]?.excludeFiles?.filter((glob) => COMPANION_GLOBS.has(glob)),
       "付随ファイルの除外が欠けた。その種別のファイルが自分の helper を import できなくなる " +

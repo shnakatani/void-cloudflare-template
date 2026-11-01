@@ -1,6 +1,12 @@
 ---
 paths:
   - "src/**"
+  - "pages/**"
+  - "routes/**"
+  - "middleware/**"
+  - "crons/**"
+  - "queues/**"
+  - "db/**"
 ---
 
 # ディレクトリ構成方針

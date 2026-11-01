@@ -1,7 +1,19 @@
 ---
 paths:
   - "src/**/*.tsx"
+  - "pages/**/*.tsx"
+  - "routes/**/*.tsx"
+  - "middleware/**/*.tsx"
+  - "crons/**/*.tsx"
+  - "queues/**/*.tsx"
+  - "db/**/*.tsx"
   - "src/**/*.css"
+  - "pages/**/*.css"
+  - "routes/**/*.css"
+  - "middleware/**/*.css"
+  - "crons/**/*.css"
+  - "queues/**/*.css"
+  - "db/**/*.css"
   - ".storybook/**"
 ---
 

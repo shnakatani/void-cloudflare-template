@@ -1,6 +1,12 @@
 ---
 paths:
   - "src/**"
+  - "pages/**"
+  - "routes/**"
+  - "middleware/**"
+  - "crons/**"
+  - "queues/**"
+  - "db/**"
 ---
 
 # 実装ワークフロー

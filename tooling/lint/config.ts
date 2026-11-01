@@ -6,6 +6,7 @@ import {
   storyGlobs,
   testHelperGlobs,
 } from "../../scripts/lib/companion-files";
+import { VOID_SOURCE_GLOBS } from "../void-source-dirs";
 
 const OXLINT_DEFAULT_PLUGINS = ["typescript", "unicorn", "oxc"] as const;
 
@@ -327,7 +328,7 @@ export const lintConfig = {
     },
     {
       // design system の内部 (ui/) だけを適用範囲から外す (ADR-0011 / ADR-0022)
-      files: ["src/**", ".storybook/**"],
+      files: ["src/**", ".storybook/**", ...VOID_SOURCE_GLOBS],
       excludeFiles: ["src/components/ui/**"],
       rules: {
         // ScrollArea は器に合わせる角丸だけを呼び出し側に許す (ADR-0011)
@@ -359,7 +360,7 @@ export const lintConfig = {
     {
       // テストと story だけが使うコードをアプリから import させない。範囲を絞った有効化なので
       // テスト側は off にせず excludeFiles で外す。.storybook/** は対象外 (ADR-0008)
-      files: ["src/**", "scripts/**"],
+      files: ["src/**", "scripts/**", ...VOID_SOURCE_GLOBS],
       excludeFiles: [...companionGlobs("**/"), "src/test/**"],
       rules: {
         "no-restricted-imports": [

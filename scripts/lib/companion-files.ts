@@ -31,7 +31,7 @@ function companionGlobsOfKinds(prefix: string, kinds: readonly (typeof COMPANION
 
 /**
  * 付随ファイルに当たる glob。`prefix` は呼ぶ側の基準ディレクトリで決まり、`/` で終える
- * (lint は `**\/`、coverage は `src/**\/`)。終えないと `src*.test.ts` のような glob になる。
+ * (lint も coverage も `**\/`)。終えないと `src*.test.ts` のような glob になる。
  */
 export function companionGlobs(prefix: string): string[] {
   return companionGlobsOfKinds(prefix, COMPANION_KINDS);

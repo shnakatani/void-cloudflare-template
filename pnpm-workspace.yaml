@@ -28,6 +28,14 @@ minimumReleaseAgeExclude:
   - "@oxfmt/*"
   - vitest
   - "@vitest/*"
+  # 公開 3 日未満の版を、provenance を確かめて前倒しする (docs/guides/dependencies-and-toolchain.md「待機を前倒しする」)
+  - void@1.4.0
+  - "@void/react@1.4.0"
+  - "@void/deploy-cloudflare@1.4.0"
+  - "@void/deploy-core@1.4.0"
+  - "@void/edge@1.4.0"
+  - "@void/isr@1.4.0"
+  - "@void/platform@1.4.0"
 
 # vite / vitest の行は vp migrate が書き、消しても書き戻す (docs/guides/dependencies-and-toolchain.md「peer の食い違いを数える」)
 peerDependencyRules:
@@ -52,6 +60,8 @@ pmOnFail: ignore
 allowBuilds:
   esbuild: true
   lightningcss: true
+  sharp: true
+  workerd: true
 
 # 公開後 3 日 (4320 分) 未満の版を解決しない。.github/dependabot.yml の cooldown と
 # .github/zizmor.yml の下限を同じ値に揃える (ADR-0005)

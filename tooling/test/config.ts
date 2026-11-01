@@ -6,6 +6,7 @@ import {
 
 import { companionGlobs } from "../../scripts/lib/companion-files";
 import { isStorybookRun } from "../../scripts/lib/storybook-env";
+import { VOID_SOURCE_GLOBS } from "../void-source-dirs";
 import { browserProject } from "./browser-project";
 import { storybookProject } from "./storybook-project";
 
@@ -68,7 +69,7 @@ export const testConfig = {
     {
       test: {
         name: "unit",
-        include: ["src/**/*.test.ts"],
+        include: ["src/**/*.test.ts", ...VOID_SOURCE_GLOBS.map((glob) => `${glob}/*.test.ts`)],
       },
     },
     {
@@ -97,14 +98,14 @@ export const testConfig = {
   coverage: {
     provider: "v8",
     reporter: ["text", "html", "json-summary"],
-    include: ["src/**"],
+    include: ["src/**", ...VOID_SOURCE_GLOBS],
     exclude: [
       // 付随ファイルは出荷されないので分母に入れない
-      ...companionGlobs("src/**/"),
+      ...companionGlobs("**/"),
       // vi.mock の差し替え先。テストだけが読み、出荷されない
-      "src/**/__mocks__/**",
+      "**/__mocks__/**",
       "src/test/**",
-      "src/**/*.d.ts",
+      "**/*.d.ts",
     ],
   },
 } satisfies TestUserConfig;
