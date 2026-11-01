@@ -53,7 +53,7 @@ patch を当てた状態で、2 秒待つ action を `ActionButton` の Action �
 | 2059 ms の標本        | 新しい props が描かれ、ボタンの pending が解ける |
 
 - `run` の `true` は、新しい props の commit の前に返る。`await run()` の後の処理と `onSuccess` は、新しい props が描かれる前に走る
-- 新しい props の Transition が Action の終わりを待つのは、React が走っている Transition を束ねる挙動 (`useTransition` リファレンスの Caveats「If there are multiple ongoing Transitions, React currently batches them together」) と合う (推論)。「React 側の方針」の React 19.3 の行は Transition を独立して描くと書くが、react 19.3.1 のテンプレートでは束ねられて見えた
+- 新しい props の Transition が Action の終わりを待つのは、React が走っている Transition を束ねる挙動 (`useTransition` リファレンスの Caveats「If there are multiple ongoing Transitions, React currently batches them together」) と合う (推論)
 
 ### 制約: ダイアログの close は Transition に参加しない
 

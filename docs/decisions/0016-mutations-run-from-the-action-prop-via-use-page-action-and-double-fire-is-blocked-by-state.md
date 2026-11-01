@@ -33,14 +33,15 @@ mutation は、page の action (`.server.ts` の `action` / `actions`) を呼ん
 ### 制約: Action の reject は、`useTransition` を呼んだ部品から境界へ投げられる
 
 `useTransition` リファレンスは、`startTransition` に渡した関数が throw または reject すると最寄りの Error Boundary が fallback を出すと書き、「wrap the component where you are calling the `useTransition` in an error boundary」と案内する。
-Error Boundary は画面ごと差し替わる。`action()` の throw を Action の reject のまま境界へ任せると、次のように見えた (2026-11-02 に dev で確認。void 1.4.0、react 19.3.1)。
+Error Boundary は画面ごと差し替わる。`action()` の throw を Action の reject のまま境界へ任せると、次のように見えた (2026-11-02 に dev で確認。void 1.4.0、react 19.3.1)。500 の行は patch を当てない 1.4.0 で、取り消しの行は patch と同じく `_resolveOnShell` を渡す形で測った。patch が変えるのは成功の resolve の時点なので、500 の行は patch の有無で変わらないと見ている (推論)。
 
-| 送信中に起きたこと                                                        | `action()` の決着                 | 画面                                         |
-| ------------------------------------------------------------------------- | --------------------------------- | -------------------------------------------- |
-| 何も起きず、500 が返る (Action の持ち主は mount したまま)                 | `VoidActionError` (500) で reject | 全画面のエラーに替わる                       |
-| 確認ダイアログを閉じた、または Action を持つ部品を消したあとに 500 が返る | `VoidActionError` (500) で reject | 何も出ない。toast も境界も出ない             |
-| `Link` で遷移した                                                         | `AbortError` で reject            | 全画面のエラーが一瞬出てから遷移先が描かれる |
-| `router.refresh()` か 2 つ目の action を始めた                            | `AbortError` で reject            | 全画面のエラーが残る                         |
+| 送信中に起きたこと                                                        | `action()` の決着                 | 画面                                                                         |
+| ------------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| 何も起きず、500 が返る (Action の持ち主は mount したまま)                 | `VoidActionError` (500) で reject | 全画面のエラーに替わる                                                       |
+| 確認ダイアログを閉じた、または Action を持つ部品を消したあとに 500 が返る | `VoidActionError` (500) で reject | 何も出ない。toast も境界も出ない                                             |
+| `Link` で遷移した                                                         | `AbortError` で reject            | 全画面のエラーは描画に出ずに遷移先が描かれたが、console に境界のエラーが出た |
+| `router.refresh()` を始めた                                               | `AbortError` で reject            | 全画面のエラーが残る                                                         |
+| 2 つ目の action を始めた                                                  | `AbortError` で reject            | 2 つ目の Action が終わった後に、全画面のエラーに替わる                       |
 
 `AbortError` は、後から始めた visit が commit 前の visit を abort した結果である (ADR-0017「前提となる仕様」)。部品が消えた後の reject が消えるのは、投げる先の部品が無いためと推論している (react.dev は unmount のときを書いていない)。
 
