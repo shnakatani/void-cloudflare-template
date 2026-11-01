@@ -42,7 +42,7 @@ lint (`typescript/no-misused-promises`) が止める。直し方 (`docs/guides/r
 
 - ハンドラは同期関数として宣言し、非同期処理はその内側の関数へ閉じる。JSX の prop に `void` やインラインの `async` を書かない
 - 待たない判断は内側で 1 回だけ表明する。呼び先が失敗を自分で処理するなら `void`、呼び出し側で通知や後始末をするなら `.catch()`
-- 呼び出し側で扱える操作の失敗は Error Boundary へ届けない。通知は toast (`src/components/ui/toast.tsx`) か画面内表示で行う。Error Boundary は画面ごと差し替わる。`action()` が throw する 401・403・500 は境界に届けてよい (ADR-0016)
+- 操作の失敗は Error Boundary へ届けない。通知は toast (`src/components/ui/toast.tsx`) か画面内表示で行う。Error Boundary は画面ごと差し替わり、送信中に Action の持ち主が unmount すると reject は何も出ずに消える (ADR-0016)
 - mutation を伴う操作は「ユーザー操作による更新は Transition の中で行う」に従う
 
 ## ユーザー操作による更新は Transition の中で行う
@@ -56,7 +56,7 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 | 制御コンポーネントの入力値        | 緊急更新のまま。Transition は割り込まれるので入力値の反映が遅れる                                |
 
 - pending 表示は Action 層の `isPending` から取る。項目の busy は `useOptimistic` の楽観値から取る (ADR-0015)
-- mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` は `action()` の `ok: false` を toast かフィールドのエラーに出し、throw (401・403・500 など) は Error Boundary へ届ける。どちらも、通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
+- mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` は `action()` の `ok: false` を toast かフィールドのエラーに、throw (401・403・500 など) を toast に出し、reject しない。取り消し (`AbortError`) は何も出さない。呼び出し側が通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`docs/guides/react/updates.md`「mutation の書き方」)
 - `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
 - 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
