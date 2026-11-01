@@ -18,6 +18,7 @@ function requiredMessage(label: string): string {
 
 /** server が同じ理由で拒んだときにも出す文言 (`auth-error.ts`) */
 export const CREDENTIAL_MESSAGES = {
+  requiredEmail: requiredMessage(EMAIL_LABEL),
   invalidEmail: `${EMAIL_LABEL}の形式が正しくありません`,
   passwordTooShort: `${PASSWORD_LABEL}は ${PASSWORD_MIN_LENGTH} 文字以上にしてください`,
   passwordTooLong: `${PASSWORD_LABEL}は ${PASSWORD_MAX_LENGTH} 文字以下にしてください`,
@@ -28,10 +29,13 @@ const passwordLabel = v.metadata<string, { label: typeof PASSWORD_LABEL }>({
   label: PASSWORD_LABEL,
 });
 
+// valibot の pipe は、検証 (`nonEmpty`) が落ちても次の検証 (`email`) を走らせる。schema と変換は、前の項目が落ちていれば
+// 走らない。間の `v.string()` がその境目で、空のときに必須と形式のエラーが並ぶのを防ぐ
 const email = v.pipe(
   v.string(),
   v.trim(),
-  v.nonEmpty(requiredMessage(EMAIL_LABEL)),
+  v.nonEmpty(CREDENTIAL_MESSAGES.requiredEmail),
+  v.string(),
   v.email(CREDENTIAL_MESSAGES.invalidEmail),
   v.metadata({ label: EMAIL_LABEL }),
 );

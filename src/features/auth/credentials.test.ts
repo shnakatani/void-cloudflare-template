@@ -1,7 +1,13 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vite-plus/test";
 
-import { loginSchema, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, signUpSchema } from "./credentials";
+import {
+  CREDENTIAL_MESSAGES,
+  loginSchema,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  signUpSchema,
+} from "./credentials";
 
 describe("loginSchema", () => {
   it("前後の空白を除いたメールアドレスを返す", () => {
@@ -17,6 +23,22 @@ describe("loginSchema", () => {
     [{ email: "a@example.com", password: "" }],
   ])("%o を受けない", (input) => {
     expect(v.safeParse(loginSchema, input).success).toBe(false);
+  });
+});
+
+describe("メールアドレスのエラー", () => {
+  function emailMessages(input: string): string[] {
+    const result = v.safeParse(loginSchema, { email: input, password: "x" });
+    return (result.issues ?? []).map((issue) => issue.message);
+  }
+
+  it("空なら必須のエラーだけを返す (形式のエラーを並べない)", () => {
+    expect(emailMessages("")).toEqual([CREDENTIAL_MESSAGES.requiredEmail]);
+    expect(emailMessages("  ")).toEqual([CREDENTIAL_MESSAGES.requiredEmail]);
+  });
+
+  it("形式が正しくなければ形式のエラーだけを返す", () => {
+    expect(emailMessages("not-an-email")).toEqual([CREDENTIAL_MESSAGES.invalidEmail]);
   });
 });
 
