@@ -9,7 +9,9 @@ export default defineConfig({
     compatibility_date: "2026-02-24",
   },
   // すべてのページの <head> の既定。ページの head() とマージされ、ページの値が勝つ (Void の docs「Head Management」)。
-  // lang と title は WCAG 3.1.1 と 2.4.2。ページ名を足す titleTemplate は、ページの head() を書く段階で決める
+  // lang と title は WCAG 3.1.1 と 2.4.2。title はホームと head() を持たないページの title になる。
+  // titleTemplate は使わない。この title にも掛かり、ホームが「アプリ名 — アプリ名」になる。ページ名は
+  // ページの head() が pageTitle (src/lib/page-title.ts) で付ける (ADR-0049)
   head: {
     title: APP_NAME,
     htmlAttrs: { lang: "ja" },
