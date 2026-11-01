@@ -73,7 +73,7 @@ server で起きた例外の文言は、production の Void が client へ運ば
 
 - client に届く文言は `HTTPException` の `message`、`ValidationError` の文言、validator (valibot) の message の 3 つになる。どれにも秘密と個人情報を載せない
 - `HTTPException` は server のログに出ない。server で調べたい失敗は、投げる前に `console.error` で残す
-- lint はファイル名で見分けるので、`void/db` を import するのに `.server` で終わらない module は止まらない。DB を読む module の名付けがこの境界を支える
+- lint は `.server` で終わる module の import に加えて、`void/db`・`void/kv`・`void/storage`・`void/email` の import も止める。`.server` で終わらないファイルは、これらを値で import できない。止めるのは `src/**` と `pages/**` で、`void/env` など他の server 用の module は止めない
 - `import type` は止めない。ページが `.server.ts` から `import type` すると、その `.server.ts` が app の program に入る (ADR-0047)。`src/features/<domain>/*.server.ts` は `tsconfig.app.json` の program に入るので、`void/env` を import しない
 - oxc の docs は `allowTypeImports` を `paths` の option としてだけ載せる (2026-11-02 に確認)。`patterns` の中でも効くことは `server-import-lint.test.ts` の `import type` の行が確かめ、効かなくなるとその行が落ちる
 
