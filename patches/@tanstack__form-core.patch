@@ -1,0 +1,39 @@
+diff --git a/dist/cjs/FieldApi.cjs b/dist/cjs/FieldApi.cjs
+index b0a001348e90c43a6b89065aead1e9e9ba41325c..6cc62556dc1a0e26b3d8fb50bfd327f640f790f5 100644
+--- a/dist/cjs/FieldApi.cjs
++++ b/dist/cjs/FieldApi.cjs
+@@ -305,7 +305,7 @@ class FieldApi {
+       const submitErrKey = getErrorMapKey("submit");
+       if (
+         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+-        this.state.meta.errorMap?.[submitErrKey] && cause !== "submit" && !hasErrored
++        this.state.meta.errorMap?.[submitErrKey] && cause === "change" && !hasErrored
+       ) {
+         this.setMeta((prev) => ({
+           ...prev,
+diff --git a/dist/esm/FieldApi.js b/dist/esm/FieldApi.js
+index 6066942e74ca6b4a6d94ce0a4c67265107045385..0021e26c8ad6ed07ad29e5c7d7243603ea420851 100644
+--- a/dist/esm/FieldApi.js
++++ b/dist/esm/FieldApi.js
+@@ -303,7 +303,7 @@ class FieldApi {
+       const submitErrKey = getErrorMapKey("submit");
+       if (
+         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+-        this.state.meta.errorMap?.[submitErrKey] && cause !== "submit" && !hasErrored
++        this.state.meta.errorMap?.[submitErrKey] && cause === "change" && !hasErrored
+       ) {
+         this.setMeta((prev) => ({
+           ...prev,
+diff --git a/src/FieldApi.ts b/src/FieldApi.ts
+index 80770f88979b8c8793c3c5969767f23cf2a15f92..671eb4f16c11b43c2e6c05fcc706fe523e9adf3d 100644
+--- a/src/FieldApi.ts
++++ b/src/FieldApi.ts
+@@ -1354,7 +1354,7 @@ export class FieldApi<
+     if (
+       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+       this.state.meta.errorMap?.[submitErrKey] &&
+-      cause !== 'submit' &&
++      cause === 'change' &&
+       !hasErrored
+     ) {
+       this.setMeta((prev) => ({

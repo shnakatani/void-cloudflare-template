@@ -32,6 +32,7 @@ overrides:
 packageExtensionsChecksum: sha256-ttdFC/5hpXZP+Ocsv+u7pWl9gzxONh3zAFJp9hbCbPE=
 
 patchedDependencies:
+  '@tanstack/form-core': a7d59898a1c04a11065d76d83037902c4898dc295e4df32fe96c741ee608e0d4
   '@void/react': 70b51de442d2a19f7aaab44e8e1fca065f00e3c1ed5a9bbaf8b697ad0e8166d1
   void: 669da60ea1007f05700943fd47d445a7f7755e4cd2b7ea43491586a7f6691471
 
@@ -7420,7 +7421,7 @@ snapshots:
       - csstype
       - utf-8-validate
 
-  '@tanstack/form-core@1.33.5':
+  '@tanstack/form-core@1.33.5(patch_hash=a7d59898a1c04a11065d76d83037902c4898dc295e4df32fe96c741ee608e0d4)':
     dependencies:
       '@tanstack/devtools-event-client': 0.4.4
       '@tanstack/pacer-lite': 0.1.1
@@ -7448,7 +7449,7 @@ snapshots:
 
   '@tanstack/react-form@1.33.5(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@tanstack/form-core': 1.33.5
+      '@tanstack/form-core': 1.33.5(patch_hash=a7d59898a1c04a11065d76d83037902c4898dc295e4df32fe96c741ee608e0d4)
       '@tanstack/react-store': 0.11.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react: 19.3.1
     transitivePeerDependencies:
