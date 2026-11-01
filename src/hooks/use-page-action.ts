@@ -4,6 +4,7 @@ import { getValidationErrors, isAbortError } from "void/pages-client";
 import type { ActionUrl, ResolveActionBody } from "void/routes";
 
 import { toastMutationError } from "@/lib/mutation-error";
+import { setServerFieldError, submitClearingServerFieldErrors } from "@/lib/server-field-errors";
 
 /** `action(url, ...rest)` の `rest`。`params` は動的な page でだけ必須になる (Void の型のまま) */
 type ActionRest<U extends ActionUrl> = typeof action<U> extends (
@@ -123,16 +124,10 @@ export function usePageAction<U extends ActionUrl>(
  *
  * - `run` は form の `onSubmit` で呼ぶ。`onSubmitAsync` などの validator は戻り値を form のエラーとして読むので、
  *   validator の中で呼ぶと、成功の `true` が form のエラーになり `onSubmit` が走らない (form-core 1.33.5 の `normalizeError`)
- * - 422 のエラーは各 field の `errorMap.onSubmit` に置く。TanStack Form の docs が server の検証に案内する
- *   `onSubmitAsync` の `fields` が入る場所で、field の入力が変わると form-core が消す。`onServer` は SSR 用で、
- *   検証を持たない field では入力を変えても消えない
+ * - 422 のエラーは `setServerFieldError` (`src/lib/server-field-errors.ts`) で各 field の `errorMap.onSubmit` に置く
  * - form に無い field 名のエラーは、`setFieldMeta` に渡すと黙って meta ができて何も描かれない。警告を残して toast に出す
- * - `submit` は、各 field の `errorMap.onSubmit` を消してから `form.handleSubmit()` を呼ぶ。form-core (1.33.5) は
- *   検証を持たない field の `errorMap.onSubmit` を submit の検証で消さず、`handleSubmit` が `onSubmit` の前に止まる。
- *   原因が別の field にあるエラー、編集できない field へのエラー、server の状態で決まるエラーが残ると、form が
- *   二度と送れない。消すと、送信が決着するまでは前回の server のエラーの表示が消えるが、server が同じエラーを返せば
- *   決着で再び出る。client の `onSubmit` の validator は、submit の検証で計算し直される
- *   (`canSubmitWhenInvalid` は `canSubmit` の判定だけを外し、この止まり方は外さない)
+ * - `submit` は `submitClearingServerFieldErrors` で、前回の server のエラーを消してから `form.handleSubmit()` を呼ぶ。
+ *   消さないと form が二度と送れなくなる理由は、その関数の docstring にある
  * - `run` は失敗でも `false` を返して resolve するので、`onSubmit` も resolve し、form-core は `isSubmitSuccessful` を
  *   `true` にする。form-core が `false` にするのは `onSubmit` が throw したときだけである。
  *   `isSubmitSuccessful` で送信の成否を判断せず、`run` の戻り値を使う
@@ -155,27 +150,10 @@ export function usePageActionForm<U extends ActionUrl>(
           toastMutationError(new Error(message));
           continue;
         }
-        form.setFieldMeta(name, (meta) => ({
-          ...meta,
-          errorMap: { ...meta.errorMap, onSubmit: message },
-        }));
+        setServerFieldError(form, name, message);
       }
     },
   });
 
-  async function submit() {
-    for (const [name, meta] of Object.entries(form.state.fieldMeta)) {
-      if (meta?.errorMap.onSubmit === undefined) {
-        continue;
-      }
-      form.setFieldMeta(name, (prev) => ({
-        ...prev,
-        errorMap: { ...prev.errorMap, onSubmit: undefined },
-        errorSourceMap: { ...prev.errorSourceMap, onSubmit: undefined },
-      }));
-    }
-    await form.handleSubmit();
-  }
-
-  return { run, submit };
+  return { run, submit: () => submitClearingServerFieldErrors(form) };
 }
