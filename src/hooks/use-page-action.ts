@@ -116,7 +116,7 @@ export function usePageAction<U extends ActionUrl>(
  * form の field に出す処理と、送る前にそのエラーを消す `submit` を足す。
  *
  * ```tsx
- * const form = useAppForm({ defaultValues, onSubmit: async ({ value }) => { await run(value); } });
+ * const form = useAppForm({ defaultValues, onSubmit: async ({ value }) => { await run(v.parse(inputSchema, value)); } });
  * const { run, submit } = usePageActionForm(form, "/notes/:id", { method: "PUT", params });
  * <ActionForm submitAction={submit}>...</ActionForm>
  * ```
