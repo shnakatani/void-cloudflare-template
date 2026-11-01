@@ -8,6 +8,10 @@ function CurrentPath() {
   return <p>{useRouter().path}</p>;
 }
 
+function CurrentQuery() {
+  return <p>{`q=${useRouter().query.get("q") ?? "なし"}`}</p>;
+}
+
 function NavigationStateText() {
   return <p>{useNavigation().state}</p>;
 }
@@ -23,6 +27,18 @@ describe("VoidRouterProvider", () => {
     await expect.element(screen.getByText("/a")).toBeInTheDocument();
     router.navigate("/b");
     await expect.element(screen.getByText("/b")).toBeInTheDocument();
+  });
+
+  it("navigate で query だけが変わっても useRouter().query が更新される", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(
+      <VoidRouterProvider router={router}>
+        <CurrentQuery />
+      </VoidRouterProvider>,
+    );
+    await expect.element(screen.getByText("q=なし")).toBeInTheDocument();
+    router.navigate("/a?q=x");
+    await expect.element(screen.getByText("q=x")).toBeInTheDocument();
   });
 
   it("Link のクリックが visit として記録される", async () => {
