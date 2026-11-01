@@ -12,6 +12,7 @@ vp run verify    # マージ前に通す。手順は vite.config.ts の verifySt
 ## 開発上の注意
 
 - `vp run verify` は、ルートの `.env` に `BETTER_AUTH_SECRET` が無いと `verify:security-headers` と `verify:auth-redirect` で落ちる。`.env` は ignore 済みで、build が `dist/ssr/.dev.vars` へ写し、preview の Worker はそこからだけ secret を受ける。書き方は `docs/guides/auth.md`「preview に secret を渡す」
+- dev の起動ログに `Local database already has application tables but no Void migration history` が出たら `vp exec void db reset` で dev の D1 を作り直す。dev は ready になるが migration が当たっていない。reset は dev で登録したユーザーも消す (`docs/guides/database.md`「dev の D1 を作り直す」)
 - dev server と Storybook を background で動かすときは `mise daemons start serve` (`storybook`) で起動し、`mise daemons stop <同じ名前>` で止める。起動した pid にだけ SIGTERM を送ると、port を持つ子孫の node が残り、次の `mise run serve` が port を取れずに終わる (`docs/guides/dependencies-and-toolchain.md`「dev server と Storybook を止める」)
 - 依存は `vp add` / `vp remove` で足し外し、pnpm / npm / yarn で足し外さない。入口を `vp` にそろえる (`npm` はこのリポジトリの `catalog:` を読めず `EUNSUPPORTEDPROTOCOL` で止まる)。`vp` が中継しないサブコマンドは素の `pnpm` で打つ (`pnpm peers check`)。出典は `docs/guides/dependencies-and-toolchain.md`「依存を足す・外す」。一回限りの実行は `vp dlx`、devDependency 済みなら `vp exec`。Vitest / Oxlint / Oxfmt は Vite+ が内包するので install しない
 - Node.js の版は `package.json` の `devEngines.runtime` を直接書き換えて変え、`vp env pin` で書かない。`vp env pin` は範囲を渡しても exact の版に解決して書く (ADR-0004)
