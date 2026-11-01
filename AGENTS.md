@@ -24,7 +24,7 @@ vp run verify    # マージ前に通す。手順は vite.config.ts の verifySt
 
 ## テストの実行
 
-- テストの置き場所は壊れる原因で分ける (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。アプリの単体は `src/**/*.test.ts` (Node で動くテストのうち、ローカルの TZ に触れうるモジュールのテストは `src/**/*.tz.test.ts`)、ブラウザは `src/**/*.test.tsx`、型だけのテストは `src/**/*.test-d.ts` (`vp check` が検査し、`vp test run` は集めない)、スクリプトは `scripts/**/*.test.ts` (`scripts/checks/**` を除く)、設定と文書の整合検査は `scripts/checks/integrity/`、ビルド成果物の検査は `scripts/checks/runtime/` (vitest の project ではなく `vp build` の後に走らせる)。新しいテストファイルを書くだけでは `paths` の rules は読み込まれない (ADR-0003)
+- テストの置き場所は壊れる原因で分ける (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。アプリのテストは `src/` と Void の規約のディレクトリ (`scripts/lib/void-source-dirs.ts`) に置き、接尾辞で種別を分ける。単体は `*.test.ts` (Node で動くテストのうち、ローカルの TZ に触れうるモジュールのテストは `*.tz.test.ts`)、ブラウザは `*.test.tsx`、型だけのテストは `*.test-d.ts` (`vp check` が検査し、`vp test run` は集めない)。スクリプトは `scripts/**/*.test.ts` (`scripts/checks/**` を除く)、設定と文書の整合検査は `scripts/checks/integrity/`、ビルド成果物の検査は `scripts/checks/runtime/` (vitest の project ではなく `vp build` の後に走らせる)。新しいテストファイルを書くだけでは `paths` の rules は読み込まれない (ADR-0003)
 - `vp test run <path>` で 1 回実行する。watch は `vp test watch` (`docs/guides/testing/configuration.md`「テストを走らせる」)
 - `vp test` を複数並行で走らせない。orphan の runner が残ると後続が collection エラーで巻き添えになる。kill 後は `ps` で残存を確かめる。スクリプトが子として起動し、全部の終わりを待つ並列 (`scripts/time-zones/run-tests.ts`) は除く。親だけを kill すると子の vitest が残るので、子も `ps` で確かめる (`docs/guides/testing/configuration.md`「テストを走らせる」)
 - background で走らせるときはパイプを付けない。buffering で完了まで出力が見えず、ハングと実行中を区別できない

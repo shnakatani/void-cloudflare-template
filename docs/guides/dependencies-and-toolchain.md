@@ -31,7 +31,7 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 - `vp staged` と hook の間に、自前の skip のスクリプトを挟まない。止める手段は、Vite+ が入れた hook 自身が実行のたびに確かめる ([Vite+ docs「Commit Hooks」][]: "The installed hooks check the environment on every run, so you can disable them per machine or per process without uninstalling anything.")
 - hook を止めるときは、止める範囲で [Vite+ docs「Commit Hooks」][] の手段を選ぶ。CI のビルドコンテナのように環境ごと止めるなら `VP_GIT_HOOKS=0` を設定する。`prepare` の `vp config` が hook を入れず、入っている hook も何もせずに終わる (Environment variable の節)。コミットするプロセスがシェルの環境を受け継がない (デーモンなど) なら、マシンごとの init script (`$XDG_CONFIG_HOME/vite-plus/hooks-init.sh`。既定は `~/.config/vite-plus/hooks-init.sh`) で `VP_GIT_HOOKS=0` を export する (Init script の節)。1 つの clone で止めるなら `vp hooks disable` を打つ (Removing commit hooks の節)
-- `staged` のコマンドに付けた `--no-error-on-unmatched-pattern` を外さない。staged のファイルが `ignorePatterns` に当たるもの (`.claude/skills/**` の中のファイルなど) だけのコミットでは対象が 0 件になり、`vp fmt` と `vp lint` が error で終わって commit が止まる。`vp lint --help` はこのフラグを "Do not exit with an error when no files are selected for linting (for example, after applying ignore patterns)" と説明する。2026-10-06 に vite-plus 1.0.0 で `src/routeTree.gen.ts` だけを渡すと、`vp fmt --write` は exit 2 (`Expected at least one target file`)、`vp lint` は exit 1 で終わり、このフラグを付けるとどちらも 0 で終わった
+- `staged` のコマンドに付けた `--no-error-on-unmatched-pattern` を外さない。staged のファイルが `ignorePatterns` に当たるもの (`.claude/skills/**` の中のファイルなど) だけのコミットでは対象が 0 件になり、`vp fmt` と `vp lint` が error で終わって commit が止まる。`vp lint --help` はこのフラグを "Do not exit with an error when no files are selected for linting (for example, after applying ignore patterns)" と説明する。2026-10-06 に vite-plus 1.0.0 で `ignorePatterns` に当たるファイルだけを渡すと、`vp fmt --write` は exit 2 (`Expected at least one target file`)、`vp lint` は exit 1 で終わり、このフラグを付けるとどちらも 0 で終わった
 
 ### 依存を足す・外す
 
@@ -179,7 +179,7 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 
 ### 走査対象を持つ config を足す
 
-`tooling/test/config.ts` (test。project はここから継承する) / `tooling/lint/config.ts` (lint) / `vite.config.ts` (fmt) は、それぞれ `.claude/worktrees/**` を除外している。`tsconfig.*.json` は `include` を `src/**` などの具体的なディレクトリに限り、`.claude/` を含めない。走査対象を持つ config を新しく足したら、同じ除外をその場で書くか、`include` を同じように限る。除外の経路は config ごとに別で共通化できず、1 つ落とすと worktree のコードがその走査へ黙って混ざる。
+`tooling/test/config.ts` (test。project はここから継承する) / `tooling/lint/config.ts` (lint) / `vite.config.ts` (fmt) は、それぞれ `.claude/worktrees/**` を除外している。`tsconfig.*.json` は除外を書かない。TypeScript の `include` の `**/` は `.` で始まるディレクトリに降りないので (TypeScript 6.0.3 の `lib/typescript.js` の `doubleAsteriskRegexFragment` が、ディレクトリ名を `[^/.][^/]*` に限る)、`**/*.test.ts` も `.claude/` を拾わない。2026-11-01 に `.claude/worktrees/<名前>/src/x.test.ts` を置くと `tsc -p tsconfig.test.json --listFilesOnly` に出ず、同じファイルを `.` で始まらないディレクトリに置くと出た。`.` で始まるディレクトリのファイルを型検査に入れるときは、`.storybook/preview.tsx` のように字面で書く。走査対象を持つ config を新しく足したら、同じ除外をその場で書くか、その config の glob が `.claude/` に降りないことを確かめる。除外の経路は config ごとに別で共通化できず、1 つ落とすと worktree のコードがその走査へ黙って混ざる。
 
 ### `git status` に出ないファイルを調べる
 
