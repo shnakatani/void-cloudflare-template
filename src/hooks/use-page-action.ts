@@ -1,3 +1,4 @@
+import type { AnyFormApi } from "@tanstack/react-form";
 import { action } from "@void/react";
 import { getValidationErrors } from "void/pages-client";
 import type { ActionUrl, ResolveActionBody } from "void/routes";
@@ -12,12 +13,20 @@ type ActionRest<U extends ActionUrl> = typeof action<U> extends (
   ? Rest
   : never;
 
-export type PageActionOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest<U>[0]>, "data"> & {
+/** `action()` に渡す `method` と `params` */
+type ActionCallOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest<U>[0]>, "data">;
+
+type PageActionCallbacks = {
   /** 成功のあとに走る。返した Promise の決着まで `run` は resolve せず、Transition も続く */
   onSuccess?: () => void | Promise<void>;
   /** 422 で返ったフィールドのエラー (`{ <field 名>: <文言> }`) を受ける */
   onValidationError?: (errors: Record<string, string>) => void;
 };
+
+export type PageActionOptions<U extends ActionUrl> = ActionCallOptions<U> & PageActionCallbacks;
+
+export type PageActionFormOptions<U extends ActionUrl> = ActionCallOptions<U> &
+  Pick<PageActionCallbacks, "onSuccess">;
 
 /**
  * Void の page の action を、Action (`startTransition` に渡す非同期関数) から呼ぶ入口。
@@ -32,12 +41,7 @@ export type PageActionOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest
  * `action()` が throw する失敗 (401・403・500・502・ネットワーク) は捕まえない。Action の reject として
  * 最も近い error boundary に届く (`node_modules/void/docs/guide/pages-routing/actions-and-forms.md`「Validation Errors」)。
  *
- * TanStack Form からは `onSubmit` で `run` を呼び、`onValidationError` で各 field の `errorMap.onSubmit` に写す。
- *
- * - 呼ぶ場所: `onSubmitAsync` などの validator の中で呼ぶと、form-core が validator の throw をフォームのエラーに変え、境界に届かない
- * - 写す先: `onSubmit` は、TanStack Form の docs が server の検証に案内する `onSubmitAsync` の `fields` が入る場所で、
- *   field の入力が変わると form-core が消す。`onServer` は検証を持たない field では入力を変えても消えず、form が送れないまま残る
- * - form に無い field 名: `setFieldMeta` は黙って meta を作り、何も描かれない。警告を残して toast に出す
+ * TanStack Form から送るときは `usePageActionForm` を使う。
  */
 export function usePageAction<U extends ActionUrl>(
   url: U,
@@ -72,4 +76,72 @@ export function usePageAction<U extends ActionUrl>(
   }
 
   return { run };
+}
+
+/**
+ * TanStack Form の form から page の action を送る入口。`usePageAction` の `run` に、422 のフィールドのエラーを
+ * form の field に出す処理と、送る前にそのエラーを消す `submit` を足す。
+ *
+ * ```tsx
+ * const form = useAppForm({ defaultValues, onSubmit: async ({ value }) => { await run(value); } });
+ * const { run, submit } = usePageActionForm(form, "/notes/:id", { method: "PUT", params });
+ * <ActionForm submitAction={submit}>...</ActionForm>
+ * ```
+ *
+ * - `run` は form の `onSubmit` で呼ぶ。`onSubmitAsync` などの validator の中で呼ぶと、form-core が validator の throw を
+ *   フォームのエラーに変え、401・403・500 が error boundary に届かない
+ * - 422 のエラーは各 field の `errorMap.onSubmit` に置く。TanStack Form の docs が server の検証に案内する
+ *   `onSubmitAsync` の `fields` が入る場所で、field の入力が変わると form-core が消す。`onServer` は SSR 用で、
+ *   検証を持たない field では入力を変えても消えない
+ * - form に無い field 名のエラーは、`setFieldMeta` に渡すと黙って meta ができて何も描かれない。警告を残して toast に出す
+ * - `submit` は、各 field の `errorMap.onSubmit` を消してから `form.handleSubmit()` を呼ぶ。form-core (1.33.5) は
+ *   検証を持たない field の `errorMap.onSubmit` を submit の検証で消さず、`handleSubmit` が `onSubmit` の前に止まる。
+ *   原因が別の field にあるエラー、編集できない field へのエラー、server の状態で決まるエラーが残ると、form が
+ *   二度と送れない。消しても失うものは無い。client の `onSubmit` の validator は、submit の検証で計算し直される
+ *   (`canSubmitWhenInvalid` は `canSubmit` の判定だけを外し、この止まり方は外さない)
+ * - 422 で `run` が `false` を返しても、`onSubmit` は resolve するので、form-core は `isSubmitSuccessful` を `true` にする。
+ *   form-core が `false` にするのは `onSubmit` が throw したときだけで、throw は error boundary に届く。
+ *   `isSubmitSuccessful` で送信の成否を判断せず、`run` の戻り値を使う
+ */
+export function usePageActionForm<U extends ActionUrl>(
+  form: AnyFormApi,
+  url: U,
+  options: PageActionFormOptions<U>,
+): { run: (data: ResolveActionBody<U>) => Promise<boolean>; submit: () => Promise<void> } {
+  const { run } = usePageAction(url, {
+    ...options,
+    onValidationError: (errors) => {
+      for (const [name, message] of Object.entries(errors)) {
+        if (form.getFieldMeta(name) === undefined) {
+          console.warn("[usePageActionForm] form に無い field のエラーが返りました", {
+            url,
+            name,
+            message,
+          });
+          toastMutationError(new Error(message));
+          continue;
+        }
+        form.setFieldMeta(name, (meta) => ({
+          ...meta,
+          errorMap: { ...meta.errorMap, onSubmit: message },
+        }));
+      }
+    },
+  });
+
+  async function submit() {
+    for (const [name, meta] of Object.entries(form.state.fieldMeta)) {
+      if (meta?.errorMap.onSubmit === undefined) {
+        continue;
+      }
+      form.setFieldMeta(name, (prev) => ({
+        ...prev,
+        errorMap: { ...prev.errorMap, onSubmit: undefined },
+        errorSourceMap: { ...prev.errorSourceMap, onSubmit: undefined },
+      }));
+    }
+    await form.handleSubmit();
+  }
+
+  return { run, submit };
 }

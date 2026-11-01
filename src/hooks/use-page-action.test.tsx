@@ -11,10 +11,10 @@ import { ActionButton } from "@/components/action/button";
 import { ActionForm, ActionFormSubmit } from "@/components/action/form";
 import { Toaster } from "@/components/ui/toast";
 import { useAppForm } from "@/hooks/use-app-form";
-import { MUTATION_ERROR_FALLBACK_MESSAGE, toastMutationError } from "@/lib/mutation-error";
+import { MUTATION_ERROR_FALLBACK_MESSAGE } from "@/lib/mutation-error";
 import { expectAbsent, expectRemoved } from "@/test/assert/absent";
 
-import { usePageAction } from "./use-page-action";
+import { usePageAction, usePageActionForm } from "./use-page-action";
 
 // テンプレートにはまだ action を持つ page が無く、`ActionUrl` が never になる。テストの中でだけ action を 1 つ足す
 declare module "void/routes" {
@@ -147,16 +147,7 @@ describe("usePageAction", () => {
   });
 });
 
-const FIELD_NAMES = ["title", "memo"] as const;
-
-function isFieldName(name: string): name is (typeof FIELD_NAMES)[number] {
-  return FIELD_NAMES.some((fieldName) => fieldName === name);
-}
-
-/**
- * TanStack Form の `onSubmit` から `run` を呼び、422 を field の `errorMap.onSubmit` に写す形
- * (`use-page-action.ts` の docstring)。`memo` は検証を持たない field
- */
+/** `usePageActionForm` の docstring の形で組んだ form。`memo` は検証を持たない field */
 function NoteForm() {
   const form = useAppForm({
     defaultValues: { title: "", memo: "" },
@@ -165,24 +156,10 @@ function NoteForm() {
       await run(value);
     },
   });
-  const { run } = usePageAction(ACTION_URL, {
-    onValidationError: (errors) => {
-      for (const [name, message] of Object.entries(errors)) {
-        if (!isFieldName(name)) {
-          console.warn("[NoteForm] form に無い field のエラーが返りました", { name, message });
-          toastMutationError(new Error(message));
-          continue;
-        }
-        form.setFieldMeta(name, (meta) => ({
-          ...meta,
-          errorMap: { ...meta.errorMap, onSubmit: message },
-        }));
-      }
-    },
-  });
+  const { run, submit } = usePageActionForm(form, ACTION_URL, {});
 
   return (
-    <ActionForm submitAction={() => form.handleSubmit()}>
+    <ActionForm submitAction={submit}>
       <form.AppField
         name="title"
         validators={{
@@ -229,10 +206,13 @@ describe("usePageAction を TanStack Form から使う", () => {
     await expect.poll(() => action).toHaveBeenCalledTimes(2);
   });
 
-  it("422 のあと、入力を変えずにもう一度送れる", async () => {
+  it.each([
+    { name: "title", note: "検証を持つ field" },
+    { name: "memo", note: "検証を持たない field" },
+  ])("$note に 422 が出たあと、入力を変えずにもう一度送れる", async ({ name }) => {
     vi.mocked(action).mockResolvedValue({
       ok: false,
-      error: actionError(422, { errors: { title: "サーバーが受け付けませんでした" } }),
+      error: actionError(422, { errors: { [name]: "サーバーが受け付けませんでした" } }),
     });
     const screen = await render(<NoteForm />);
 
@@ -240,6 +220,7 @@ describe("usePageAction を TanStack Form から使う", () => {
     await screen.getByRole("button", { name: "保存" }).click();
     await expect.element(screen.getByText("サーバーが受け付けませんでした")).toBeVisible();
 
+    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
     await screen.getByRole("button", { name: "保存" }).click();
     await expect.poll(() => action).toHaveBeenCalledTimes(2);
     expect(action).toHaveBeenLastCalledWith(ACTION_URL, {
@@ -247,6 +228,31 @@ describe("usePageAction を TanStack Form から使う", () => {
       method: undefined,
       params: undefined,
     });
+    await expectRemoved(screen.getByText("サーバーが受け付けませんでした"));
+  });
+
+  it("別の field のエラーの原因を直して送ると、送れて、古いエラーが消える", async () => {
+    vi.mocked(action).mockResolvedValue({
+      ok: false,
+      error: actionError(422, { errors: { memo: "タイトルと同じメモは保存できません" } }),
+    });
+    const screen = await render(<NoteForm />);
+
+    await userEvent.fill(screen.getByRole("textbox", { name: "タイトル" }), "買い物");
+    await userEvent.fill(screen.getByRole("textbox", { name: "メモ" }), "買い物");
+    await screen.getByRole("button", { name: "保存" }).click();
+    await expect.element(screen.getByText("タイトルと同じメモは保存できません")).toBeVisible();
+
+    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    await userEvent.fill(screen.getByRole("textbox", { name: "タイトル" }), "買い物リスト");
+    await screen.getByRole("button", { name: "保存" }).click();
+    await expect.poll(() => action).toHaveBeenCalledTimes(2);
+    expect(action).toHaveBeenLastCalledWith(ACTION_URL, {
+      data: { title: "買い物リスト", memo: "買い物" },
+      method: undefined,
+      params: undefined,
+    });
+    await expectRemoved(screen.getByText("タイトルと同じメモは保存できません"));
   });
 
   it("form に無い field のエラーは、警告を残して固定の文言の toast に出す", async () => {
@@ -263,10 +269,10 @@ describe("usePageAction を TanStack Form から使う", () => {
     await userEvent.fill(screen.getByRole("textbox", { name: "タイトル" }), "買い物");
     await screen.getByRole("button", { name: "保存" }).click();
     await expect.element(screen.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
-    expect(console.warn).toHaveBeenCalledWith("[NoteForm] form に無い field のエラーが返りました", {
-      name: "dueDate",
-      message: "期日が過ぎています",
-    });
+    expect(console.warn).toHaveBeenCalledWith(
+      "[usePageActionForm] form に無い field のエラーが返りました",
+      { url: ACTION_URL, name: "dueDate", message: "期日が過ぎています" },
+    );
   });
 
   it("onSubmit の中で throw した失敗は、form が握らずに error boundary に届く", async () => {
