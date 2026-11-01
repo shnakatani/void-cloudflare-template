@@ -188,8 +188,11 @@ describe("usePageAction", () => {
     function DeleteButton({ onStart }: { onStart: () => void }) {
       const { run } = usePageAction(ACTION_URL, {});
       async function remove() {
+        const running = run({ title: "a", memo: "" });
+        // Action の同期区間の更新は Transition に入り、Action の終わりまで描かれない。await の後に消して送信中に unmount させる
+        await Promise.resolve();
         onStart();
-        await run({ title: "a", memo: "" });
+        await running;
       }
       return <ActionButton action={remove}>削除</ActionButton>;
     }
@@ -205,6 +208,7 @@ describe("usePageAction", () => {
 
     await screen.getByRole("button", { name: "削除" }).click();
     await expect.poll(() => action).toHaveBeenCalledOnce();
+    await expect.element(screen.getByText("閉じた")).toBeVisible();
     failed.reject(actionError(500, null));
     await expect.element(screen.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
   });
