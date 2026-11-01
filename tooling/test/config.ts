@@ -6,7 +6,7 @@ import {
 
 import { companionGlobs } from "../../scripts/lib/companion-files";
 import { isStorybookRun } from "../../scripts/lib/storybook-env";
-import { VOID_SOURCE_GLOBS } from "../void-source-dirs";
+import { VOID_SOURCE_GLOBS } from "../../scripts/lib/void-source-dirs";
 import { browserProject } from "./browser-project";
 import { storybookProject } from "./storybook-project";
 

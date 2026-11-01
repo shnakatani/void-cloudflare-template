@@ -7,6 +7,8 @@ paths:
   - "crons/**/*.tsx"
   - "queues/**/*.tsx"
   - "db/**/*.tsx"
+  - "email/**/*.tsx"
+  - "durable-objects/**/*.tsx"
   - "src/**/*.css"
   - "pages/**/*.css"
   - "routes/**/*.css"
@@ -14,6 +16,8 @@ paths:
   - "crons/**/*.css"
   - "queues/**/*.css"
   - "db/**/*.css"
+  - "email/**/*.css"
+  - "durable-objects/**/*.css"
   - ".storybook/**"
 ---
 

@@ -1,6 +1,6 @@
 import { defineProject, mergeConfig } from "vite-plus/test/config";
 
-import { BROWSER_TEST_GLOB } from "../../scripts/lib/companion-files";
+import { BROWSER_TEST_GLOBS } from "../../scripts/lib/companion-files";
 import { ASSERT_TIMEOUT_MS } from "../../src/test/browser/assert-budget";
 import { DEFAULT_VIEWPORT } from "../../src/test/browser/viewport-sizes";
 import { chromiumProjectBase, NO_COMPILER_DIR } from "./chromium-project";
@@ -52,7 +52,7 @@ export async function browserProject({ compiler }: { compiler: boolean }) {
           },
         ],
         setupFiles: ["src/test/browser/browser-setup.tsx"],
-        include: [compiler ? BROWSER_TEST_GLOB : `${NO_COMPILER_DIR}/**/*.test.tsx`],
+        include: compiler ? BROWSER_TEST_GLOBS : [`${NO_COMPILER_DIR}/**/*.test.tsx`],
         browser: {
           // 操作の上限を置き (vitest-dev/vitest#6983)、`expect.poll.timeout` を `expect.element` へ届かせる
           // (vitest-dev/vitest#8308、vitest-dev/vitest#7871。docs/guides/testing/waiting-and-assertions.md「assert の予算を分ける理由」)

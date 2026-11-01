@@ -3,13 +3,15 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
-/* src の外に置く Void の規約のディレクトリも scan する。並びは tooling/void-source-dirs.ts と揃える */
+/* src の外に置く Void の規約のディレクトリも scan する。並びは scripts/lib/void-source-dirs.ts と揃える */
 @source "../pages";
 @source "../routes";
 @source "../middleware";
 @source "../crons";
 @source "../queues";
 @source "../db";
+@source "../email";
+@source "../durable-objects";
 
 /* 既定 palette を生成レベルで消す。色は semantic token だけを通し、bg-red-500 のような
    palette ユーティリティは CSS ごと存在しなくなる (tailwindcss.com/docs/colors の

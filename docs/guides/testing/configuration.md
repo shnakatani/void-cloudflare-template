@@ -26,7 +26,7 @@
 | 整合検査               | 設定・ドキュメントの更新漏れ | `scripts/checks/integrity/`                         | `vp test run --project checks-integrity`                                                                     |
 | 成果物の検査           | ビルド結果に現れる挙動の欠落 | `scripts/checks/runtime/`                           | `vp build` の後に `vp run verify:<name>` (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)    |
 
-- `src/` のテストは接尾辞で project が決まる。DOM が要るテストは `*.test.tsx` にして browser project で、DOM が要らないテストは `*.test.ts` にして unit project (Node) で走らせる。テストの helper のテストも同じに分ける。集める範囲は、`tooling/test/config.ts` の `unit` の `include` と、`scripts/lib/companion-files.ts` の `BROWSER_TEST_GLOB` が持つ
+- `src/` のテストは接尾辞で project が決まる。DOM が要るテストは `*.test.tsx` にして browser project で、DOM が要らないテストは `*.test.ts` にして unit project (Node) で走らせる。テストの helper のテストも同じに分ける。集める範囲は、`tooling/test/config.ts` の `unit` の `include` と、`scripts/lib/companion-files.ts` の `BROWSER_TEST_GLOBS` が持つ
 - 種別を足すときは、置き場所と project を対で作る (「project を足す」)
 
 ### テストの API を import する

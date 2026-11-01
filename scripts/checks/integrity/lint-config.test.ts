@@ -107,6 +107,8 @@ const EXPECTED_OVERRIDES = [
       "crons/**",
       "queues/**",
       "db/**",
+      "email/**",
+      "durable-objects/**",
     ],
     excludeFiles: ["src/components/ui/**"],
     rules: { "shadcn/no-restyle": "deny", "shadcn/require-static-classes": "deny" },
@@ -117,7 +119,20 @@ const EXPECTED_OVERRIDES = [
     // 期待値は手書きで持つ。`testHelperGlobs()` を spread すると tooling/lint/config.ts と同じ
     // 入力どうしの比較になり、種別が増えても検査が通ってしまう
     // (`companion-files.ts` の docstring が禁じている)
-    files: ["src/**/*.test.tsx", "src/test/**", "**/*.test-helpers.ts", "**/*.test-helpers.tsx"],
+    files: [
+      "src/**/*.test.tsx",
+      "pages/**/*.test.tsx",
+      "routes/**/*.test.tsx",
+      "middleware/**/*.test.tsx",
+      "crons/**/*.test.tsx",
+      "queues/**/*.test.tsx",
+      "db/**/*.test.tsx",
+      "email/**/*.test.tsx",
+      "durable-objects/**/*.test.tsx",
+      "src/test/**",
+      "**/*.test-helpers.ts",
+      "**/*.test-helpers.tsx",
+    ],
     excludeFiles: ["src/test/**/*.test.ts"],
     rules: {
       "browser-test/prefer-locator-methods": "deny",
@@ -139,6 +154,8 @@ const EXPECTED_OVERRIDES = [
       "crons/**",
       "queues/**",
       "db/**",
+      "email/**",
+      "durable-objects/**",
     ],
     excludeFiles: ["src/test/**"],
     rules: { "no-restricted-imports": "deny" },
@@ -160,6 +177,8 @@ const SOURCE_ROOTS = [
   "crons",
   "queues",
   "db",
+  "email",
+  "durable-objects",
 ];
 
 /** 追跡されているのに lint されなくてよいソース (生成物) */
@@ -297,6 +316,8 @@ describe("書いた設定が解決後も残っている", () => {
         "crons/**",
         "queues/**",
         "db/**",
+        "email/**",
+        "durable-objects/**",
       ],
     ]);
     expect(

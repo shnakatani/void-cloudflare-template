@@ -1,12 +1,12 @@
 import type { OxlintConfig } from "vite-plus/lint";
 
 import {
-  BROWSER_TEST_GLOB,
+  BROWSER_TEST_GLOBS,
   companionGlobs,
   storyGlobs,
   testHelperGlobs,
 } from "../../scripts/lib/companion-files";
-import { VOID_SOURCE_GLOBS } from "../void-source-dirs";
+import { VOID_SOURCE_GLOBS } from "../../scripts/lib/void-source-dirs";
 
 const OXLINT_DEFAULT_PLUGINS = ["typescript", "unicorn", "oxc"] as const;
 
@@ -345,7 +345,7 @@ export const lintConfig = {
     {
       // ブラウザテストと locator を配る helper に当て、unit のテストは外す (ADR-0009)。
       // 除外を **/*.test.ts で書かない。その綴りは import 禁止の override の印 (lint-config.test.ts が検査する)
-      files: [BROWSER_TEST_GLOB, "src/test/**", ...testHelperGlobs("**/")],
+      files: [...BROWSER_TEST_GLOBS, "src/test/**", ...testHelperGlobs("**/")],
       excludeFiles: ["src/test/**/*.test.ts"],
       rules: {
         "browser-test/prefer-locator-methods": "error",

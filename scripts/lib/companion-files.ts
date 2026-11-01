@@ -1,3 +1,5 @@
+import { VOID_SOURCE_DIRS } from "./void-source-dirs";
+
 /**
  * アプリのコードと同じディレクトリに置くが、アプリのコードではないファイルの種別。
  * `<名前>.<種別>.ts` / `.tsx` の形で置く。
@@ -8,7 +10,7 @@
  * 目的なので、導出先で改めて字面を並べ直さない。
  *
  * `tsconfig.app.json` の `exclude` と `tsconfig.test.json` の `include` は JSON なのでここを読めず、
- * 種別を字面で並べる。種別を足したら、両方にも足す。
+ * 種別を `**\/*.<種別>.<拡張子>` の字面で並べる。種別を足したら、両方にも足す。
  *
  * `lint-config.test.ts` は lint の解決結果と突き合わせる期待値を手書きで持つ。そちらを
  * ここから導出すると入力どうしの比較になり検査が常に通るので、付随ファイルの分を差し引く
@@ -91,8 +93,9 @@ export function companionFilePattern(): string {
 }
 
 /**
- * ブラウザテストの glob。`tooling/test/browser-project.ts` の `include` と、`tooling/lint/config.ts` の
+ * ブラウザテストの glob。`src/` と、Void の規約のディレクトリ ({@link VOID_SOURCE_DIRS}) に置いた
+ * `*.test.tsx` に当たる。`tooling/test/browser-project.ts` の `include` と、`tooling/lint/config.ts` の
  * browser-test ルールの適用先が同じ集合を指す (ADR-0009)。片方だけ変えると lint の適用先が
  * 黙って browser project から外れる
  */
-export const BROWSER_TEST_GLOB = "src/**/*.test.tsx";
+export const BROWSER_TEST_GLOBS = ["src", ...VOID_SOURCE_DIRS].map((dir) => `${dir}/**/*.test.tsx`);

@@ -7,6 +7,8 @@ paths:
   - "crons/**/*.tsx"
   - "queues/**/*.tsx"
   - "db/**/*.tsx"
+  - "email/**/*.tsx"
+  - "durable-objects/**/*.tsx"
 ---
 
 # Base UI コンポーネント利用ルール

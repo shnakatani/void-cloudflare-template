@@ -7,6 +7,8 @@ paths:
   - "crons/**"
   - "queues/**"
   - "db/**"
+  - "email/**"
+  - "durable-objects/**"
 ---
 
 # 実装ワークフロー
