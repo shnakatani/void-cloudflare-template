@@ -1,0 +1,36 @@
+diff --git a/dist/pages/client.d.mts b/dist/pages/client.d.mts
+index a2476388e80b22b06f098ff49c0c7d8fe1b5310e..b35dba493895423c3b4ad981e79a2d574278be04 100644
+--- a/dist/pages/client.d.mts
++++ b/dist/pages/client.d.mts
+@@ -218,7 +218,7 @@ export type ActionClient = {
+   action<U extends ActionUrl & string>(url: U, ...args: HasParams<U> extends true ? [options: ActionOptions<U>] : [options?: ActionOptions<U>]): Promise<ActionResult>;
+ };
+ /** Creates an action client with its own router for each framework adapter. */
+-export declare function createActionClient(): ActionClient;
++export declare function createActionClient(defaults?: Pick<VisitOptions, '_resolveOnShell'>): ActionClient;
+ export declare function createVoidRouter(config: VoidRouterConfig): Promise<{
+   router: VoidRouter;
+   initialPageData: PageData;
+diff --git a/dist/pages/client.mjs b/dist/pages/client.mjs
+index f7744a73fa7d448c0a0e6f5cf356f176f592294e..42eca28581a076601ad3147ea5aa21acd495a3df 100644
+--- a/dist/pages/client.mjs
++++ b/dist/pages/client.mjs
+@@ -1218,7 +1218,7 @@ async function submitAction(router, url, options) {
+ 	}
+ }
+ /** Creates an action client with its own router for each framework adapter. */
+-function createActionClient() {
++function createActionClient(defaults = {}) {
+ 	let _router = null;
+ 	/** Called during app initialization to store the router instance */
+ 	function setActionRouter(router) {
+@@ -1233,7 +1233,8 @@ function createActionClient() {
+ 		const resolvedUrl = interpolateRouteParams(url, options?.params);
+ 		return submitAction(_router, resolvedUrl, {
+ 			method,
+-			data
++			data,
++			...defaults
+ 		});
+ 	}
+ 	return {
