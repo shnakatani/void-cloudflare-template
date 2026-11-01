@@ -41,13 +41,34 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 
 ### 検討した案: 伝え方
 
-| 候補                               | 評価                                                                                                               | 採否     |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------- |
-| 見出しへ focus (枠なし) + 読み上げ | 見出しから読み始め、次の Tab が新しいページの先頭から始まる。次の Tab を押すまで focus の位置は見えない            | **採用** |
-| `<body>` へ戻す + 読み上げ         | ページの先頭から探し直す。Gatsby 2019 は "resetting focus to the top of the app would be very overwhelming" とする | 却下     |
-| focus を移さず読み上げだけ         | キーボードの次の Tab が押したリンクから始まる。拡大鏡の利用者に届かない (Gatsby 2019 の "quite useless")           | 却下     |
+| 候補                                                                | スクリーンリーダー                                                                                                 | キーボード                              | 目で見る利用者 (拡大鏡を含む)                                                              | 採否     |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------ | -------- |
+| 見出しへ focus (枠なし) + 読み上げ                                  | 新しいページの見出しから読み始める                                                                                 | 次の Tab が新しいページの先頭から始まる | 次の Tab を押すまで focus の位置が見えない                                                 | **採用** |
+| 見出しへ focus、アプリ標準の枠をキーボードのときだけ出す + 読み上げ | 採用案と同じ                                                                                                       | 採用案と同じ                            | キーボードで遷移したときは位置が見える。操作できない見出しが、ボタンやリンクと同じ枠を持つ | 却下     |
+| 見出しへ focus、枠を常に出す + 読み上げ                             | 採用案と同じ                                                                                                       | 採用案と同じ                            | 位置が常に見える。ポインターで遷移しても、操作できない見出しに枠が出る                     | 却下     |
+| `<body>` へ戻す + 読み上げ                                          | ページの先頭から探し直す。Gatsby 2019 は "resetting focus to the top of the app would be very overwhelming" とする | 次の Tab がページの先頭から始まる       | focus の位置が見えない                                                                     | 却下     |
+| focus を移さず読み上げだけ                                          | 読み上げで届く                                                                                                     | 次の Tab が押したリンクから始まる       | 届かない (Gatsby 2019 の "quite useless")                                                  | 却下     |
 
-見出しに枠を出さないのは、見出しが操作できる要素ではないからである。枠を出すと、操作できない見出しがボタンやリンクと同じ focus の表現を持つ。
+### 見出しに枠を出さない理由
+
+focus を移す目的は次の 2 つで、どちらも枠を要さない。
+
+- スクリーンリーダーが読み始める位置を、新しいページの見出しにする
+- キーボードの次の Tab の起点を、新しいページの先頭にする
+
+| 根拠                       | 中身                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WCAG 2.4.3 (Focus Order)   | Understanding は "This success criterion does not prohibit making non-operable content (e.g., static text) focusable, or programmatically moving focus to such content" とし、見出しへ focus を移すことを妨げない。同じ文書は "As a best practice, avoid having focusable elements which cannot be operated or actioned, as these are likely to make operation tedious for keyboard users." とする。見出しは `tabindex="-1"` で Tab の順に入らないので、操作できない停止位置を Tab の順に足さない。次の Tab は新しいページの先頭の要素へ進み、順序はページの内容の順に沿う |
+| WCAG 2.4.7 (Focus Visible) | focus の枠を求める対象は "keyboard operable user interface" で、user interface component は "a part of the content that is perceived by users as a single control for a distinct function" と定義される。見出しは操作の単位ではないので、この SC は見出しの枠を求めない (定義からの判断)                                                                                                                                                                                                                                                                                   |
+| 操作できる要素との区別     | 枠を出すと、操作できない見出しがボタンやリンクと同じ focus の表現を持つ。Chrome for Testing 147 では、キーボードで遷移した後に `focusVisible` を渡さずに見出しへ focus すると、ブラウザ既定の `outline: auto` が出て、アプリ標準の枠とも食い違った (2026-09-28)                                                                                                                                                                                                                                                                                                            |
+
+Gatsby 2019 のテストの、枠についての証言は両方向にある。枠が位置の手がかりになるという証言は、キーボードのときだけ枠を出す案の側にある。それでも採らないのは、操作できない要素の枠は紛らわしいというスイッチ操作の被験者の証言と、2.4.3 の best practice が、操作できない要素を操作できる要素と同じに見せない向きを指すからである。位置が見えないのは次の操作までの間に限られ、手がかりが減る利用者は Consequences に書く。
+
+| 被験者       | 証言                                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 拡大鏡       | "the participant found visible focus outlines to be helpful for orienting oneself in the application"                      |
+| 音声操作     | "the visible focus indicator was helpful to orient the user’s place on the screen"                                         |
+| スイッチ操作 | "The visible focus indicators were useful, though they added that focus outlines on inoperable elements can be confusing." |
 
 ### 検討した案: 遷移の検出
 
@@ -88,7 +109,7 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 
 - ページ名を持つページは、`.server.ts` の `head()` で `pageTitle` を返す必要がある。書き忘れると title がアプリ名だけになり、遷移の読み上げでホームと区別できない
 - 各ページは `<h1>` を持つ必要がある。無いと focus は `<body>` に落ち、`focusPageHeading` が `console.warn` を出す
-- 遷移の直後は、Tab を押すまで focus の位置が目では見えない
+- 遷移の直後は、Tab を押すまで focus の位置が目では見えない。Gatsby 2019 の拡大鏡と音声操作の被験者は枠が位置をつかむのに役立つと答えており、この利用者には手がかりが減る。見出しの枠の有無を比べたテストは見つかっていない
 - 検出は Void の内部の 3 つの順序に乗る。新しいページの描画で `useRouter().path` が変わること、`useNavigation()` が idle に戻る描画の時点で `document.title` が新しい値になっていること、遷移の開始ごとに `useNavigation()` の値が新しくなること。どれも docs に書かれていない。Void を上げたら、dev server で 2 つのページの間を遷移し、読み上げの region に新しいページの title が入ることを確かめる。遷移の先には、layout effect で同期の更新を起こすページも含める
 - Void が遷移の開始と完了を購読する API を持ったら、この検出を作り直す
 - 偽の router (ADR-0048) は title の書き換えを再現しない。`src/components/route-announcer.test.tsx` は、新しいページの描画と遷移の完了の間に `document.title` を置き換えて確かめる。title の順序は下の「調査結果」の dev server の実測が持つ
@@ -123,5 +144,7 @@ idle に戻った effect で読み上げる形では、続けてブラウザの�
 - `voidzero-dev/void#140`: https://github.com/voidzero-dev/void/pull/140
 - react.dev「useLayoutEffect」の Caveats: https://react.dev/reference/react/useLayoutEffect
 - WCAG Understanding 2.4.2: https://www.w3.org/WAI/WCAG22/Understanding/page-titled.html
+- WCAG Understanding 2.4.3: https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html
+- WCAG Understanding 2.4.7: https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html
 - Gatsby と Fable Tech Labs のユーザーテスト (2019-07-11): https://www.gatsbyjs.com/blog/2019-07-11-user-testing-accessible-client-routing/
 - Navigation API の explainer「Focus management」: https://github.com/WICG/navigation-api#focus-management
