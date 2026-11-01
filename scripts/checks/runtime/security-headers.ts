@@ -70,7 +70,10 @@ function delay(ms: number): Promise<void> {
  *
  * 固定の port にすると、前回の残骸や別の worktree の検査が同じ port で応答し、こちらの起動が
  * 失敗しても古い成果物を検査して緑になる。閉じてから `vp preview` が bind するまでの間に
- * 別のプロセスが取ったときは、`--strictPort` で `vp preview` が終わり、`waitForServer` が落ちる
+ * 別のプロセスが取ったときは、`--strictPort` で `vp preview` が終わる。相手が HTTP で応答しなければ
+ * `waitForServer` が落ちる。相手が応答すると `waitForServer` は相手の応答で通り、ヘッダも相手の
+ * 応答で検査する。検査を終えた時点で `vp preview` が終わっていれば `run` が落とすが、終わる前に
+ * 検査を終えたときは見逃す
  */
 function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -234,6 +237,12 @@ async function run(): Promise<void> {
           Object.fromEntries(response.headers.entries()),
           EXPECTED_HEADERS,
         ).map((violation) => `${path} (${status.toString()}) ${violation}`),
+      );
+    }
+    // port を別のプロセスに取られて vp preview が終わっていれば、検査したのは相手の応答である
+    if (exit !== undefined) {
+      throw new CheckFailure(
+        `vp preview がヘッダの検査の間に終わった (code: ${String(exit.code)}, signal: ${String(exit.signal)})。検査した応答は vp preview のものではない\n--- vp preview の出力 ---\n${Buffer.concat(output).toString()}`,
       );
     }
     if (violations.length > 0) {
