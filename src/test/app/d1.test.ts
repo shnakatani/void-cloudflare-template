@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vite-plus/test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { createTestD1 } from "./d1";
+import { afterEach, describe, expect, it } from "vite-plus/test";
+
+import { createTestD1, migrationStatements } from "./d1";
 
 const AUTH_TABLES = ["account", "session", "user", "verification"];
 
@@ -32,5 +36,44 @@ describe("createTestD1", () => {
       await a.dispose();
       await b.dispose();
     }
+  });
+});
+
+describe("migrationStatements", () => {
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });
+  });
+
+  function migrationsDir(journalTags: string[] | null, sql: Record<string, string>): string {
+    const dir = mkdtempSync(join(tmpdir(), "migrations-"));
+    dirs.push(dir);
+    if (journalTags) {
+      mkdirSync(join(dir, "meta"));
+      writeFileSync(
+        join(dir, "meta/_journal.json"),
+        JSON.stringify({ entries: journalTags.map((tag) => ({ tag })) }),
+      );
+    }
+    for (const [tag, body] of Object.entries(sql)) writeFileSync(join(dir, `${tag}.sql`), body);
+    return dir;
+  }
+
+  it("journal の順に読む (ファイル名の順ではない)", () => {
+    const dir = migrationsDir(["b", "a"], {
+      a: "select 'a'",
+      b: "select 'b1';--> statement-breakpoint\nselect 'b2'",
+    });
+    expect(migrationStatements(dir)).toEqual([["select 'b1';", "select 'b2'"], ["select 'a'"]]);
+  });
+
+  it("journal が無ければ throw する", () => {
+    expect(() => migrationStatements(migrationsDir(null, { a: "select 1" }))).toThrow(/journal/);
+  });
+
+  it("journal にある .sql が無ければ throw する", () => {
+    expect(() => migrationStatements(migrationsDir(["a", "b"], { a: "select 1" }))).toThrow(
+      /b\.sql/,
+    );
   });
 });

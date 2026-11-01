@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -18,19 +18,39 @@ export type TestD1 = {
   readonly dispose: () => Promise<void>;
 };
 
-function migrationStatements(): string[][] {
-  const files = readdirSync(MIGRATIONS_DIR)
-    .filter((file) => file.endsWith(".sql"))
-    .toSorted();
-  if (files.length === 0) {
-    throw new Error(`migration が無い: ${MIGRATIONS_DIR}。vp exec void db generate で作る`);
+/** drizzle-kit が適用順を持つ journal の、migration の tag を順に返す */
+function journalTags(dir: string): string[] {
+  const journalPath = join(dir, "meta/_journal.json");
+  let journal: { entries?: { tag: string }[] };
+  try {
+    journal = JSON.parse(readFileSync(journalPath, "utf8"));
+  } catch (error) {
+    throw new Error(
+      `migration の journal を読めない: ${journalPath}。vp exec void db generate で作る`,
+      {
+        cause: error,
+      },
+    );
   }
-  return files.map((file) =>
-    readFileSync(join(MIGRATIONS_DIR, file), "utf8")
+  const tags = journal.entries?.map((entry) => entry.tag) ?? [];
+  if (tags.length === 0) {
+    throw new Error(`journal に migration が無い: ${journalPath}`);
+  }
+  return tags;
+}
+
+/** journal の順に、各 migration を文に分けて返す。journal にある .sql が無ければ throw する */
+export function migrationStatements(dir: string = MIGRATIONS_DIR): string[][] {
+  return journalTags(dir).map((tag) => {
+    const sqlPath = join(dir, `${tag}.sql`);
+    if (!existsSync(sqlPath)) {
+      throw new Error(`journal にある migration の .sql が無い: ${sqlPath}`);
+    }
+    return readFileSync(sqlPath, "utf8")
       .split(STATEMENT_BREAKPOINT)
       .map((statement) => statement.trim())
-      .filter((statement) => statement !== ""),
-  );
+      .filter((statement) => statement !== "");
+  });
 }
 
 /** 空の D1 を Miniflare で作り、`db/migrations/` の migration を順に当てる */
