@@ -4,14 +4,16 @@ import { NOTE_ENTITY_LABEL } from "./schema";
 export const NOTE_SEARCH_LABEL = `${NOTE_ENTITY_LABEL}を検索`;
 
 /**
- * 打鍵が止まってから一覧の取得を始めるまでの待ち。`useDebouncedValue` の `wait`。
- * 0 にすると打鍵ごとに server function が走る (docs/guides/lists-and-search.md「検索の入力欄を組む」)。
- * literal 型に固めない。ページのテストが `vi.mock` でこの値を広げる (`-components/notes-page.test.tsx` の `vi.mock`)
+ * 打鍵が止まってから一覧の URL へ移るまでの待ち。移るたびに loader が一覧を読む。
+ * literal 型に固めない。ページのテストが `vi.mock` でこの値を広げる (`notes-page-search-submit.test.tsx`)
  */
 export const NOTE_SEARCH_DEBOUNCE_MS: number = 300;
 
 /** loader が一覧を読めなかったときの、結果の区画の見出し。例外の文言は出さない */
 export const NOTES_RESULTS_ERROR_MESSAGE = `${NOTE_ENTITY_LABEL}の一覧を取得できませんでした。`;
+
+/** 条件が変わった一覧を読めなかったときの読み上げ。区画の見出し (`NOTES_RESULTS_ERROR_MESSAGE`) と同じ文字列にしない */
+export const NOTES_RESULTS_ERROR_ANNOUNCEMENT = `${NOTES_RESULTS_ERROR_MESSAGE}「再試行」で取り直せます`;
 
 /**
  * 絞り込みの結果が入れ替わったときの通知文 (ADR-0027)。

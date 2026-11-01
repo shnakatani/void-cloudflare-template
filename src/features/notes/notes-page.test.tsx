@@ -2,7 +2,10 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { expectNoA11yViolations } from "@/test/a11y/a11y";
 import { expectAbsent } from "@/test/assert/absent";
+import { expectAnnouncements } from "@/test/assert/live-announcer";
 
+import { NOTES_RESULTS_ERROR_ANNOUNCEMENT, noteSearchResultMessage } from "./note-search";
+import { noteSearchbox } from "./note-search-field.test-helpers";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
 import { NOTE_VIEW, OTHER_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
@@ -57,5 +60,84 @@ describe("NotesPage の一覧", () => {
     const { screen } = await renderNotesPage({ notes: [NOTE_VIEW, OTHER_NOTE_VIEW] });
     await expect.element(screen.getByRole("table", { name: NOTES_PAGE_TITLE })).toBeInTheDocument();
     await expectNoA11yViolations(document.body, context);
+  });
+});
+
+describe("NotesPage の検索", () => {
+  it("打鍵が止まると、正規化した語の一覧の URL へ replace で移り、scroll を保つ", async () => {
+    const { screen, router } = await renderNotesPage({ notes: [NOTE_VIEW] });
+    await noteSearchbox(screen).fill("  買い ");
+    await expect
+      .poll(() => router.visits)
+      .toEqual([
+        { url: "/notes?q=%E8%B2%B7%E3%81%84", options: { replace: true, preserveScroll: true } },
+      ]);
+  });
+
+  it("入力と表示中の条件がずれている間は前の一覧を半透明で残し、条件が揃うと戻す", async () => {
+    const { screen, router, rerender } = await renderNotesPage({ notes: [NOTE_VIEW] });
+    await noteSearchbox(screen).fill("abc");
+    // data-busy の値ではなく、利用者に見える不透明度を算出スタイルで見る
+    await expect.element(screen.getBySlot("stale-content")).toHaveStyle("opacity: 0.6");
+    router.navigate("/notes?q=abc");
+    await rerender({ q: "abc", notes: [] });
+    await expect.element(screen.getBySlot("stale-content")).toHaveStyle("opacity: 1");
+  });
+
+  it("visit の commit までに打った文字を、commit で消さない", async () => {
+    const { screen, router, rerender } = await renderNotesPage({ notes: [NOTE_VIEW] });
+    const field = noteSearchbox(screen);
+    await field.fill("ab");
+    await expect.poll(() => router.visits.map((visit) => visit.url)).toEqual(["/notes?q=ab"]);
+    await field.fill("abc");
+    router.navigate("/notes?q=ab");
+    await rerender({ q: "ab", notes: [] });
+    await expect.element(field).toHaveValue("abc");
+  });
+
+  it("外から q が変わったら (戻る・進む)、入力欄を q に戻す", async () => {
+    const { screen, rerender } = await renderNotesPage({ q: "a", notes: [] });
+    await rerender({ q: "b", notes: [] });
+    await expect.element(noteSearchbox(screen)).toHaveValue("b");
+  });
+
+  it("検索で移ったあとに戻る・進むで同じ q へ戻っても、入力欄を q に揃える", async () => {
+    const { screen, router, rerender } = await renderNotesPage({ notes: [] });
+    const field = noteSearchbox(screen);
+    await field.fill("a");
+    await expect.poll(() => router.visits.map((visit) => visit.url)).toEqual(["/notes?q=a"]);
+    router.navigate("/notes?q=a");
+    await rerender({ q: "a", notes: [] });
+    // 戻る
+    await rerender({ q: "", notes: [] });
+    await expect.element(field).toHaveValue("");
+    // 進む
+    await rerender({ q: "a", notes: [] });
+    await expect.element(field).toHaveValue("a");
+  });
+
+  it("visit の commit の前に入力を表示中の条件へ戻したら、表示中の条件の URL へも移る", async () => {
+    const { screen, router } = await renderNotesPage({ notes: [] });
+    const field = noteSearchbox(screen);
+    await field.fill("ab");
+    await expect.poll(() => router.visits.map((visit) => visit.url)).toEqual(["/notes?q=ab"]);
+    await field.fill("");
+    // 後の visit が前の visit を取り消すので、途中の語の一覧は commit されない (ADR-0017)
+    await expect
+      .poll(() => router.visits.map((visit) => visit.url))
+      .toEqual(["/notes?q=ab", "/notes"]);
+  });
+
+  it("条件が変わった props で件数を読み上げ、初期表示と同じ条件では読まない", async () => {
+    const { rerender } = await renderNotesPage({ q: "", notes: [NOTE_VIEW] });
+    await rerender({ q: "x", notes: [NOTE_VIEW, OTHER_NOTE_VIEW] });
+    await rerender({ q: "x", notes: [NOTE_VIEW] });
+    await expectAnnouncements([noteSearchResultMessage("x", 2)]);
+  });
+
+  it("条件が変わった props で一覧を読めなかったら、失敗を読み上げる", async () => {
+    const { rerender } = await renderNotesPage({ q: "", notes: [NOTE_VIEW] });
+    await rerender({ q: "x", notes: null });
+    await expectAnnouncements([NOTES_RESULTS_ERROR_ANNOUNCEMENT]);
   });
 });
