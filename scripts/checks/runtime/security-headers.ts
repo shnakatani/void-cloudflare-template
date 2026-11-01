@@ -176,6 +176,13 @@ async function run(): Promise<void> {
   });
   // spawn の失敗 (ENOENT など) は error で届く。close も続いて届くので、waitForServer が落とす
   server.once("error", (error) => output.push(Buffer.from(`${error.stack ?? String(error)}\n`)));
+  // detached のグループには端末の Ctrl-C が届かない。中断されたら、子孫を止めてから終わる
+  const onInterrupt = (signal: NodeJS.Signals) => {
+    console.error(`[security-headers] ${signal} を受けたので vp preview を止めて終わる`);
+    void stopServer(server, closed).finally(() => process.exit(1));
+  };
+  process.once("SIGINT", onInterrupt);
+  process.once("SIGTERM", onInterrupt);
 
   try {
     try {
@@ -216,6 +223,8 @@ async function run(): Promise<void> {
       );
     }
   } finally {
+    process.off("SIGINT", onInterrupt);
+    process.off("SIGTERM", onInterrupt);
     await stopServer(server, closed);
   }
 
