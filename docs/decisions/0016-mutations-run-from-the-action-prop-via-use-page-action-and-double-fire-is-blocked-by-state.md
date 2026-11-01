@@ -49,6 +49,10 @@ Error Boundary は画面ごと差し替わる。`action()` の throw を Action 
 
 Void 1.4.0 の `action()` は、Action の中で await すると決着しない。patch で上流の修正を当てている (ADR-0015「`action()` は shell の到着で resolve する」)。
 
+### 制約: `usePageAction` が使う `void/pages-client` の 2 つの export は docs に無い
+
+`getValidationErrors` と `isAbortError` (`void/pages-client`) は `node_modules/void/docs/reference/api.md`「User-Facing Imports」に載らない。`@void/react` の adapter が使う内部用で、`void/package.json` の exports には出ている (2026-11-02、Void 1.4.0)。Void を上げたら確かめる。消えたら、`VoidActionError.body` を自前で読む形と `error.name === "AbortError"` の判定に戻す。
+
 ## Decision
 
 **mutation は `src/components/action/` の部品の `action` prop から、`usePageAction` の `run` で呼ぶ。失敗は `run` が通知し、Action の reject にしない。決着前の二重発火は Transition の `isPending` だけで塞ぐ。**
