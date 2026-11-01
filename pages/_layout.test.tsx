@@ -25,9 +25,10 @@ describe("root layout", () => {
   });
 
   it("live region を常に置く", async () => {
-    await renderLayout(<p>x</p>);
+    const screen = await renderLayout(<p>x</p>);
+    // browser-setup.tsx も document に <LiveRegions /> を描くので、document 全体で探すと layout が外しても通る。layout の描画先の中で探す
     for (const id of Object.values(LIVE_REGION_IDS)) {
-      expect(document.getElementById(id)).not.toBeNull();
+      expect(screen.container.querySelector(`#${id}`)).not.toBeNull();
     }
   });
 
