@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  COMPANION_KINDS,
-  companionFilePattern,
-  companionGlobs,
-  isCompanionFile,
-  storyGlobs,
-} from "./companion-files";
+import { COMPANION_KINDS, companionGlobs, isCompanionFile, storyGlobs } from "./companion-files";
 
 describe("COMPANION_KINDS", () => {
   it("付随ファイルの 5 種別を持つ", () => {
@@ -62,20 +56,6 @@ describe("storyGlobs", () => {
       "src/**/*.story-helpers.ts",
       "src/**/*.story-helpers.tsx",
     ]);
-  });
-});
-
-describe("companionFilePattern", () => {
-  it("5 種別 × ts / tsx に当たり、アプリのコードには当たらない", () => {
-    const pattern = new RegExp(companionFilePattern());
-
-    for (const kind of COMPANION_KINDS) {
-      expect(pattern.test(`button.${kind}.ts`), `button.${kind}.ts`).toBe(true);
-      expect(pattern.test(`button.${kind}.tsx`), `button.${kind}.tsx`).toBe(true);
-    }
-    expect(pattern.test("button.tsx")).toBe(false);
-    expect(pattern.test("handlers.server.ts")).toBe(false);
-    expect(pattern.test("schema.gen.ts")).toBe(false);
   });
 });
 

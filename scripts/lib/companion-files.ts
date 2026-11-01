@@ -5,9 +5,9 @@ import { VOID_SOURCE_DIRS } from "./void-source-dirs";
  * `<名前>.<種別>.ts` / `.tsx` の形で置く。
  *
  * この一覧が唯一の定義で、lint の適用外と story への適用範囲 (`tooling/lint/config.ts`)、coverage の
- * 除外 (`tooling/test/config.ts`)、registry baseline の突き合わせ (`registry-baseline.test.ts`)、
- * route ファイル判定のパターン (`companionFilePattern`) が ここから導出される。種別を足すときにどれか 1 つを書き忘れる事故が起きないようにするのが
- * 目的なので、導出先で改めて字面を並べ直さない。
+ * 除外 (`tooling/test/config.ts`)、registry baseline の突き合わせ (`registry-baseline.test.ts`) が
+ * ここから導出される。種別を足すときにどれか 1 つを書き忘れる事故が起きないようにするのが目的なので、
+ * 導出先で改めて字面を並べ直さない。
  *
  * `tsconfig.app.json` の `exclude` と `tsconfig.test.json` の `include` は JSON なのでここを読めず、
  * 種別を `**\/*.<種別>.<拡張子>` の字面で並べる。種別を足したら、両方にも足す。
@@ -82,14 +82,6 @@ export function isCompanionFile(fileName: string): boolean {
   return COMPANION_KINDS.some((kind) =>
     EXTENSIONS.some((extension) => fileName.endsWith(`.${kind}.${extension}`)),
   );
-}
-
-/**
- * 付随ファイルに当たるファイル名の正規表現。TanStack Router の `routeFileIgnorePattern` の
- * ように、glob ではなくパターン文字列を要求する消費者へ渡す。
- */
-export function companionFilePattern(): string {
-  return `\\.(${COMPANION_KINDS.join("|")})\\.tsx?$`;
 }
 
 /**
