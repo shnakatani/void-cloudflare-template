@@ -4,6 +4,7 @@ paths:
   - "middleware/**"
   - "src/features/**"
   - "pages/**/*.server.ts"
+  - "auth.ts"
 ---
 
 # DB と認証
