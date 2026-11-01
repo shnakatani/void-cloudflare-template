@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { render } from "vitest-browser-react";
 
 import { deferMock } from "@/test/app/defer-mock";
@@ -63,6 +63,10 @@ describe("AppError", () => {
   });
 
   it("出している間は title の前に「エラー: 」を付け、外れたら戻す", async () => {
+    const previous = document.title;
+    onTestFinished(() => {
+      document.title = previous;
+    });
     document.title = "ノート — アプリ";
     const screen = await render(<AppError error={new Error("x")} onRetry={() => {}} />);
     await expect.poll(() => document.title).toBe("エラー: ノート — アプリ");
