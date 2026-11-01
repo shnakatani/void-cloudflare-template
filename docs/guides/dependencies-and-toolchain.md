@@ -40,11 +40,12 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 ### 秘密を足す
 
-秘密が要るようになったら、暗号化した env ファイルと、`dotenvx run --` のような復号の経路を、Vite の env 機構と分けて足す。Vite は既に在る環境変数を `.env` で上書きしないので、復号を先に済ませて `process.env` へ入れる形が噛み合う。Vite の `.env` 読み込みは `envDir: false` で切ってある (ADR-0004)。
+秘密は Void の形で渡す。ローカルの値はルートの `.env` に置き、本番の server 側の値は `void secret put` で渡す ([Void docs「Environment variables」][])。
 
-- 暗号化した env ファイルは `.gitignore` の `.env` か `.env.*` に当たる。commit するファイルは `!.env.production` のような行で外し、その行を、同じファイルに当たるどの行よりも後ろに置く。同じ `.gitignore` の中では最後に当たった行が効くので、ツールの init が後から末尾に足した行が当たると、`!` の行は打ち消される ([gitignore(5)][])
-- 秘密鍵の `.env.keys` は `.env.*` が覆う。dotenvx が ignore を求めるのはこのファイルである ([dotenvx README][])
-- Void はルートの `.env` を別に読み、`vp build` が `dist/ssr/.dev.vars` へ写す。`.env` 以外の dotenv ファイル (`.env.local`・`.env.production`・`.dev.vars`) を Void は扱わない ([Void docs「Environment variables」][] の Local development)。いま `.env` が持つ `BETTER_AUTH_SECRET` の渡し方は `docs/guides/auth.md`「preview に secret を渡す」にある
+- `.env` は Git に入れない。`.gitignore` の `.env` / `.env.*` が覆う
+- Void は `vp build` で `.env` を `dist/ssr/.dev.vars` へ写す。`.env` 以外の dotenv ファイル (`.env.local`・`.env.production`・`.dev.vars`) は扱わない ([Void docs「Environment variables」][] の Local development)。暗号化した env ファイルを commit する形は、Void が読まないので使えない
+- Vite の `.env` 読み込みは `envDir: false` で切ってあり、`.env` の読み手は Void の 1 つである (ADR-0004)
+- いま `.env` が持つ `BETTER_AUTH_SECRET` の渡し方は `docs/guides/auth.md`「preview に secret を渡す」にある
 
 ### Dependabot の alerts を有効にする
 
@@ -233,7 +234,6 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 [dependabot-core「pnpm_lockfile_updater.rb」]: https://github.com/dependabot/dependabot-core/blob/d4120cab39d50362a51b1c4fb307e818fed15868/npm_and_yarn/lib/dependabot/npm_and_yarn/file_updater/pnpm_lockfile_updater.rb#L285-L295
 [gitignore(5)]: https://git-scm.com/docs/gitignore
 [git-add(1)]: https://git-scm.com/docs/git-add
-[dotenvx README]: https://github.com/dotenvx/dotenvx/blob/v2.32.3/README.md
 [Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
 [Vite+ docs「Package Management」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/install.md
 [Vite+ docs「Environment」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/env.md
