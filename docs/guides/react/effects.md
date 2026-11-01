@@ -2,10 +2,10 @@
 
 コードを effect に書くかイベントハンドラに書くかを決めるときの手順と、その判定の理由を持つ。
 
-| 決定                                                                                                                              | ADR      |
-| --------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ                                 | ADR-0026 |
-| ページは URL の変化で作り直さず、取得結果の入れ替わりはページの effect が取得の決着で通知し、直前に通知した条件と同じなら出さない | ADR-0027 |
+| 決定                                                                                                                                                 | ADR      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ                                                    | ADR-0026 |
+| ページは URL の変化で作り直さず、取得結果の入れ替わりはページの effect が loader の props の入れ替わりで通知し、直前に通知した条件と同じなら出さない | ADR-0027 |
 
 ## explanation
 
@@ -21,7 +21,7 @@
 
 - 操作が原因のコードを effect に置くと、同じ表示に戻っただけで走る。[React docs「Synchronizing with Effects」][] の「Not an Effect: Buying a product」の例では、購入の POST を effect に置くと、別のページから戻ったときにも購入が走る ("Buying is not caused by rendering; it's caused by a specific interaction.")
 - React の外の系には、DOM とブラウザ API、外部 widget、イベントに応じて動く購読 (値を読む購読は `useSyncExternalStore`)、announcer の live region が入る。[React docs「Synchronizing with Effects」][] は例として、React でない widget の制御、サーバーへの接続、analytics の送信を挙げる
-- 取得結果の件数の通知 (ADR-0027) は、打鍵が契機に見えても原因は表示である。結果の入れ替わりは確定・戻る・進む・Link のどれでも起き、取得の決着は描画の側でしか分からない
+- 取得結果の件数の通知 (ADR-0027) は、打鍵が契機に見えても原因は表示である。結果の入れ替わりは確定・戻る・進む・Link のどれでも起き、新しい結果が届いたことは loader の props が入れ替わった描画でしか分からない
 
 ### 開発時の二重実行が示すもの
 
@@ -66,7 +66,7 @@ effect が読む値は、変わったら外の系に合わせ直す契機にな�
 | 6   | 表示された結果を React の外の系に合わせる                               | effect。止めるか戻すものがあれば後始末を返す。購読を張り直さずに最新の props や state を読むなら `useEffectEvent` へ出す (「依存に置く値と Effect Event で読む値」)                                                                                                                                                                                                                                                                                                                                        |
 
 - 「表示された結果を React の外の系に合わせる」の行の effect は、開発時の二重実行で利用者に見える結果が変わらないことを確かめる。変わったときの読み方は「開発時の二重実行が示すもの」
-- その行に当たる例: `src/components/ui/calendar.tsx` の focus、`src/components/ui/sidebar.tsx` の keydown の購読、取得の決着後の件数の通知 (ADR-0027)
+- その行に当たる例: `src/components/ui/calendar.tsx` の focus、`src/components/ui/sidebar.tsx` の keydown の購読、loader の props が入れ替わったあとの件数の通知 (ADR-0027)
 
 ## 出典
 
