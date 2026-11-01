@@ -9,7 +9,9 @@ import { REPO_ROOT } from "../../lib/repo-root";
 
 /**
  * client で動くコードから `.server` を import させない lint (ADR-0055) が、実際のファイルで発火することを確かめる。
- * 設定の解決後の形は lint-config.test.ts が持つ。こちらは regex と、範囲が重なる override の優先を見る
+ * 設定の解決後の形は lint-config.test.ts が持つ。こちらは regex と、範囲が重なる override の優先を見る。
+ * probe は `src/` の下に書いて `afterAll` で消す。途中で kill されると `src/__server-import-probe-*` が残るので、
+ * `rm -rf src/__server-import-probe-*` で消す
  */
 const VP = resolve(REPO_ROOT, "node_modules", ".bin", "vp");
 const PROBE_DIR = join(REPO_ROOT, "src", `__server-import-probe-${randomUUID()}`);
