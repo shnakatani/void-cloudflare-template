@@ -5,8 +5,8 @@ import { FullScreenNotice } from "@/components/parts/centered-card";
 import { expectText } from "@/test/assert/screen-assertions";
 
 /**
- * 状態のカタログは `centered-card.stories.tsx` が持つ (docs/guides/storybook.md「カタログと play の範囲」)。狭幅での余白も `Narrow`
- * story で見る。ここに残すのは、見出しが h1 であることだけで、story に play が無い
+ * 状態のカタログは `full-screen-notice.stories.tsx` が持つ (docs/guides/storybook.md「カタログと play の範囲」)。狭幅での余白は、
+ * 外枠の `CenteredCard` の `Narrow` story (`centered-card.stories.tsx`) で見る。ここに残すのは、見出しが h1 であることだけで、story に play が無い
  * (args だけで状態が決まる部品) 以上ここでしか固定できない。
  *
  * 寸法 (`max-w-sm` / `min-h-[50vh]` / `p-6`) は測らない。値は Tailwind の定義そのもので、
