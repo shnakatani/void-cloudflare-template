@@ -1,4 +1,4 @@
-import { VOID_SOURCE_DIRS } from "./void-source-dirs";
+import { VOID_TEST_DIRS } from "./void-source-dirs";
 
 /**
  * アプリのコードと同じディレクトリに置くが、アプリのコードではないファイルの種別。
@@ -85,9 +85,9 @@ export function isCompanionFile(fileName: string): boolean {
 }
 
 /**
- * ブラウザテストの glob。`src/` と、Void の規約のディレクトリ ({@link VOID_SOURCE_DIRS}) に置いた
+ * ブラウザテストの glob。`src/` と、Void の規約のディレクトリでテストを置けるもの ({@link VOID_TEST_DIRS}) に置いた
  * `*.test.tsx` に当たる。`tooling/test/browser-project.ts` の `include` と、`tooling/lint/config.ts` の
  * browser-test ルールの適用先が同じ集合を指す (ADR-0009)。片方だけ変えると lint の適用先が
  * 黙って browser project から外れる
  */
-export const BROWSER_TEST_GLOBS = ["src", ...VOID_SOURCE_DIRS].map((dir) => `${dir}/**/*.test.tsx`);
+export const BROWSER_TEST_GLOBS = ["src", ...VOID_TEST_DIRS].map((dir) => `${dir}/**/*.test.tsx`);

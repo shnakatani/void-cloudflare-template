@@ -6,18 +6,14 @@ paths:
   - "middleware/**/*.test.*"
   - "crons/**/*.test.*"
   - "queues/**/*.test.*"
-  - "db/**/*.test.*"
   - "email/**/*.test.*"
-  - "durable-objects/**/*.test.*"
   - "src/**/*.test-d.*"
   - "pages/**/*.test-d.*"
   - "routes/**/*.test-d.*"
   - "middleware/**/*.test-d.*"
   - "crons/**/*.test-d.*"
   - "queues/**/*.test-d.*"
-  - "db/**/*.test-d.*"
   - "email/**/*.test-d.*"
-  - "durable-objects/**/*.test-d.*"
   - "scripts/**/*.test.*"
   - "src/test/**"
   - "**/*.test-helpers.*"
@@ -34,7 +30,7 @@ paths:
 ## テストの種別と置き場所
 
 壊れる原因が違うものを同じ project に混ぜない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。
-表の `<アプリ>` は、`src/` と Void の規約のディレクトリ (`scripts/lib/void-source-dirs.ts`) のどれかを指す。
+表の `<アプリ>` は、`src/` と、Void の規約のディレクトリでテストを置けるもの (`scripts/lib/void-source-dirs.ts` の `VOID_TEST_DIRS`) のどれかを指す。
 
 | 種別                   | 壊れる原因                   | 置き場所                                            | 実行                                                                                                                                                                                                                                             |
 | ---------------------- | ---------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -47,7 +43,7 @@ paths:
 | 成果物の検査           | ビルド結果に現れる挙動の欠落 | `scripts/checks/runtime/`                           | `vp build` の後に `vp run verify:<name>` (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)                                                                                                                                        |
 
 - `expectTypeOf` だけのテストは `*.test-d.ts` に置き、実行するテストと同じファイルに書かない。`*.test.ts(x)` に書くと、型しか確かめないテストが `vp test run` で pass として数えられる (`docs/guides/testing/type-tests.md`「`*.test-d.ts` に分ける理由」)
-- Void の規約のディレクトリに置くテストと helper のファイル名は `_` で始める (`pages/_layout.test.tsx`)。`_` が無いと Void が `pages/` や `routes/` のファイルとして拾う。`durable-objects/` は `_` でも外れない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)
+- Void の規約のディレクトリのテストと helper は、ファイル名を `_` で始めてディレクトリの直下に置く (`pages/_layout.test.tsx`)。`_` が無いと Void がページや route として拾う。`durable-objects/` と `db/` は `_` でも拾われるので置かず、テストできる部分を `src/` に切り出してそこでテストする (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)
 
 スクリプトの純粋関数・定数・fixture の置き場所は消費者で決める。上から順に当て、最初に当たった行で止める (`docs/guides/placement.md`「`scripts/` に関数と fixture を置く」)。
 
