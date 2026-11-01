@@ -39,6 +39,7 @@
 
 - ZWJ で結んだ絵文字 (👨‍👩‍👧 は 5 code point) や結合文字 (か + 結合濁点は 2) は、見た目の 1 文字より多く数える。「N 文字以内」の文言とずれるのはこの場合だけである。GOV.UK の Character count は `text.length` (code unit) で数え、単体の絵文字も 2 と数えることを既知の問題として残している (alphagov/govuk-frontend#1104、2026-09-29 に open)
 - 切り詰めは code point の境界で切るので、サロゲートペアの片割れは残らない。ZWJ で結んだ絵文字は途中で切れうる
+- 例外は、server (Better Auth) が `.length` で判定する値で、client の検証も UTF-16 の code unit の `v.minLength`・`v.maxLength` で数える。単位を揃えないと境界の値で client と server の判定が割れる。対象は `src/features/auth/credentials.ts` のパスワード
 - 上限を目で見て分かるようにするなら、入力欄の近くに説明を置く (デジタル庁デザインシステムの案内)。検索語のように稀にしか超えない長さなら置かなくてよい
 
 ### 再評価の条件
