@@ -29,6 +29,7 @@
 | 成果物の検査           | ビルド結果に現れる挙動の欠落 | `scripts/checks/runtime/`                           | `vp build` の後に `vp run verify:<name>` (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)    |
 
 - `src/` と Void の規約のディレクトリのテストは、接尾辞で project が決まる。DOM が要るテストは `*.test.tsx` にして browser project で、DOM が要らないテストは `*.test.ts` にして unit project (Node) で走らせる。テストの helper のテストも同じに分ける。集める範囲は、`tooling/test/config.ts` の `unit` の `include` と、`scripts/lib/companion-files.ts` の `BROWSER_TEST_GLOBS` が持つ
+- Void の規約のディレクトリに置くテストと、テストの helper のファイル名は `_` で始める (`pages/_layout.test.tsx`)。Void は `pages/`・`routes/`・`crons/`・`queues/`・`middleware/`・`email/` の走査で、`_` で始まるパスの部分 (ファイル名、`pages/` と `routes/` と `crons/` と `queues/` ではディレクトリ名も) を外す。`_` が無いと、`pages/layout.test.tsx` が `/layout.test` のページとして build に入り、chunk が出る (2026-11-01、Void 1.4.0 で実測)。出典は、`pages/` が Void 1.4.0 の `packages/void/src/pages/scan.ts` の `segments.some((segment) => segment.startsWith('_'))` (Void の docs の `pages/` の節に記述は無い)、`routes/` と `crons/` と `queues/` が同じ版の `packages/void/src/shared/convention-files.ts` の `isConventionPath` (docs の `guide/server-routing.md` と `guide/jobs.md` と `guide/queues.md` も同じ)、`middleware/` が `packages/void/src/router/scan.ts` の `parseMiddlewareDefinitions`、`email/` が `packages/void/src/router/email.ts`。`durable-objects/` の走査 (`packages/void/src/durable/scan.ts` の `scanDurableObjectModules`) は `_` を外さず、ディレクトリ直下の `.ts` をすべて durable object のモジュールとして読むので、`_` を付けてもテストを置けない
 - 種別を足すときは、置き場所と project を対で作る (「project を足す」)
 
 ### テストの API を import する

@@ -3,6 +3,9 @@
  * `durable-objects/` は `void.config.ts` の `sourceDir` にかかわらずルートの直下に置く
  * (Void 1.4.0 の `packages/void/src/durable/scan.ts`)。
  *
+ * このディレクトリに置くテストと helper のファイル名は `_` で始める。`_` が無いと Void が `pages/` や `routes/` のファイルとして拾う
+ * (`durable-objects/` は `_` でも外れない。`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。
+ *
  * `src/**` に絞った lint の override、テストの `include`、coverage は、ここから同じ範囲をこれらのディレクトリへも
  * 広げる。広げ忘れると、ここに置いたコードだけが規則とテストと coverage から無言で外れる。
  *
