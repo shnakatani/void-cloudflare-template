@@ -1,6 +1,6 @@
 import { revalidateLogic } from "@tanstack/react-form";
 import { action } from "@void/react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
@@ -135,17 +135,30 @@ describe("usePageAction", () => {
     );
   });
 
-  it("action が throw した失敗は捕まえない", async () => {
-    vi.mocked(action).mockRejectedValue(actionError(500, null));
-    const { result } = await renderHook(() => usePageAction(ACTION_URL, {}));
+  it("action が throw した失敗は、生の error を警告に残し、固定の文言の toast に出して false を返す", async () => {
+    const error = actionError(500, null);
+    vi.mocked(action).mockRejectedValue(error);
+    const { result } = await renderHook(() => usePageAction(ACTION_URL, {}), {
+      wrapper: WithToaster,
+    });
 
-    await expect(result.current.run({ title: "a", memo: "" })).rejects.toBeInstanceOf(
-      VoidActionError,
-    );
+    await expect(result.current.run({ title: "a", memo: "" })).resolves.toBe(false);
+    await expect.element(page.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
+    expect(console.warn).toHaveBeenCalledWith("[mutation] failed", { error });
   });
 
-  it("Action の中で throw した失敗は、Transition を通って最も近い error boundary に届く", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+  it("遷移などで取り消された送信は、toast も警告も出さずに false を返す", async () => {
+    vi.mocked(action).mockRejectedValue(new DOMException("Navigation aborted", "AbortError"));
+    const { result } = await renderHook(() => usePageAction(ACTION_URL, {}), {
+      wrapper: WithToaster,
+    });
+
+    await expect(result.current.run({ title: "a", memo: "" })).resolves.toBe(false);
+    await expectAbsent(page.getByText(MUTATION_ERROR_FALLBACK_MESSAGE, { exact: false }));
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it("Action の中で throw した失敗は、error boundary に届かず toast に出る", async () => {
     vi.mocked(action).mockRejectedValue(actionError(500, null));
 
     function Harness() {
@@ -156,13 +169,44 @@ describe("usePageAction", () => {
       return <ActionButton action={save}>保存</ActionButton>;
     }
     const screen = await render(
-      <ErrorBoundary fallback={<p>境界で受けた</p>}>
-        <Harness />
-      </ErrorBoundary>,
+      <WithToaster>
+        <ErrorBoundary fallback={<p>境界で受けた</p>}>
+          <Harness />
+        </ErrorBoundary>
+      </WithToaster>,
     );
 
     await screen.getByRole("button", { name: "保存" }).click();
-    await expect.element(screen.getByText("境界で受けた")).toBeVisible();
+    await expect.element(screen.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
+    await expectAbsent(screen.getByText("境界で受けた"));
+  });
+
+  it("Action を持つ部品が送信中に消えても、そのあとの失敗は toast に出る", async () => {
+    const failed = Promise.withResolvers<never>();
+    vi.mocked(action).mockReturnValue(failed.promise);
+
+    function DeleteButton({ onStart }: { onStart: () => void }) {
+      const { run } = usePageAction(ACTION_URL, {});
+      async function remove() {
+        onStart();
+        await run({ title: "a", memo: "" });
+      }
+      return <ActionButton action={remove}>削除</ActionButton>;
+    }
+    function Harness() {
+      const [shown, setShown] = useState(true);
+      return shown ? <DeleteButton onStart={() => setShown(false)} /> : <p>閉じた</p>;
+    }
+    const screen = await render(
+      <WithToaster>
+        <Harness />
+      </WithToaster>,
+    );
+
+    await screen.getByRole("button", { name: "削除" }).click();
+    await expect.poll(() => action).toHaveBeenCalledOnce();
+    failed.reject(actionError(500, null));
+    await expect.element(screen.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
   });
 });
 
@@ -294,17 +338,23 @@ describe("usePageAction を TanStack Form から使う", () => {
     );
   });
 
-  it("onSubmit の中で throw した失敗は、form が握らずに error boundary に届く", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+  it("onSubmit の中で throw した失敗は、error boundary に届かず toast に出て、もう一度送れる", async () => {
     vi.mocked(action).mockRejectedValue(actionError(403, null));
     const screen = await render(
-      <ErrorBoundary fallback={<p>境界で受けた</p>}>
-        <NoteForm />
-      </ErrorBoundary>,
+      <WithToaster>
+        <ErrorBoundary fallback={<p>境界で受けた</p>}>
+          <NoteForm />
+        </ErrorBoundary>
+      </WithToaster>,
     );
 
     await userEvent.fill(screen.getByRole("textbox", { name: "タイトル" }), "買い物");
     await screen.getByRole("button", { name: "保存" }).click();
-    await expect.element(screen.getByText("境界で受けた")).toBeVisible();
+    await expect.element(screen.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
+    await expectAbsent(screen.getByText("境界で受けた"));
+
+    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    await screen.getByRole("button", { name: "保存" }).click();
+    await expect.poll(() => action).toHaveBeenCalledTimes(2);
   });
 });

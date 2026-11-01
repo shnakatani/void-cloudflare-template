@@ -22,12 +22,12 @@ export function curateMutationErrorMessage(error: unknown): string {
 }
 
 /**
- * mutation の失敗を toast に出す。`usePageAction` の `run` が、呼び出し側で扱う失敗をこれで出す。
+ * mutation の失敗を toast に出す。`usePageAction` の `run` が、`action()` の `ok: false` と throw をこれで出す。
  *
  * 「curate を通した文言だけを toast に出す」という配線を消費側ごとに書くと、
  * 1 箇所が `error.message` を直接渡す形へ戻っても他が正しいままで気付けない。
  * 失敗を toast に出す経路を足すときは、これを通す。
  */
-export function toastMutationError(error: Error): void {
+export function toastMutationError(error: unknown): void {
   toast.add({ type: "error", title: curateMutationErrorMessage(error) });
 }
