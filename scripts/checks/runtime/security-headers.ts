@@ -36,6 +36,10 @@ const EXPECTED_HEADERS: readonly ExpectedHeader[] = [
   { name: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { name: "Cross-Origin-Resource-Policy", value: "same-origin" },
   { name: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  {
+    name: "Content-Security-Policy",
+    value: "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  },
 ];
 
 /** `vp build` が書き、`vp preview` が Worker の設定として読むファイル */
