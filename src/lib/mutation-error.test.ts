@@ -5,7 +5,7 @@ import { curateMutationErrorMessage, MUTATION_ERROR_FALLBACK_MESSAGE } from "./m
 /**
  * mutation の onError で使うエラー文言整形の境界網羅テスト。
  *
- * server function 側の throw は開発者向けの文言 (id や検証失敗の項目パスを含む) なので、
+ * サーバ側の処理が throw する文言は開発者向け (id や検証失敗の項目パスを含む) なので、
  * そのまま画面へ出さず固定文言へ丸める。raw error は observability のため console.warn に残す
  * (`query-cache-handlers.ts` の background refetch 用ハンドラと対になる意匠)。
  */
@@ -20,8 +20,8 @@ describe("curateMutationErrorMessage", () => {
     warnSpy.mockRestore();
   });
 
-  it("server function の開発者向けメッセージを画面文言に混ぜない", () => {
-    // handlers.server.ts の remove が投げる形。id と内部事情がそのまま toast に出ることを防ぐ
+  it("サーバ側の処理の開発者向けメッセージを画面文言に混ぜない", () => {
+    // 削除する対象が見つからないときにサーバ側の処理が投げる形。id と内部事情がそのまま toast に出ることを防ぐ
     const error = new Error("削除対象のノートが見つかりません: id=42");
 
     const message = curateMutationErrorMessage(error);

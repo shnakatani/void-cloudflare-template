@@ -32,7 +32,7 @@ type Story = StoryObj<typeof meta>;
 /** 画面全体を占める (`fill` 省略時の既定)。遷移先を失った画面用 */
 export const Default: Story = {};
 
-/** 画面の一部を占める。周りに他の要素が残る route の error boundary 用 */
+/** 画面の一部を占める。周りに他の要素が残る、ページの中の error boundary 用 */
 export const Section: Story = {
   args: { fill: "section" },
 };
