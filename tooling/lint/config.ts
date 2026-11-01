@@ -38,6 +38,24 @@ const RESTRICTED_BARREL_IMPORTS = [
   },
 ];
 
+/** テストと story だけが使うコードを止める pattern (ADR-0008)。import 禁止のすべての override へ渡す */
+const TEST_ONLY_IMPORT_PATTERN = {
+  // alias (@/test/) と相対 (./test/ ../test/) の両方の specifier を止める
+  regex: "\\.(test|story)-helpers$|\\.stories$|(^@|\\.)/test/",
+  message: "テストと story だけが使うコード。アプリのコードから import しない (ADR-0008)",
+};
+
+/**
+ * server だけで動く module を止める pattern (ADR-0055)。Void は client から `.server.ts` を import するのを止めず、
+ * client の環境では `void/db` が空の stub になって実行時に壊れる (Void 1.4.0 の plugin-client-stubs.ts)
+ */
+const SERVER_MODULE_IMPORT_PATTERN = {
+  regex: "\\.server(\\.ts)?$",
+  allowTypeImports: true,
+  message:
+    "server だけで動く module。client で動くコードから値を import しない。型は import type で読む (ADR-0055)",
+};
+
 /**
  * `vite.config.ts` の `lint`。`lintConfig` の中の文字列のパス (`jsPlugins` の specifier、`overrides` の `files` /
  * `excludeFiles`、`ignorePatterns`) は、このファイルではなく `vite.config.ts` のあるディレクトリから解決される。
@@ -354,14 +372,22 @@ export const lintConfig = {
           {
             // トップレベルの paths をここでも渡す。渡さないと、この override の範囲でバレルの禁止が外れる
             paths: RESTRICTED_BARREL_IMPORTS,
-            patterns: [
-              {
-                // alias (@/test/) と相対 (./test/ ../test/) の両方の specifier を止める
-                regex: "\\.(test|story)-helpers$|\\.stories$|(^@|\\.)/test/",
-                message:
-                  "テストと story だけが使うコード。アプリのコードから import しない (ADR-0008)",
-              },
-            ],
+            patterns: [TEST_ONLY_IMPORT_PATTERN],
+          },
+        ],
+      },
+    },
+    {
+      // client で動くコードから server の module を止める (ADR-0055)。上の override と範囲が重なるファイルは
+      // 後のこの override の options だけが効くので、テスト専用コードの pattern とバレルの paths もここで渡す
+      files: ["src/**", "pages/**"],
+      excludeFiles: ["**/*.server.ts", ...companionGlobs("**/"), "src/test/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: RESTRICTED_BARREL_IMPORTS,
+            patterns: [TEST_ONLY_IMPORT_PATTERN, SERVER_MODULE_IMPORT_PATTERN],
           },
         ],
       },
