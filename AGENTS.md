@@ -1,4 +1,4 @@
-# AGENTS.md - tanstack-start-template
+# AGENTS.md - void-cloudflare-template
 
 プロジェクト概要・技術スタック・セットアップ・ドキュメント一覧は `README.md` を参照。
 
