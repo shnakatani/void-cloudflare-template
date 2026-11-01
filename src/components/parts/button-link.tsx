@@ -7,7 +7,10 @@ import { buttonVariants } from "@/components/ui/button";
 
 import { PendingLabel } from "./pending-label";
 
-type ButtonLinkProps = Omit<ComponentProps<typeof Link>, "className"> &
+type ButtonLinkProps = Omit<
+  ComponentProps<typeof Link>,
+  "className" | "disabled" | "aria-disabled"
+> &
   VariantProps<typeof buttonVariants> & {
     className?: string;
     /**
@@ -24,7 +27,10 @@ type ButtonLinkProps = Omit<ComponentProps<typeof Link>, "className"> &
  * 内部の ref (`elementRef`) で持つ。`render` が ref を合成せず上書きすると観測する要素が無くなる、と推論している。
  * 推論であり、ブラウザで IntersectionObserver が張られるかは確かめていない。
  *
- * `Link` の props に `ref` が無いので、この部品も `ref` を受けない。
+ * `ref` は型が許さない。実行時に渡すと `{...rest}` が `Link` 内部の ref を上書きし、`prefetch="visible"` の観測が働かなくなる。
+ *
+ * 無効なリンクは持たない。`disabled` と `aria-disabled` は型で外してある。`Link` は無効の状態で遷移を止めず、
+ * `buttonVariants` の薄くする指定 (`data-disabled:`・`disabled:`) も a には当たらない。無効にしたい操作はリンクではなくボタンで表す。
  */
 export function ButtonLink({
   className,
