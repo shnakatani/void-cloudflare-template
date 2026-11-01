@@ -10,7 +10,8 @@
  * - `scripts/checks/integrity/lint-config.test.ts` の期待値と `SOURCE_ROOTS`
  * - `.claude/rules/` の `paths`
  * - `src/styles.css` の `@source`
- * - `tsconfig.worker.json` の `include` (`pages/` は `*.server.ts` だけを持つ)
+ * - `tsconfig.worker.json` の `include` (ディレクトリごとに `.ts` と `.tsx`。`pages/` は `*.server.ts` だけを持つ)
+ * - `tsconfig.test.json` の `exclude` (`pages/` は持たない)
  * - ADR-0047 の実行環境の表
  */
 export const VOID_SOURCE_DIRS = [

@@ -1,4 +1,4 @@
-// tsconfig.app.json・tsconfig.worker.json・tsconfig.node.json が共有する設定。実行環境で変わる
+// tsconfig.app.json・tsconfig.test.json・tsconfig.worker.json・tsconfig.node.json が共有する設定。実行環境で変わる
 // lib・types・include は、それぞれの tsconfig が持つ (ADR-0047)
 {
   "compilerOptions": {

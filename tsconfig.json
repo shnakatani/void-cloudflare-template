@@ -1,4 +1,5 @@
-// 実行環境ごとに型を分ける (ADR-0047)。ここはどのファイルも持たず、4 つの tsconfig をつなぐだけにする
+// 実行環境ごとに型を分ける (ADR-0047)。ここはどのファイルも持たず、`files: []`・`references`・shadcn の CLI のための
+// `paths` だけを持って、4 つの tsconfig をつなぐ
 {
   "files": [],
   "references": [
