@@ -6,7 +6,7 @@ Vite+ で組んだ Web アプリケーションの template repository。
 
 ## 技術スタック
 
-- React 19 + TanStack Query / Form / Table
+- React 19 + TanStack Form / Table
 - shadcn/ui (Base UI) + Tailwind CSS v4
 - Vite+ (`vp`) + mise
 
