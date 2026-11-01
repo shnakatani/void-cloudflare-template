@@ -56,7 +56,6 @@ story は部品が取りうる状態を並べるカタログで、振る舞い�
 
 ### story に要る構成を手で置く
 
-- Query を使う部品の story を書くようになったら、QueryClient を `.storybook/preview.tsx` の構成へ手で置く
 - server-only の依存を引く部品の story を書くようになったら、その依存を `__mocks__` で遮断する
 
 ### play を書く

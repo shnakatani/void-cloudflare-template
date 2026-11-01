@@ -18,7 +18,7 @@ paths:
 lint (`react/set-state-in-effect`、`react/no-deriving-state-in-effects`) が止める。代替のうち lint が案内しないもの:
 
 - 外部ストアの値を読む購読は `useSyncExternalStore`。lint では検出できないのでレビューで見る (`docs/guides/react/effects.md`「effect に書くかを判定する」)
-- データ取得は TanStack Query で行う (`docs/guides/react/effects.md`「effect に書くかを判定する」)
+- データ取得は page の loader で行い、page の props で受ける。effect で fetch しない (`docs/guides/react/effects.md`「effect に書くかを判定する」)
 
 ## effect かイベントハンドラかを原因で決める
 
