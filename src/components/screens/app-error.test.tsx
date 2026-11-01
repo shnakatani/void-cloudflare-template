@@ -93,6 +93,14 @@ describe("AppError", () => {
     await expect.poll(() => document.title).toBe("エラー: 設定 — アプリ");
   });
 
+  it("出た時点で focus が無ければ、見出しへ移す", async () => {
+    const screen = await render(<AppError error={new Error("x")} onRetry={() => {}} />);
+
+    await expect
+      .element(screen.getByRole("heading", { name: "エラーが発生しました", level: 1 }))
+      .toHaveFocus();
+  });
+
   it("再試行が決着するまで押せず、再クリックでは onRetry を呼ばない", async () => {
     const pending = Promise.withResolvers<undefined>();
     const onRetry = vi.fn(() => pending.promise);
@@ -134,6 +142,15 @@ describe("AppErrorBoundary", () => {
       .toBeVisible();
     reload.resolve(undefined);
     await expect.element(screen.getByRole("heading", { name: "ページの中身" })).toBeVisible();
+  });
+
+  it("再試行が成功したら、描き直した見出しへ focus を移す", async () => {
+    const { screen, state } = await renderBoundary();
+    state.failing = false;
+
+    await screen.getByRole("button", { name: "再試行" }).click();
+
+    await expect.element(screen.getByRole("heading", { name: "ページの中身" })).toHaveFocus();
   });
 
   it("再読み込みが失敗しても子を描き直し、失敗を warn に残す", async () => {
