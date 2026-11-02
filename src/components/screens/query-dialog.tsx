@@ -159,6 +159,11 @@ export function QueryDialog<TDialog>({
   );
 }
 
+/**
+ * 中身は `dialogKey` ではなく props の object で比べる。key で比べると、同じ key のまま props が更新されたとき
+ * `previous` が古い object を持ち、閉じかけに古い中身を描く。呼ぶ側が描画ごとに object を作っても、描画中の
+ * `setPrevious` は同じ props で描き直すだけで止まる
+ */
 function isSameShown<TDialog>(a: Shown<TDialog> | null, b: Shown<TDialog> | null): boolean {
   if (a === null || b === null) {
     return a === b;
