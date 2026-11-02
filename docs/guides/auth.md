@@ -8,6 +8,7 @@
 | tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ            | ADR-0047 |
 | Void のページの context に依存する部品は、export された router・navigation・shared の context を通して story とブラウザテストで描く | ADR-0048 |
 | 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                                         | ADR-0053 |
+| 別の origin からの書き込みは Void の判定に任せ、routes/ の書き込みの handler は user を読んでから書く                               | ADR-0060 |
 
 ## how-to
 
@@ -25,7 +26,7 @@
 
 ### `routes/` に書き込みの handler を足す
 
-`routes/` の handler には、page の action のような origin の判定が掛からない。Void が別の origin からの書き込みの要求で session の cookie を捨てるので、user を読んで書く handler だけが守られる (ADR-0053、「別の origin からの書き込みが止まる仕組み」)。足す handler の形で守り方を選ぶ。
+`routes/` の handler には、page の action のような origin の判定が掛からない。Void が別の origin からの書き込みの要求で session の cookie を捨てるので、user を読んで書く handler だけが守られる (ADR-0060、「別の origin からの書き込みが止まる仕組み」)。足す handler の形で守り方を選ぶ。
 
 | handler の形                                                      | 守り方                                                                                                                                               |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -138,7 +139,7 @@ Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か�
 - cookie を捨てる判定は要求を止めない。`routes/` の handler が守られるのは、user を読み、無ければ止まるからである
 - ブラウザは別の origin への要求に `Origin` を付ける ([MDN「Origin」][])。どちらの判定も、`Origin` の無い要求をブラウザの外の client として通す
 - session の cookie は `SameSite=Lax` で発行される (2026-11-02、`vp preview` の `Set-Cookie`)。別の site からの `POST` には cookie が付かない。同じ site の別の origin (兄弟の subdomain) からの `POST` には付くので、上の 2 か所が止める
-- 2026-11-02 に `vp preview` で叩いた結果は ADR-0053 の Context にある
+- 2026-11-02 に `vp preview` で叩いた結果は ADR-0060 の Context にある
 
 ### page の loader に middleware を渡さない理由
 
