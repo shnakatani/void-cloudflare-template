@@ -16,12 +16,13 @@ import { PageHeader } from "@/components/parts/page-header";
 import { StaleContent } from "@/components/parts/stale-content";
 import { Dialog } from "@/components/ui/dialog";
 import { usePageAction } from "@/hooks/use-page-action";
+import { dialogOpenerProps, dialogOpenerRef } from "@/lib/dialog-final-focus";
 import { announce } from "@/lib/live-announcer";
 import { startVisit } from "@/lib/start-visit";
 
 import { noteDeleteDialogHandle } from "./note-delete-dialog-handle";
 import { NoteDialogContent } from "./note-dialog";
-import { noteCreateLinkProps, noteCreateLinkRef } from "./note-dialog-focus";
+import { NOTE_CREATE_OPENER } from "./note-dialog-focus";
 import {
   NOTE_SEARCH_DEBOUNCE_MS,
   NOTES_RESULTS_ERROR_ANNOUNCEMENT,
@@ -239,7 +240,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
               href={noteCreateUrl(q)}
               preserveScroll
               onNavigate={abandonSearch}
-              {...noteCreateLinkProps()}
+              {...dialogOpenerProps(NOTE_CREATE_OPENER)}
             >
               ＋ {NOTE_ENTITY_LABEL}を追加
             </ButtonLink>
@@ -262,7 +263,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
         handle={noteDeleteDialogHandle}
         entityLabel={NOTE_ENTITY_LABEL}
         onConfirm={confirmDelete}
-        fallbackFocusRef={noteCreateLinkRef}
+        fallbackFocusRef={dialogOpenerRef(NOTE_CREATE_OPENER)}
       />
       {/* Root は開閉をまたいで残し、open を URL の query から導く。中身は種類と id で作り直す */}
       <Dialog

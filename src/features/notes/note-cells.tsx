@@ -9,11 +9,12 @@ import type {
 } from "@/components/parts/data-table-features";
 import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { dialogOpenerProps } from "@/lib/dialog-final-focus";
 import { formatCalendarDateLabel } from "@/lib/format-calendar-date-label";
 import { formatDateTime } from "@/lib/format-date-time";
 
 import { noteDeleteDialogHandle } from "./note-delete-dialog-handle";
-import { noteEditLinkProps } from "./note-dialog-focus";
+import { noteEditOpener } from "./note-dialog-focus";
 import type { NoteRow } from "./note-rows";
 
 type NoteCellContext = DataTableCellContext<NoteRow>;
@@ -103,7 +104,7 @@ export function NoteActionsCell({ row, table }: NoteCellContext) {
         onNavigate={() => table.options.meta?.onRowNavigate?.()}
         variant="outline"
         size="sm"
-        {...noteEditLinkProps(note.id)}
+        {...dialogOpenerProps(noteEditOpener(note.id))}
         aria-label={editLabel}
         // 削除中は開かせない (ADR-0017 の「止める範囲」)。要素を替えずに止めるので、削除に失敗して解けても focus が残る
         disabled={isDeleting}
