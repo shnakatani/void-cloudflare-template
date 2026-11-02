@@ -63,6 +63,13 @@ describe("mirrorUAVisualTransition", () => {
     expect(marked()).toBe(false);
   });
 
+  it("hasUAVisualTransition を持たない popstate では属性を付けない", () => {
+    const { marked } = mirror();
+    // hasUAVisualTransition に未対応のブラウザの popstate。PopStateEvent の初期化では未定義にできない
+    window.dispatchEvent(new Event("popstate"));
+    expect(marked()).toBe(false);
+  });
+
   it("後始末のあとは戻る・進むを写さない", () => {
     const { marked, popstate, dispose } = mirror();
     dispose();

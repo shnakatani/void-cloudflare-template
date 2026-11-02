@@ -13,7 +13,9 @@ export function mirrorUAVisualTransition(target: Window, root: HTMLElement): () 
   target.addEventListener(
     "popstate",
     (event) => {
-      root.toggleAttribute(UA_VISUAL_TRANSITION_ATTRIBUTE, event.hasUAVisualTransition);
+      // 未対応のブラウザでは値が無く、undefined を渡すと toggleAttribute が付け外しを反転する。lib.dom.d.ts は値を必ず持つ型で書く
+      const hasUAVisualTransition = "hasUAVisualTransition" in event && event.hasUAVisualTransition;
+      root.toggleAttribute(UA_VISUAL_TRANSITION_ATTRIBUTE, hasUAVisualTransition);
     },
     { signal },
   );
