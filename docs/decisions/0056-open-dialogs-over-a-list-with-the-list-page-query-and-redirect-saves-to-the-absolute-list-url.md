@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-02
-- 関連: ADR-0016 (ページの query を `pageQuery` で action の URL に載せる)、ADR-0017 (完了点と、後の送信による取り消し)、ADR-0027 (ページは URL の変化で作り直さず、props の変化を effect で通知する)、ADR-0049 (遷移の読み上げ)、ADR-0053 (redirect を絶対 URL で返す)、ADR-0058 (遷移のクロスフェード)
+- 関連: ADR-0016 (ページの query を `pageQuery` で action の URL に載せる)、ADR-0042 (押したリンクの `Spinner`)、ADR-0017 (完了点と、後の送信による取り消し)、ADR-0027 (ページは URL の変化で作り直さず、props の変化を effect で通知する)、ADR-0049 (遷移の読み上げ)、ADR-0053 (redirect を絶対 URL で返す)、ADR-0058 (遷移のクロスフェード)
 
 ## Context
 
@@ -10,13 +10,15 @@
 
 Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い。
 
-| 出典                                                                  | 内容                                                                                                                                                                                               |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Void docs「Layouts & Shared Data」                                    | layout は遷移の間も部品の state を保つ。layout のデータは middleware の `shared` だけで、"Shared data comes from middleware; page props come from the loader." と書く                              |
-| Void 1.4.0 のソース `packages/void/src/pages/scan.ts` の `scanPages`  | `.server` の companion を探すのはページのファイルだけで、layout のファイルは探さない。layout は loader を持てない。1 つの URL に描くページは 1 つで、子 route の `<Outlet />` に当たる仕組みは無い |
-| Void docs「Pages API」(`reference/api/pages.md`)                      | Vue と Solid は GET の遷移でページを作り直すと書く。React については書かない                                                                                                                       |
-| Void 1.4.0 の `.void/routes.d.ts` の `ActionUrl`                      | `<page>` か `<page>?<action 名>` だけを許し、ほかの query を持てない (ADR-0016「制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない」)                      |
-| Void docs「Actions & Forms」の Named Actions と voidzero-dev/void#648 | 相対の redirect は要求の query を行き先に混ぜる                                                                                                                                                    |
+| 出典                                                                               | 内容                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Void docs「Layouts & Shared Data」                                                 | layout は遷移の間も部品の state を保つ。layout のデータは middleware の `shared` だけで、"Shared data comes from middleware; page props come from the loader." と書く                                    |
+| Void 1.4.0 のソース `packages/void/src/pages/scan.ts` の `scanPages`               | `.server` の companion を探すのはページのファイルだけで、layout のファイルは探さない。layout は loader を持てない。1 つの URL に描くページは 1 つで、子 route の `<Outlet />` に当たる仕組みは無い       |
+| Void docs「Pages API」(`reference/api/pages.md`)                                   | Vue と Solid は GET の遷移でページを作り直すと書く。React については書かない                                                                                                                             |
+| Void 1.4.0 の `.void/routes.d.ts` の `ActionUrl`                                   | `<page>` か `<page>?<action 名>` だけを許し、ほかの query を持てない (ADR-0016「制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない」)                            |
+| Void docs「Actions & Forms」の Named Actions と voidzero-dev/void#648              | 相対の redirect は要求の query を行き先に混ぜる                                                                                                                                                          |
+| Void docs「Pages API」の `useNavigation()`                                         | 読み込み中の遷移の `state` と行き先の `location` を返す。戻る・進むも `router.visit` を通るので、同じく行き先を返す (Void 1.4.0 の `packages/react/src/runtime/pages-client.ts` の `setPopStateHandler`) |
+| Void 1.4.0 の `packages/react/src/runtime/pages-client.ts` の `navigationFallback` | 遷移の読み込み中の受け皿を、待ちの閾値なしに次の frame で出す。受け皿はページの部品の位置 (Suspense の fallback) に描かれ、一覧ごと置き換わる (コードの読み)                                             |
 
 ### 実測: query で開く形と、別のページのファイルが同じ部品を re-export する形
 
@@ -44,13 +46,15 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 - 保存の Action の間は、利用者の close (キャンセル、Escape、外側の押下、X) を止める。止める条件は、そのダイアログ自身の保存の pending だけにする。閉じる操作は一覧の URL への visit なので、保存の送信を取り消す (ADR-0017)。要求がサーバーへ届く前なら保存は起きず、入力もダイアログと一緒に消える
 - ダイアログの中身は、ダイアログの種類と値の id が替わったら作り直す。ページは URL の変化で作り直されない (ADR-0027) ので、作り直さないと、開いたまま別の値の URL へ移ったときに、打ち始めた form が前の値のまま残る
 - 閉じたときの focus は、下の「閉じたときの focus」の表に従い、`finalFocus` に関数を渡して分ける
+- 行き先がダイアログの遷移の読み込みが 1000ms を超えたら、同じ Root にダイアログの形の読み込み中を出す (下の「読み込み中」)
+- Root の配線 (開閉、閉じる遷移、close の停止、中身の作り直し、開閉の読み上げ、読み込み中) は `QueryDialog` (`src/components/screens/query-dialog.tsx`) が持つ。ページは props の値と行き先を渡す
 
 ### 閉じたときの focus
 
-| 閉じ方                                                                   | 開いた元のリンクがある                                                                              | 開いた元のリンクが無い (絞り込みで外れた、削除された、一覧を読めない) |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| 一覧へ戻った (閉じる操作、保存と削除の redirect、ブラウザの戻る)         | そのリンクへ戻す                                                                                    | ページの見出しへ、枠を出さずに移す (ADR-0049 と同じ移し方)            |
-| 開いたまま別のダイアログに替わった (別の値の URL へ、追加と編集の行き来) | focus に触れない (`finalFocusToOpener` が移さない)。替わる側のダイアログが、自分の中へ focus を移す | 同左                                                                  |
+| 閉じ方                                                                                         | 開いた元のリンクがある                                                                              | 開いた元のリンクが無い (絞り込みで外れた、削除された、一覧を読めない) |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 一覧へ戻った (閉じる操作、保存と削除の redirect、ブラウザの戻る)                               | そのリンクへ戻す                                                                                    | ページの見出しへ、枠を出さずに移す (ADR-0049 と同じ移し方)            |
+| 開いたまま別のダイアログに替わった (別の値の URL へ、追加と編集の行き来、読み込み中から本物へ) | focus に触れない (`finalFocusToOpener` が移さない)。替わる側のダイアログが、自分の中へ focus を移す | 同左                                                                  |
 
 - 開いた元のリンクへ戻すのは、APG のダイアログの形である。リンクへ戻さないと、focus はダイアログと一緒に外れ、利用者は一覧の中の位置を失う
 - 移し方は `finalFocusToOpener` (`src/lib/dialog-final-focus.ts`) が持つ。`finalFocus` から Base UI に常に `false` ("Do not move focus") を返し、commit が終わってから、開いているダイアログが無いときだけ自分で移す
@@ -82,6 +86,25 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 | 中身をすぐ外し、旧画面の snapshot の Popup に閉じ方の keyframes を当て直す | View Transition の type で閉じる遷移を見分ける必要があるが、Void は type を渡す口を持たない (ADR-0058 の Context)。当て直した keyframes と registry の閉じ方を 2 か所で揃え続けることになる | 却下     |
 | 中身をすぐ外す                                                             | 閉じる遷移だけ、開く遷移と違ってアニメーションが無い                                                                                                                                        | 却下     |
 
+### 読み込み中
+
+一覧の上で開くダイアログの読み込み (loader) が 1000ms を超えたら、同じ Root に、開こうとしているダイアログの見出しと「読み込み中」の説明と閉じるボタンだけを持つ中身を描く。
+
+- 行き先は `useNavigation()` の `location` から、loader と同じ読み方で読む。開いているダイアログがあれば出さない
+- 1000ms は TanStack Router の `defaultPendingMs` の既定に倣う (TanStack Router docs「Data Loading」の Showing a pending component)。値は `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`) が持つ
+- 読み込み中は読み上げない。focus がダイアログの中の閉じるボタンへ移り、ダイアログの名前が読まれる。読み終えたダイアログが開いたときに title を 1 回読む
+- 閉じる操作は、ほかのダイアログと同じく一覧の URL への遷移にする。後から始めた遷移が読み込みを取り消す (ADR-0017)。Void の router は遷移を取り消す口を持たない (`VoidRouter` の型)
+- 読み終えると、中身は key の替わりで本物に替わり、`finalFocusToOpener` は開いているダイアログを見て開いた元を経由しない
+
+| 案                                                                 | 評価                                                                                                                                           | 採否     |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 待ちを `QueryDialog` が持ち、同じ Root に読み込み中を描く          | 一覧は残り、読み込み中から本物への替わりは別の値のダイアログへの替わりと同じ経路になる。押したリンクの無い開き方 (戻る・進む) でも状況が見える | **採用** |
+| 押したリンクの `Spinner` (ADR-0042) だけにする                     | 戻る・進むで開くと押したリンクが無く、読み込みが終わるまで何も見えない                                                                         | 却下     |
+| Void の `navigationFallback` に任せる                              | 閾値が無く、どの遷移でも次の frame で受け皿が出る。受け皿はページの位置に描かれ、一覧ごと消える (Context の表)                                 | 却下     |
+| 出したら最小の時間は出し続ける (TanStack Router の `pendingMinMs`) | 読み終えたダイアログを、最小の時間が過ぎるまで出せない。読み込み中から本物への替わりで画面が乱れることは、下の実測では見ていない               | 持たない |
+
+2026-11-02 に dev (Void 1.4.0、headless の playwright-cli、Chromium) で、編集の URL の loader を 2.5 秒遅らせて行の編集リンクを押した。押してから 1065ms に読み込み中が開き、focus は閉じるボタンへ移った。2573ms に本物が開き、2599ms に focus が入力欄へ移った。編集リンクは押した直後の 1 回のほかに focusin を受けなかった。読み込み中のまま Escape で閉じると、閉じるアニメーションのあと focus は編集リンクへ戻り、URL は一覧のままで、読み終えたダイアログは開かなかった。
+
 ### 検討した選択肢
 
 | 案                                                     | 評価                                                                                                                                                                                                                                   | 採否         |
@@ -106,16 +129,18 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
   - path の URL (`<一覧>/<id>/edit`) が要件になったら、(ii) を比べ直す
   - 保存のあとの履歴を置き換えるなら、`usePageAction` に `replace` を足して、保存のあとの履歴の積み方を決め直す
   - Void の `action()` が `preserveScroll` を受けるようになったら、`usePageAction` を `action()` に戻せるかを確かめる
+  - Void が遷移の読み込み中を出すまでの待ちを設定できるようになったら、読み込み中の待ちを `QueryDialog` から外せるかを確かめる
 
 ## 出典
 
 - Void docs「Layouts & Shared Data」: `node_modules/void/docs/guide/pages-routing/layouts.md`
-- Void docs「Pages API」: `node_modules/void/docs/reference/api/pages.md`
+- Void docs「Pages API」(`useNavigation()`): `node_modules/void/docs/reference/api/pages.md`
 - Void docs「Scroll Restoration」: `node_modules/void/docs/guide/pages-routing/overview.md`
 - Void docs「Actions & Forms」の Named Actions: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
-- Void 1.4.0 のソース: `packages/void/src/pages/scan.ts` (`scanPages`)、`packages/void/src/pages/action-key.ts`、`packages/react/src/runtime/pages-client.ts` (`finishNavigation`)、`packages/void/src/pages/navigation-engine.ts` (`makeCommit`)
+- Void 1.4.0 のソース: `packages/void/src/pages/scan.ts` (`scanPages`)、`packages/void/src/pages/action-key.ts`、`packages/react/src/runtime/pages-client.ts` (`finishNavigation`、`navigationFallback`、`setPopStateHandler`)、`packages/void/src/pages/navigation-engine.ts` (`makeCommit`)
 - Base UI docs「Dialog」の Popup の Data Attributes (`data-open`): `node_modules/@base-ui/react/docs/react/components/dialog.md`
 - `@base-ui/react` 1.9.0 のソース: `floating-ui-react/components/FloatingFocusManager.mjs` (return focus の後始末)、`popover/popup/PopoverPopup.mjs` (Popover の Popup の `role: 'dialog'`)
 - React docs「useRef」(描画中に `ref.current` を読み書きしない): https://react.dev/reference/react/useRef
 - voidzero-dev/void#648 (相対の redirect が要求の query を混ぜる)
 - WAI-ARIA APG「Dialog (Modal) Pattern」: https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/
+- TanStack Router docs「Data Loading」の Showing a pending component (`defaultPendingMs` と `defaultPendingMinMs` の既定): https://tanstack.com/router/latest/docs/guide/data-loading
