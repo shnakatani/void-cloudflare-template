@@ -40,6 +40,13 @@ vi.mock(import("void/pages-client"), async (importOriginal) => ({
   submitAction: vi.fn(),
 }));
 
+// 読み込みの navigation を渡して、読み込み中のダイアログが開く前の一覧を見る。待ちを広げ、遅い runner でも
+// 待ちが過ぎてダイアログが一覧を覆わないようにする
+vi.mock(import("@/lib/pending-display"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  PENDING_DISPLAY_DELAY_MS: 60_000,
+}));
+
 beforeEach(() => {
   vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
 });
