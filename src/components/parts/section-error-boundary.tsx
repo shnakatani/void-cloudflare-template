@@ -18,7 +18,6 @@ const SECTION_SLOT = "section-error-boundary";
 /**
  * ページの中の区画の描画の失敗を、その区画だけで受ける境界 (ADR-0050)。root の layout の境界 (`AppErrorBoundary`)
  * へ届かせると、区画の外 (検索欄など) ごと全画面のエラー表示に置き換わる。
- * `<Suspense>` は含めない。読み込み中の表示は区画ごとに違うので、使う側が子に並べる。
  * `resetKeys` のどれかが変わると境界は戻る。再試行は子を描き直すだけで、loader を読み直さない。
  * `onCatch` は失敗を捕まえて読み上げた後に呼ぶ
  */

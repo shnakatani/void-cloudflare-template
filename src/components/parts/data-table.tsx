@@ -23,8 +23,7 @@ interface DataTableBaseProps<TData extends RowData> extends Pick<
   "columns" | "data" | "getRowId"
 > {
   /**
-   * table の名前。見た目には出さず caption に置く。読み込み中の `TableSkeleton` にも同じ値を渡し、
-   * 本体へ置き換わっても名前を変えない (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
+   * table の名前。見た目には出さず caption に置く (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
    */
   caption: string;
   /**

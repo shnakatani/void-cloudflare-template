@@ -4,8 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * 寸法の API が `className` しかない部品なので、story も消費側と同じ形で描く。
- * 寸法は layout の class なので、story の className を layout に限る範囲に収まる (`docs/guides/storybook.md`「story を書く」)。
- * 実際の一覧の待機表示は `TableSkeleton` (parts) が持つ
+ * 寸法は layout の class なので、story の className を layout に限る範囲に収まる (`docs/guides/storybook.md`「story を書く」)
  */
 const meta = {
   component: Skeleton,
@@ -18,11 +17,6 @@ type Story = StoryObj<typeof meta>;
 /** 文字 1 行ぶん */
 export const Line: Story = {
   args: { className: "h-4 w-16" },
-};
-
-/** 本文のセル。最大幅を持たせて伸ばす */
-export const Cell: Story = {
-  args: { className: "h-8 w-full max-w-48" },
 };
 
 /** アイコンの枠。`sidebar.tsx` の待機表示と同じ形 */

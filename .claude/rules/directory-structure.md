@@ -26,7 +26,7 @@ paths:
 
 - 部品として配るなら `parts/`、既存の部品を並べて画面を組むなら `screens/`。配る部品を `screens/` や直下へ置くと `componentImports` に入らず、素の要素に当てる見た目の上書きが検査から漏れる (ADR-0011)
 - 一覧テーブルは `DataTable` (`parts/`) に列定義と data を渡す。列定義は `createColumnHelper` で書き、cell は名前付きの部品を参照で渡す (`docs/guides/lists-and-search.md`「cell を部品の参照で渡す理由」)
-- 一覧テーブルの `DataTable` と読み込み中の `TableSkeleton` には、同じ `caption` (見た目に出さない table の名前) を渡す (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
+- 一覧テーブルの `DataTable` には `caption` (見た目に出さない table の名前) を渡す (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
 - cell の部品が Table のメソッド (`row.getIsSelected()`、`cell.getValue()` など) で表の状態を読むなら、その部品の中で `Subscribe` する。同じ `row` / `cell` の object が渡り続け、Compiler が前の描画を使い回すとメソッドの結果が古いまま残る (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
 - story は部品と同じディレクトリに `<部品>.stories.tsx` で置き、`title` を書かない。見出しはファイルパスから決まり、手で書くとファイルを動かしたときに title だけが古いパスを指す (`docs/guides/storybook.md`「story に `title` を書かない理由」)
 - story を置けるのは `src/components/` 配下だけ。他へ置くと `.storybook/main.ts` の `stories` から無言で外れる (`docs/guides/storybook.md`「story を置く」)
