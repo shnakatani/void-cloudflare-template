@@ -40,7 +40,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 | 全画面のエラー表示の title   | 出している間は `document.title` の前に「エラー: 」を付ける。外れたとき、title が付けたときのままなら戻す。遷移の先で失敗したときの読み上げは、ADR-0049 の部品がこの title を読む                                                                                                         |
 | 全画面のエラー表示の見出し   | `FullScreenNotice` の `<h1>`。ページの `<h1>` は描かれないので、遷移の後の focus はこの見出しへ移る (ADR-0049 の `focusPageHeading`)。遷移を伴わない失敗 (操作による再描画の throw) では、表示が出た時点で focus が `<body>` か `null` なら、この見出しへ移す                            |
 | 404                          | `public/404.html`。ページの対象そのものが無いとき、loader は `return c.notFound()` と書き、`throw new HTTPException(404)` を使わない。ページは在り、その上の 1 区画の対象が無いときは値で返す (ADR-0057)                                                                                 |
-| 500                          | `public/500.html`                                                                                                                                                                                                                                                                        |
+| 500                          | `public/500.html`。`/` へのリンクの前に、`href=""` の「再試行」のリンクを置く。Void は失敗した要求の URL のまま 500 のページを返すので、空の href はその URL を指し、script を使わずに GET で読み直す                                                                                    |
 | 静的なページの形             | `<html lang="ja">`、`charset`、viewport、`<ページの見出し> — <アプリ名>` の title、`/error-page.css`、`<main>` の中の `<h1>` と `/` へのリンク。inline の `<script>` と `style` 属性は書かない                                                                                           |
 | 静的なページの見た目         | `public/error-page.css` が `src/styles.css` の `:root` (light) の `--background`・`--foreground`・`--font-sans` の値を写して持つ。dark は持たない                                                                                                                                        |
 
@@ -74,6 +74,14 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 | 前に「エラー: 」を付ける                                           | タブの title と遷移の読み上げの両方に失敗が出る。WCAG Understanding 2.4.2 の "describes topic or purpose" に、ページの内容が失敗の表示であることが入る | **採用** |
 | ページの title のまま                                              | 遷移の読み上げはページ名だけを読み、失敗は focus の移った見出しでしか伝わらない。タブの title にも失敗が出ない                                         | 却下     |
 | 静的な 500 と同じ「エラーが発生しました — <アプリ名>」に置き換える | どのページで失敗したかが title から消える                                                                                                              | 却下     |
+
+### 検討した案: 静的な 500 の再試行
+
+| 候補                                              | 評価                                                                                                                                                    | 採否     |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `href=""` のリンク                                | 失敗した URL を query ごと GET で読み直す。script を使わないので、CSP の `script-src 'self'` の下でも動く。action の POST の 500 では送信をやり直さない | **採用** |
+| `location.reload()` を呼ぶボタン                  | inline の script は CSP が止める。`/` 以外の script のファイルを静的なページのために足すことになる。POST の 500 では送信をやり直すかを問う              | 却下     |
+| 置かない (本文で再試行を促し、`/` へのリンクだけ) | 本文が「再試行してください」と書くのに、操作はブラウザの再読み込みに任せる。全画面の境界 (`AppError`) は再試行を持つので、失敗の場所で手段が変わる      | 却下     |
 
 ### 検討した案: 静的なページの dark
 
@@ -123,6 +131,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 - 「Action の外のハンドラで、読み直してから境界を戻し、見出しへ移す」形で pending を部品の state に持ち `ActionButtonShell` に渡しても、値はその形の行と同じだった。描画が 2 回続けて throw するページでは、1 回目の再試行のあと全画面のエラー表示に戻り、再試行のボタンは `aria-disabled="false"`、focus は `<h1>エラーが発生しました</h1>` になり、2 回目の再試行でページに戻った
 - preview で当たらない URL は status 404 と `public/404.html`、loader が throw するページは status 500 と `public/500.html` を返した。どちらの応答にも `routing.headers` の 6 つのヘッダが付いた。body の背景色と文字色は `error-page.css` の値 (`oklch(1 0 0)`、`oklch(0.148 0.004 228.8)`) になった
 - dev の 500 は `public/500.html` の後ろに Void の error overlay の `<style>` と要素が付いた
+- 同じ日に `vp build` の後の `vp preview` で、loader が最初の 1 回だけ throw するページを query 付きで開いた。status 500 の `public/500.html` が、要求した URL のまま返った。「再試行」のリンクを押すと、query を含む同じ URL への `GET` が 1 本出て、status 200 でページが描かれた
 
 ## 出典
 
