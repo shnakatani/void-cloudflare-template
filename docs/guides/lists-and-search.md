@@ -46,11 +46,11 @@
 
 行を消す操作を確認ダイアログで確定したら、閉じるときのフォーカスを消える行の外へ移す。既定ではダイアログを開いた行のトリガーへ戻り、行が消えた時点で body へ落ちる ([APG「Developing a Keyboard Interface」][] の Persistence of focus: "If such events are not managed to set focus on the button that triggered the dialog or on the list item following the deleted item, browsers move focus to the body element, effectively causing a loss of focus within the user interface.")。
 
-- 確定したあとは、閉じ方 (キャンセル、Escape を含む) によらず、次の行の同じ操作 (同じ列の、セルの中で同じ位置) へ移す。無ければ前の行、ほかの行に移せる操作が無ければ (最後の 1 件や、残りがすべて削除中のとき) ページが渡す要素 (一覧への追加ボタンなど) へ移す。開いたトリガーは消える ([APG「Dialog (Modal) Pattern」][] の Keyboard Interaction の注記: "The invoking element no longer exists. Then, focus is set on another element that provides logical work flow.")
+- 確定したあとは、閉じ方 (キャンセル、Escape を含む) によらず、次の行の同じ操作 (同じ列の、セルの中で同じ位置) へ移す。無ければ前の行、ほかの行に移せる操作が無ければ (最後の 1 件のとき) ページが渡す要素 (一覧への追加ボタンなど) へ移す。開いたトリガーは消える ([APG「Dialog (Modal) Pattern」][] の Keyboard Interaction の注記: "The invoking element no longer exists. Then, focus is set on another element that provides logical work flow.")
 - 確定せずに閉じたときは、開いたトリガーへ戻す (Base UI の既定)。行は残る
 - `DeleteConfirmDialog` がこれを持ち、確定の時点で決めた移し先を Popup の `finalFocus` で返す ([Base UI docs「Alert Dialog」][] の `finalFocus`)。ほかの行に移せる操作が無いときの移し先は `fallbackFocusRef` で受ける
 - 移し先は閉じる時点ではなく確定の時点で決める。閉じる動きが終わる時点では、確定した行が一覧から消えていて、その位置から隣の行を引けない (推論。閉じる動きの長さと行が消える時点は測っていない)
-- 無効な操作 (削除中や更新中の行) へは移さない。消える途中の行へ移すと、その行が消えたときに body へ落ちる
+- 無効な操作 (`disabled` や `aria-disabled` の操作) へは移さない。消える途中の行へ移すと、その行が消えたときに body へ落ちる
 - 確定が失敗して行が戻っても、フォーカスは移し先に残る。失敗は toast で伝わる
 
 ### 検索の入力欄を組む
