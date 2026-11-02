@@ -1,11 +1,10 @@
 import { revalidateLogic } from "@tanstack/react-form";
-import { action } from "@void/react";
 import { useState, type ReactNode } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render, renderHook } from "vitest-browser-react";
-import { VoidActionError } from "void/pages-client";
+import { submitAction, VoidActionError } from "void/pages-client";
 
 import { ActionButton } from "@/components/action/button";
 import { ActionForm, ActionFormSubmit } from "@/components/action/form";
@@ -26,9 +25,9 @@ declare module "void/routes" {
 
 const ACTION_URL = "/page-action-test";
 
-vi.mock(import("@void/react"), async (importOriginal) => ({
+vi.mock(import("void/pages-client"), async (importOriginal) => ({
   ...(await importOriginal()),
-  action: vi.fn(),
+  submitAction: vi.fn(),
 }));
 
 function actionError(status: number, body: unknown) {
@@ -46,7 +45,7 @@ describe("usePageAction", () => {
   });
 
   it("成功したら onSuccess の決着を待って true を返す", async () => {
-    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     const settled = Promise.withResolvers<undefined>();
     const onSuccess = vi.fn(() => settled.promise);
     const { result } = await renderHook(() =>
@@ -63,15 +62,15 @@ describe("usePageAction", () => {
 
     settled.resolve(undefined);
     await expect(running).resolves.toBe(true);
-    expect(action).toHaveBeenCalledExactlyOnceWith(ACTION_URL, {
-      data: { title: "a", memo: "" },
-      method: "PUT",
-      params: undefined,
-    });
+    expect(submitAction).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      ACTION_URL,
+      expect.objectContaining({ data: { title: "a", memo: "" }, method: "PUT" }),
+    );
   });
 
   it("422 のフィールドのエラーを onValidationError に渡し、toast は出さずに false を返す", async () => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(422, { errors: { title: "必須です" } }),
     });
@@ -86,7 +85,7 @@ describe("usePageAction", () => {
   });
 
   it("フィールドのエラーを持たない失敗は固定の文言の toast に出して false を返す", async () => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(409, { message: "conflict: id=42" }),
     });
@@ -101,7 +100,7 @@ describe("usePageAction", () => {
   });
 
   it("onValidationError を渡さずに 422 が来たら、警告を残して toast に出す", async () => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(422, { errors: { title: "必須です" } }),
     });
@@ -118,7 +117,7 @@ describe("usePageAction", () => {
   });
 
   it("422 のフィールドのエラーが空なら、警告を残して toast に出す", async () => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(422, { errors: {} }),
     });
@@ -138,7 +137,7 @@ describe("usePageAction", () => {
 
   it("action が throw した失敗は、生の error を警告に残し、固定の文言の toast に出して false を返す", async () => {
     const error = actionError(500, null);
-    vi.mocked(action).mockRejectedValue(error);
+    vi.mocked(submitAction).mockRejectedValue(error);
     const { result } = await renderHook(() => usePageAction(ACTION_URL, {}), {
       wrapper: WithToaster,
     });
@@ -149,7 +148,7 @@ describe("usePageAction", () => {
   });
 
   it("onSuccess が throw したら run は reject し、error を console.error に残す", async () => {
-    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     const error = new Error("onSuccess failed");
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
     const { result } = await renderHook(() =>
@@ -169,31 +168,61 @@ describe("usePageAction", () => {
 
   // Void は検証の失敗を action の URL のページとして描き直すので、ページの query は action の URL が運ぶ
   it("ページの query を、名前つきの action の URL の後ろに & で続けて送る", async () => {
-    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     const { result } = await renderHook(() =>
       usePageAction("/page-action-named-test?save", { pageQuery: "new&q=%E4%BC%9A" }),
     );
 
     await result.current.run({ title: "a" });
 
-    expect(action).toHaveBeenCalledExactlyOnceWith("/page-action-named-test?save&new&q=%E4%BC%9A", {
-      data: { title: "a" },
-      method: undefined,
-      params: undefined,
-    });
+    expect(submitAction).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      "/page-action-named-test?save&new&q=%E4%BC%9A",
+      expect.objectContaining({ data: { title: "a" } }),
+    );
   });
 
   it("名前の無い action では、ページの query を ? で続けて送る", async () => {
-    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     const { result } = await renderHook(() => usePageAction(ACTION_URL, { pageQuery: "edit=1" }));
 
     await result.current.run({ title: "a", memo: "" });
 
-    expect(action).toHaveBeenCalledExactlyOnceWith(`${ACTION_URL}?edit=1`, {
+    expect(submitAction).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      `${ACTION_URL}?edit=1`,
+      expect.objectContaining({ data: { title: "a", memo: "" } }),
+    );
+  });
+
+  // 決着が新しい props の commit を待つと、Action の中の await が commit と互いを待って決着しない (ADR-0015)
+  it("POST で、shell の到着で決着する指定を付けて送り、scroll の指定は既定で渡さない", async () => {
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
+    const { result } = await renderHook(() => usePageAction(ACTION_URL, {}));
+
+    await result.current.run({ title: "a", memo: "" });
+
+    expect(submitAction).toHaveBeenCalledExactlyOnceWith(expect.anything(), ACTION_URL, {
+      method: "POST",
       data: { title: "a", memo: "" },
-      method: undefined,
-      params: undefined,
+      preserveScroll: undefined,
+      _resolveOnShell: true,
     });
+  });
+
+  it("preserveScroll を渡すと、決着のあとの commit で scroll の位置を保つ指定を付けて送る", async () => {
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
+    const { result } = await renderHook(() =>
+      usePageAction(ACTION_URL, { method: "PUT", preserveScroll: true }),
+    );
+
+    await result.current.run({ title: "a", memo: "" });
+
+    expect(submitAction).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      ACTION_URL,
+      expect.objectContaining({ method: "PUT", preserveScroll: true }),
+    );
   });
 
   it("? で始まるページの query は、ページが読めない key になるので呼び出しの誤りとして throw する", async () => {
@@ -204,7 +233,7 @@ describe("usePageAction", () => {
   });
 
   it("遷移などで取り消された送信は、toast も警告も出さずに false を返す", async () => {
-    vi.mocked(action).mockRejectedValue(new DOMException("Navigation aborted", "AbortError"));
+    vi.mocked(submitAction).mockRejectedValue(new DOMException("Navigation aborted", "AbortError"));
     const { result } = await renderHook(() => usePageAction(ACTION_URL, {}), {
       wrapper: WithToaster,
     });
@@ -215,7 +244,7 @@ describe("usePageAction", () => {
   });
 
   it("Action の中で throw した失敗は、error boundary に届かず toast に出る", async () => {
-    vi.mocked(action).mockRejectedValue(actionError(500, null));
+    vi.mocked(submitAction).mockRejectedValue(actionError(500, null));
 
     function Harness() {
       const { run } = usePageAction(ACTION_URL, {});
@@ -239,7 +268,7 @@ describe("usePageAction", () => {
 
   it("Action を持つ部品が送信中に消えても、そのあとの失敗は toast に出る", async () => {
     const failed = Promise.withResolvers<never>();
-    vi.mocked(action).mockReturnValue(failed.promise);
+    vi.mocked(submitAction).mockReturnValue(failed.promise);
 
     function DeleteButton({ onStart }: { onStart: () => void }) {
       const { run } = usePageAction(ACTION_URL, {});
@@ -263,7 +292,7 @@ describe("usePageAction", () => {
     );
 
     await screen.getByRole("button", { name: "削除" }).click();
-    await expect.poll(() => action).toHaveBeenCalledOnce();
+    await expect.poll(() => submitAction).toHaveBeenCalledOnce();
     await expect.element(screen.getByText("閉じた")).toBeVisible();
     failed.reject(actionError(500, null));
     await expect.element(screen.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
@@ -311,7 +340,7 @@ describe("usePageAction を TanStack Form から使う", () => {
     { label: "タイトル", name: "title", note: "検証を持つ field" },
     { label: "メモ", name: "memo", note: "検証を持たない field" },
   ])("422 のエラーを $note に出し、入力を変えると消え、もう一度送れる", async ({ label, name }) => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(422, { errors: { [name]: "サーバーが受け付けませんでした" } }),
     });
@@ -326,16 +355,16 @@ describe("usePageAction を TanStack Form から使う", () => {
     await userEvent.type(input, "リスト");
     await expectRemoved(screen.getByText("サーバーが受け付けませんでした"));
 
-    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     await screen.getByRole("button", { name: "保存" }).click();
-    await expect.poll(() => action).toHaveBeenCalledTimes(2);
+    await expect.poll(() => submitAction).toHaveBeenCalledTimes(2);
   });
 
   it.each([
     { name: "title", note: "検証を持つ field" },
     { name: "memo", note: "検証を持たない field" },
   ])("$note に 422 が出たあと、入力を変えずにもう一度送れる", async ({ name }) => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(422, { errors: { [name]: "サーバーが受け付けませんでした" } }),
     });
@@ -347,14 +376,14 @@ describe("usePageAction を TanStack Form から使う", () => {
 
     // 決着後の focus はエラーの欄にある。その欄から送信ボタンを押す
     await expect.element(screen.getByRole("textbox", { name: LABEL_OF[name] })).toHaveFocus();
-    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     await screen.getByRole("button", { name: "保存" }).click();
-    await expect.poll(() => action).toHaveBeenCalledTimes(2);
-    expect(action).toHaveBeenLastCalledWith(ACTION_URL, {
-      data: { title: "買い物", memo: "" },
-      method: undefined,
-      params: undefined,
-    });
+    await expect.poll(() => submitAction).toHaveBeenCalledTimes(2);
+    expect(submitAction).toHaveBeenLastCalledWith(
+      expect.anything(),
+      ACTION_URL,
+      expect.objectContaining({ data: { title: "買い物", memo: "" } }),
+    );
     await expectRemoved(screen.getByText("サーバーが受け付けませんでした"));
   });
 
@@ -362,7 +391,7 @@ describe("usePageAction を TanStack Form から使う", () => {
     { name: "title", note: "検証を持つ field" },
     { name: "memo", note: "検証を持たない field" },
   ])("$note の 422 のエラーは、入力を変えずに欄を離れても残る", async ({ name }) => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(422, { errors: { [name]: "サーバーが受け付けませんでした" } }),
     });
@@ -381,7 +410,7 @@ describe("usePageAction を TanStack Form から使う", () => {
   });
 
   it("別の field のエラーの原因を直して送ると、送れて、古いエラーが消える", async () => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(422, { errors: { memo: "タイトルと同じメモは保存できません" } }),
     });
@@ -392,20 +421,20 @@ describe("usePageAction を TanStack Form から使う", () => {
     await screen.getByRole("button", { name: "保存" }).click();
     await expect.element(screen.getByText("タイトルと同じメモは保存できません")).toBeVisible();
 
-    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     await userEvent.fill(screen.getByRole("textbox", { name: "タイトル" }), "買い物リスト");
     await screen.getByRole("button", { name: "保存" }).click();
-    await expect.poll(() => action).toHaveBeenCalledTimes(2);
-    expect(action).toHaveBeenLastCalledWith(ACTION_URL, {
-      data: { title: "買い物リスト", memo: "買い物" },
-      method: undefined,
-      params: undefined,
-    });
+    await expect.poll(() => submitAction).toHaveBeenCalledTimes(2);
+    expect(submitAction).toHaveBeenLastCalledWith(
+      expect.anything(),
+      ACTION_URL,
+      expect.objectContaining({ data: { title: "買い物リスト", memo: "買い物" } }),
+    );
     await expectRemoved(screen.getByText("タイトルと同じメモは保存できません"));
   });
 
   it("form に無い field のエラーは、警告を残して固定の文言の toast に出す", async () => {
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: actionError(422, { errors: { dueDate: "期日が過ぎています" } }),
     });
@@ -425,7 +454,7 @@ describe("usePageAction を TanStack Form から使う", () => {
   });
 
   it("onSubmit の中で throw した失敗は、error boundary に届かず toast に出て、もう一度送れる", async () => {
-    vi.mocked(action).mockRejectedValue(actionError(403, null));
+    vi.mocked(submitAction).mockRejectedValue(actionError(403, null));
     const screen = await render(
       <WithToaster>
         <ErrorBoundary fallback={<p>境界で受けた</p>}>
@@ -439,8 +468,8 @@ describe("usePageAction を TanStack Form から使う", () => {
     await expect.element(screen.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
     await expectAbsent(screen.getByText("境界で受けた"));
 
-    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     await screen.getByRole("button", { name: "保存" }).click();
-    await expect.poll(() => action).toHaveBeenCalledTimes(2);
+    await expect.poll(() => submitAction).toHaveBeenCalledTimes(2);
   });
 });

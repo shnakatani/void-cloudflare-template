@@ -1,6 +1,11 @@
 import type { AnyFormApi } from "@tanstack/react-form";
-import { action } from "@void/react";
-import { getValidationErrors, isAbortError } from "void/pages-client";
+import { type action, useRouter } from "@void/react";
+import {
+  getValidationErrors,
+  interpolateRouteParams,
+  isAbortError,
+  submitAction,
+} from "void/pages-client";
 import type { ActionUrl, ResolveActionBody } from "void/routes";
 
 import { toastMutationError } from "@/lib/mutation-error";
@@ -14,7 +19,7 @@ type ActionRest<U extends ActionUrl> = typeof action<U> extends (
   ? Rest
   : never;
 
-/** `action()` に渡す `method` と `params` に、action の URL に載せるページの query を足したもの */
+/** `action()` に渡す `method` と `params` に、action の URL に載せるページの query と、scroll の指定を足したもの */
 type ActionCallOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest<U>[0]>, "data"> & {
   /**
    * action を呼ぶページの URL の query を、`?` を除いて渡す (`tab=profile&page=2`)。action の URL の後ろに載せる。
@@ -25,6 +30,12 @@ type ActionCallOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest<U>[0]>
    * `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`「Named Actions」(`POST /users/42?update&tab=profile`)
    */
   pageQuery?: string;
+  /**
+   * 決着のあとの commit で scroll の位置を保つ。action のあとも同じページに残る操作 (一覧の行の削除、一覧の上の
+   * ダイアログからの保存) で `true` を渡す。渡さないと Void は新しい遷移として先頭へ scroll し、
+   * 画面の下の行から移した focus が画面の外へ出る (Void docs「Scroll Restoration」の New navigation)
+   */
+  preserveScroll?: boolean;
 };
 
 type PageActionCallbacks = {
@@ -59,9 +70,38 @@ function actionUrlWithPageQuery<U extends ActionUrl>(url: U, pageQuery: string |
 }
 
 /**
+ * `params` を `interpolateRouteParams` が受ける形に組み直す。`params` の型は U で分かれる条件型で、U が決まらない
+ * `usePageAction` の中では `Record<string, string>` へ絞れない。値は呼び出し側で `PageActionOptions<U>` として検査済み
+ */
+function routeParams(params: unknown): Record<string, string> | undefined {
+  if (params === undefined) {
+    return undefined;
+  }
+  if (typeof params !== "object" || params === null) {
+    throw new Error(`params は object で渡す: ${typeof params}`);
+  }
+  return Object.fromEntries(
+    Object.entries(params).map(([key, value]) => {
+      if (typeof value !== "string") {
+        throw new Error(`params の値は文字列で渡す: ${key}`);
+      }
+      return [key, value];
+    }),
+  );
+}
+
+/**
  * Void の page の action を、Action (`startTransition` に渡す非同期関数) から呼ぶ入口。
  *
- * `run` は `action()` を await し、結果ごとに次を行う。`action()` の失敗では reject しない。
+ * 送るのは `action()` ではなく、`action()` が中で呼ぶ `submitAction` である。`action()` の options は `data`・`method`・
+ * `params` だけで、`preserveScroll` を渡せない (`void` 1.4.0 の `dist/pages/client.d.mts` の `ActionOptions`)。
+ * `submitAction` に渡す値は `@void/react` 1.4.0 の `useForm` (`packages/react/src/runtime/use-form.ts`) と同じにし、
+ * `_resolveOnShell` で shell の到着で決着させる。付けないと Action の中の await が新しい props の commit と互いを待ち、
+ * 決着しない (ADR-0015)。`_resolveOnShell` は `@internal` の option なので、Void を上げたら、Action の中で `run` を
+ * await して pending が解け、props が入れ替わることを dev で確かめる。このファイルのテストは `submitAction` を
+ * mock するので捕まえない。option が型から消えたときは `vp check` が落ちる
+ *
+ * `run` は送信を await し、結果ごとに次を行う。送信の失敗では reject しない。
  *
  * | `action()` の結果 | `run` |
  * | --- | --- |
@@ -83,15 +123,17 @@ export function usePageAction<U extends ActionUrl>(
   url: U,
   options: PageActionOptions<U>,
 ): { run: (data: ResolveActionBody<U>) => Promise<boolean> } {
-  const { onSuccess, onValidationError, method, params, pageQuery } = options;
+  const { onSuccess, onValidationError, method, params, pageQuery, preserveScroll } = options;
   const target = actionUrlWithPageQuery(url, pageQuery);
+  const router = useRouter();
 
   async function run(data: ResolveActionBody<U>): Promise<boolean> {
-    // `rest` は U で分かれる条件型で、U が決まらないこの関数の中では組み立てを検査できない。
-    // 値の組は呼び出し側で `PageActionOptions<U>` として検査済み
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- U に依存する rest の型を関数の中で組めない (上のコメント)
-    const rest = [{ data, method, params }] as ActionRest<U>;
-    const result = await action(target, ...rest).catch((error: unknown) => {
+    const result = await submitAction(router, interpolateRouteParams(target, routeParams(params)), {
+      method: method ?? "POST",
+      data,
+      preserveScroll,
+      _resolveOnShell: true,
+    }).catch((error: unknown) => {
       if (!isAbortError(error)) {
         toastMutationError(error);
       }

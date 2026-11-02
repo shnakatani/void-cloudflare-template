@@ -1,6 +1,6 @@
-import { action } from "@void/react";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
+import { submitAction } from "void/pages-client";
 
 import {
   confirmDeleteButton,
@@ -24,13 +24,13 @@ import { NOTE_VIEW, OTHER_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
 import { NOTE_ENTITY_LABEL } from "./schema";
 
-vi.mock(import("@void/react"), async (importOriginal) => ({
+vi.mock(import("void/pages-client"), async (importOriginal) => ({
   ...(await importOriginal()),
-  action: vi.fn(),
+  submitAction: vi.fn(),
 }));
 
 beforeEach(() => {
-  vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+  vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
 });
 
 describe("NotesPage の一覧", () => {
@@ -176,9 +176,12 @@ const openDeleteConfirm = vi.defineHelper(async (screen: Screen, note: NoteView)
   await parkMouse();
 });
 
-/** 削除の action の呼び出し。一覧の q は action の URL に載せ、body は id だけ */
-function deletedWith(url: string, id: number) {
-  return [url, { data: { id }, method: undefined, params: undefined }];
+/**
+ * 削除の action の呼び出し。一覧の q は action の URL に載せ、body は id だけ。削除のあとも同じ一覧に残るので、
+ * 一覧の scroll を保つ
+ */
+function deletedWith(url: string, id: number): [unknown, string, unknown] {
+  return [expect.anything(), url, expect.objectContaining({ data: { id }, preserveScroll: true })];
 }
 
 describe("NotesPage の削除", () => {
@@ -189,7 +192,7 @@ describe("NotesPage の削除", () => {
     await confirmDeleteButton(screen).click();
 
     await expect
-      .poll(() => vi.mocked(action).mock.calls)
+      .poll(() => vi.mocked(submitAction).mock.calls)
       .toEqual([deletedWith("/notes?delete", NOTE_VIEW.id)]);
     await rerender({ notes: [] });
     await expectText(screen, `${NOTE_ENTITY_LABEL}が登録されていません`);
@@ -205,7 +208,7 @@ describe("NotesPage の削除", () => {
 
     // 載せないと、server の検証の失敗でページが q の無い URL で描き直される (usePageAction の pageQuery)
     await expect
-      .poll(() => vi.mocked(action).mock.calls)
+      .poll(() => vi.mocked(submitAction).mock.calls)
       .toEqual([deletedWith("/notes?delete&q=x", NOTE_VIEW.id)]);
   });
 
@@ -216,7 +219,7 @@ describe("NotesPage の削除", () => {
     await screen.getByRole("button", { name: "キャンセル" }).click();
 
     await expectDeleteConfirmClosed(screen);
-    expect(action).not.toHaveBeenCalled();
+    expect(submitAction).not.toHaveBeenCalled();
     await expect.element(noteRow(screen, NOTE_VIEW)).toBeInTheDocument();
     await expect.element(rowDeleteButton(screen, NOTE_VIEW)).toHaveFocus();
   });
@@ -224,7 +227,7 @@ describe("NotesPage の削除", () => {
   it("削除に失敗すると固定文言を toast に出し、行の busy が解ける", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     // 即 reject だと busy の窓が観測できない
-    const remove = deferMock(action);
+    const remove = deferMock(submitAction);
     const { screen } = await renderNotesPage({ notes: [NOTE_VIEW] });
     await openDeleteConfirm(screen, NOTE_VIEW);
 
@@ -243,14 +246,14 @@ describe("NotesPage の削除", () => {
   });
 
   it("削除を確定するとダイアログは決着を待たずに閉じ、Action の終わりまで行が busy のまま、新しい props で消える", async () => {
-    const remove = deferMock(action);
+    const remove = deferMock(submitAction);
     const { screen, rerender } = await renderNotesPage({ notes: [NOTE_VIEW, OTHER_NOTE_VIEW] });
     await openDeleteConfirm(screen, NOTE_VIEW);
 
     await confirmDeleteButton(screen).click();
 
     await expectDeleteConfirmClosed(screen);
-    expect(action).toHaveBeenCalledOnce();
+    expect(submitAction).toHaveBeenCalledOnce();
     await expect.element(noteRow(screen, NOTE_VIEW)).toHaveStyle("opacity: 0.6");
 
     remove.resolve({ ok: true, pageData: undefined });
@@ -262,7 +265,7 @@ describe("NotesPage の削除", () => {
   });
 
   it("削除中は対象の行が busy になる", { tags: ["axe"] }, async (context) => {
-    const remove = deferMock(action);
+    const remove = deferMock(submitAction);
     const { screen } = await renderNotesPage({ notes: [NOTE_VIEW, OTHER_NOTE_VIEW] });
     await openDeleteConfirm(screen, NOTE_VIEW);
 
@@ -285,18 +288,18 @@ describe("NotesPage の削除", () => {
   });
 
   it("削除中でも他の行を削除でき、後の送信が前を取り消しても、両方の行が後の Action の終わりまで busy のまま", async () => {
-    const first = deferMock(action);
+    const first = deferMock(submitAction);
     const { screen, rerender } = await renderNotesPage({ notes: [NOTE_VIEW, OTHER_NOTE_VIEW] });
     await openDeleteConfirm(screen, NOTE_VIEW);
     await confirmDeleteButton(screen).click();
     await expectDeleteConfirmClosed(screen);
 
-    const second = deferMock(action);
+    const second = deferMock(submitAction);
     await openDeleteConfirm(screen, OTHER_NOTE_VIEW);
     await confirmDeleteButton(screen).click();
 
     await expect
-      .poll(() => vi.mocked(action).mock.calls)
+      .poll(() => vi.mocked(submitAction).mock.calls)
       .toEqual([
         deletedWith("/notes?delete", NOTE_VIEW.id),
         deletedWith("/notes?delete", OTHER_NOTE_VIEW.id),
@@ -335,7 +338,7 @@ describe("NotesPage の削除", () => {
 
   it("削除の開始と完了を announcer が通知し、完了には対象名を載せる", async () => {
     // 行の半透明も行の消失も読み上げに出ないので、両端を polite の region で伝える (ADR-0026)
-    const remove = deferMock(action);
+    const remove = deferMock(submitAction);
     const { screen } = await renderNotesPage({ notes: [NOTE_VIEW] });
     await openDeleteConfirm(screen, NOTE_VIEW);
 
@@ -353,7 +356,7 @@ describe("NotesPage の削除", () => {
     // このテストだけ Base UI の animation を戻す (docs/guides/testing/user-interactions.md「animation を戻すテストを書く」)
     enableAnimations();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const remove = deferMock(action);
+    const remove = deferMock(submitAction);
     const { screen } = await renderNotesPage({ notes: [NOTE_VIEW] });
     await openDeleteConfirm(screen, NOTE_VIEW);
 
@@ -364,7 +367,7 @@ describe("NotesPage の削除", () => {
     await expect.element(confirmDeleteButton(screen)).toHaveFocus();
     await userEvent.keyboard("{Enter}");
 
-    expect(action).toHaveBeenCalledOnce();
+    expect(submitAction).toHaveBeenCalledOnce();
     // 2 発目が payload 無しで確定へ届いた場合は DeleteConfirmDialog が warn を出す
     expect(warn).not.toHaveBeenCalledWith(
       expect.stringContaining("[DeleteConfirmDialog]"),

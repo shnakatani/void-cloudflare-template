@@ -1,9 +1,8 @@
-import { action } from "@void/react";
 import { format } from "date-fns/format";
 import { ja } from "date-fns/locale/ja";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
-import { VoidActionError } from "void/pages-client";
+import { submitAction, VoidActionError } from "void/pages-client";
 
 import { formatCalendarDateLabel } from "@/lib/format-calendar-date-label";
 import { MUTATION_ERROR_FALLBACK_MESSAGE } from "@/lib/mutation-error";
@@ -37,23 +36,23 @@ import { NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
 import { NOTE_BODY_MAX_LENGTH, NOTE_FIELD_LABELS, NOTE_TITLE_MAX_LENGTH } from "./schema";
 
-vi.mock(import("@void/react"), async (importOriginal) => ({
+vi.mock(import("void/pages-client"), async (importOriginal) => ({
   ...(await importOriginal()),
-  action: vi.fn(),
+  submitAction: vi.fn(),
 }));
 
 const CREATE_ACTION_URL = "/notes?create";
 
 beforeEach(() => {
-  vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+  vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
   // 失敗の経路は toastMutationError が raw error を warn に残す
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 // action の URL はページの query を運ぶ。Void は検証の失敗をこの URL のページで描き直すので、
-// 運ばないとダイアログが閉じて q も落ちる
-function createdWith(url: string, data: Record<string, unknown>) {
-  return [url, { data, method: undefined, params: undefined }];
+// 運ばないとダイアログが閉じて q も落ちる。保存のあとも一覧の上にいるので、一覧の scroll を保つ
+function savedWith(url: string, data: Record<string, unknown>): [unknown, string, unknown] {
+  return [expect.anything(), url, expect.objectContaining({ data, preserveScroll: true })];
 }
 
 function createLink(screen: Awaited<ReturnType<typeof renderNotesPage>>["screen"]) {
@@ -83,7 +82,7 @@ describe("追加のダイアログ", () => {
     await saveButton(screen).click();
 
     await expectText(screen, `${NOTE_FIELD_LABELS.title}を入力してください`);
-    expect(action).not.toHaveBeenCalled();
+    expect(submitAction).not.toHaveBeenCalled();
   });
 
   it("上限超過のタイトルで保存すると文字数上限のメッセージが出て action を呼ばない", async () => {
@@ -96,7 +95,7 @@ describe("追加のダイアログ", () => {
       screen,
       `${NOTE_FIELD_LABELS.title}は ${NOTE_TITLE_MAX_LENGTH} 文字以内で入力してください`,
     );
-    expect(action).not.toHaveBeenCalled();
+    expect(submitAction).not.toHaveBeenCalled();
   });
 
   it("初回 submit 前はタイトルを空にしてもエラーが出ない (dynamic validation)", async () => {
@@ -120,9 +119,9 @@ describe("追加のダイアログ", () => {
     await saveButton(screen).click();
 
     await expect
-      .poll(() => vi.mocked(action))
+      .poll(() => vi.mocked(submitAction))
       .toHaveBeenCalledExactlyOnceWith(
-        ...createdWith("/notes?create&new&q=x", {
+        ...savedWith("/notes?create&new&q=x", {
           title: "買い物リスト",
           body: "牛乳とパン",
           dueDate: null,
@@ -165,14 +164,14 @@ describe("追加のダイアログ", () => {
     await userEvent.keyboard("牛乳{Enter}パン");
 
     await expect.element(bodyTextbox(screen)).toHaveValue("牛乳\nパン");
-    expect(action).not.toHaveBeenCalled();
+    expect(submitAction).not.toHaveBeenCalled();
 
     await saveButton(screen).click();
 
     await expect
-      .poll(() => vi.mocked(action))
+      .poll(() => vi.mocked(submitAction))
       .toHaveBeenCalledExactlyOnceWith(
-        ...createdWith("/notes?create&new", {
+        ...savedWith("/notes?create&new", {
           title: "買い物リスト",
           body: "牛乳\nパン",
           dueDate: null,
@@ -209,9 +208,9 @@ describe("追加のダイアログ", () => {
     await saveButton(screen).click();
 
     await expect
-      .poll(() => vi.mocked(action))
+      .poll(() => vi.mocked(submitAction))
       .toHaveBeenCalledExactlyOnceWith(
-        ...createdWith("/notes?create&new", {
+        ...savedWith("/notes?create&new", {
           title: "買い物リスト",
           body: "",
           dueDate: expectedDueDate,
@@ -247,7 +246,7 @@ describe("追加のダイアログ", () => {
   });
 
   it("保存に失敗すると固定文言を toast に出し、server の raw message は表示しない", async () => {
-    vi.mocked(action).mockRejectedValue(
+    vi.mocked(submitAction).mockRejectedValue(
       new VoidActionError({
         status: 500,
         statusText: "",
@@ -270,7 +269,7 @@ describe("追加のダイアログ", () => {
 
   it("action の 422 の結果を欄に写し、props が変わらない間はダイアログを開いたままにする", async () => {
     // action を差し替えているので、Void が 422 と一緒に commit する一覧の props はここに届かない
-    vi.mocked(action).mockResolvedValue({
+    vi.mocked(submitAction).mockResolvedValue({
       ok: false,
       error: new VoidActionError({
         status: 422,
@@ -289,7 +288,7 @@ describe("追加のダイアログ", () => {
   });
 
   it("保存の開始と完了を announcer が通知し、完了には保存した見出しを対象名に載せる", async () => {
-    const create = deferMock(action);
+    const create = deferMock(submitAction);
     const { screen } = await renderNotesPage({ dialog: { kind: "create" } });
     await titleTextbox(screen).fill("買い物リスト");
 
@@ -313,7 +312,7 @@ describe("追加のダイアログ", () => {
 
   it("保存の応答前はキャンセルできず Escape でも閉じない", async () => {
     // 完了点「サーバー応答」: 応答の前に閉じると、保存に失敗したときに入力が残らない (ADR-0017)
-    const create = deferMock(action);
+    const create = deferMock(submitAction);
     const { screen, router, rerender } = await renderNotesPage({ dialog: { kind: "create" } });
     await titleTextbox(screen).fill("買い物リスト");
 
@@ -409,21 +408,19 @@ describe("編集のダイアログ", () => {
     await saveButton(screen).click();
 
     await expect
-      .poll(() => vi.mocked(action))
-      .toHaveBeenCalledExactlyOnceWith(`/notes?update&edit=${String(NOTE_VIEW.id)}&q=x`, {
-        data: {
+      .poll(() => vi.mocked(submitAction))
+      .toHaveBeenCalledExactlyOnceWith(
+        ...savedWith(`/notes?update&edit=${String(NOTE_VIEW.id)}&q=x`, {
           id: NOTE_VIEW.id,
           title: "変えた見出し",
           body: NOTE_VIEW.body,
           dueDate: NOTE_VIEW.dueDate,
-        },
-        method: undefined,
-        params: undefined,
-      });
+        }),
+      );
   });
 
   it("更新の開始と完了を announcer が通知し、完了には更新後の見出しを対象名に載せる", async () => {
-    const update = deferMock(action);
+    const update = deferMock(submitAction);
     const { screen } = await renderNotesPage({ dialog: { kind: "edit", note: NOTE_VIEW } });
     await titleTextbox(screen).fill("変えた見出し");
 
@@ -437,7 +434,7 @@ describe("編集のダイアログ", () => {
   });
 
   it("送信中は Escape で閉じない", async () => {
-    deferMock(action);
+    deferMock(submitAction);
     const { screen, router } = await renderNotesPage({
       dialog: { kind: "edit", note: NOTE_VIEW },
     });
