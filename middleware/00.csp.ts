@@ -5,8 +5,8 @@ import { contentSecurityPolicy, createCspNonce } from "@/lib/csp-nonce.server";
 /**
  * HTML の応答に、応答ごとの nonce の CSP を付け、HTML のすべての `<script>` に同じ nonce を付ける (ADR-0051)。
  * Void は script の nonce を発行しないので、描き終えた HTML を Cloudflare の `HTMLRewriter` で書き換える。
- * `HTMLRewriter` は stream のまま書き換えるので、deferred props のように後から流れる `<script>` にも付く。
- * 最初の番号に置き、ほかの middleware が返す応答 (redirect など) も包む
+ * `HTMLRewriter` は応答を溜めずに stream のまま書き換える (Cloudflare Workers の docs「HTMLRewriter」)。
+ * 最初の番号に置き、ほかの middleware が `next()` を呼ばずに返す HTML も包む
  */
 export default defineMiddleware(async (c, next) => {
   const nonce = createCspNonce();

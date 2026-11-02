@@ -23,7 +23,7 @@ import { type ExpectedHeader, findHeaderViolations } from "../../lib/response-he
  * CSS の応答に、`EXPECTED_HEADERS` の 6 件が乗ることを確かめた。hash 付きの asset を検査に入れないのは、
  * ファイル名がビルドごとに変わり、検査する path をビルド出力から探すことになるため。
  * ログインが要るページは、未ログインでは 302 になり、302 の応答は検査の対象の種類に入っていないので、検査のユーザーで
- * ログインしてから読む。ページが足す script (deferred props の値など) は、ログインが要るページで使われやすい
+ * ログインしてから読む。ページごとに足す script は、ログインが要るページにも入る
  *
  * nonce の CSP は、200 の HTML の応答を 2 回ずつ取って比べる (ADR-0051)。404 の HTML (`public/404.html`) は
  * `<script>` を持たず、nonce が届くかを確かめる対象が無いので比べない
