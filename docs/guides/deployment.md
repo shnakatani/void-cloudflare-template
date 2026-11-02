@@ -12,13 +12,13 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 ### 本番へ初めて出す
 
 1. 手元で `vp exec void deploy --platform cloudflare` を打つ。ブラウザで Cloudflare にログインし、出すアカウントを選ぶ ([Void docs「Deployment」][] の Deploy to Cloudflare)。D1 を作り、`db/migrations/` を当て、`BETTER_AUTH_SECRET` が無ければ作る ([Void docs「Cloudflare」][] の Databases and secrets)
-2. `void.lock.json` を commit して main へ push する。選んだアカウントと作った資源の ID はここに残り、CI の deploy はこれを読む (「最初の deploy を手元で行う理由」)
-3. Cloudflare の API token を作り、repository の secret に置く。権限は Workers Scripts の Edit と、Void が作る資源の Edit にする ([Void docs「Cloudflare」][] の Deploying from CI)。このアプリが作る資源は D1 である
+2. Cloudflare の API token を作り、repository の secret に置く。権限は Workers Scripts の Edit と、Void が作る資源の Edit にする ([Void docs「Cloudflare」][] の Deploying from CI)。このアプリが作る資源は D1 である
 
    ```bash
    gh secret set CLOUDFLARE_API_TOKEN
    ```
 
+3. `void.lock.json` を commit して main へ push する。選んだアカウントと作った資源の ID はここに残り、CI の deploy はこれを読む (「最初の deploy を手元で行う理由」)。この push で workflow が走るので、token は先に置く
 4. 以後は main への push のたびに `.github/workflows/void-deploy.yml` が `void deploy --platform cloudflare` を走らせる。同じブランチの前の deploy が走っていれば取り消す
 
 - token が複数のアカウントに届くなら、repository の secret に `CLOUDFLARE_ACCOUNT_ID` も置き、workflow の `env` に足す ([Void docs「Cloudflare」][] の Deploying from CI)
