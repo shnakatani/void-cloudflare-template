@@ -19,6 +19,11 @@ export const Line: Story = {
   args: { className: "h-4 w-16" },
 };
 
+/** 親の幅に合わせて伸ばし、最大幅で止める */
+export const Cell: Story = {
+  args: { className: "h-8 w-full max-w-48" },
+};
+
 /** アイコンの枠。`sidebar.tsx` の待機表示と同じ形 */
 export const Icon: Story = {
   args: { className: "size-4" },
