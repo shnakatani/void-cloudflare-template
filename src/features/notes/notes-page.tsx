@@ -118,7 +118,11 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     [],
     (ids, id) => (ids.includes(id) ? ids : [...ids, id]),
   );
-  const { run: runDelete } = usePageAction("/notes?delete", { pageQuery: notesListQuery(q) });
+  // 削除のあとも同じ一覧に残るので scroll を保つ。保たないと、次の行へ移した focus が画面の外へ出る
+  const { run: runDelete } = usePageAction("/notes?delete", {
+    pageQuery: notesListQuery(q),
+    preserveScroll: true,
+  });
 
   // 完了点「確定操作の直後」: 閉じてから楽観値を立て、run の決着まで Action を続ける。失敗しても行は残っていて、
   // やり直せる (ADR-0017)

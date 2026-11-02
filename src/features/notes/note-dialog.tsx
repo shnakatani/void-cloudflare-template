@@ -77,8 +77,10 @@ function NoteCreateDialogContent({ q, saving, onSaveStart }: NoteFormDialogProps
       }
     },
   });
+  // 保存のあとは同じ一覧へ戻り、422 のときはダイアログを開いたまま描き直すので、どちらも一覧の scroll を保つ
   const { run, submit } = usePageActionForm(form, "/notes?create", {
     pageQuery: noteCreateQuery(q),
+    preserveScroll: true,
   });
   return (
     <NoteFormContent
@@ -110,8 +112,10 @@ function NoteEditDialogContent({
       }
     },
   });
+  // 追加と同じく一覧の scroll を保つ。閉じたあと focus を戻す行のリンクが画面の外へ出ない
   const { run, submit } = usePageActionForm(form, "/notes?update", {
     pageQuery: noteEditQuery(note.id, q),
+    preserveScroll: true,
   });
   return (
     <NoteFormContent
