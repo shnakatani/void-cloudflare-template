@@ -7,8 +7,10 @@ import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 
 import HomePage from "./index";
 
+const TYPOGRAPHY_PROPERTIES = ["fontSize", "fontWeight"] as const;
+
 describe("ホームの画面", () => {
-  it("アプリ名を、ほかの画面と同じ PageHeader の h1 で描く", async () => {
+  it("アプリ名を、ほかの画面と同じ PageHeader の h1 の文字の大きさと太さで描く", async () => {
     const screen = await render(
       <VoidRouterProvider router={createFakeRouter("/")}>
         <HomePage />
@@ -19,14 +21,14 @@ describe("ホームの画面", () => {
     const reference = screen.getByRole("heading", { level: 1, name: "基準" }).element();
     await expect
       .poll(() => {
-        const { fontSize, fontWeight } = getComputedStyle(home);
-        return { fontSize, fontWeight };
+        const homeStyle = getComputedStyle(home);
+        const referenceStyle = getComputedStyle(reference);
+        return TYPOGRAPHY_PROPERTIES.filter(
+          (property) => homeStyle[property] !== referenceStyle[property],
+        ).map(
+          (property) => `${property}: ${homeStyle[property]} (基準 ${referenceStyle[property]})`,
+        );
       })
-      .toEqual(
-        (() => {
-          const { fontSize, fontWeight } = getComputedStyle(reference);
-          return { fontSize, fontWeight };
-        })(),
-      );
+      .toEqual([]);
   });
 });
