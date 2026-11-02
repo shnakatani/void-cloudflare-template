@@ -89,6 +89,7 @@ lint では見ないのでレビューで見る。
 
 - `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit`、`c.redirect` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。Void 1.4.0 では在らない path を書いても、押すまで 404 に気付けない (ADR-0059)
 - query を持つ URL は、query の組み方を持つ関数で組み、呼び出し側で `?` と `&` を連結しない (ADR-0059)
+- path の定数は URL を組む関数と別のモジュールに置き、そのモジュールは path の定数のほかを import しない。同じモジュールに置くと、リンクだけを描くページの client の chunk に検証のスキーマが入る (ADR-0059)
 - ページのファイルを動かしたら、その path の定数を直す。定数と `pages/` の対応は何も検査しない (ADR-0059)
 
 ## ページの失敗は loader の値と区画の境界で受ける

@@ -1,2 +1,2 @@
-/** 一覧のページの path。ホームのリンクも読むので、ほかの module を import しない (ホームの chunk に一覧の検証を引き込まない) */
+/** 一覧のページの path。ほかのページのリンクと守る path の一覧も読むので、ほかの module を import しない (ADR-0059) */
 export const NOTES_PATH = "/notes";
