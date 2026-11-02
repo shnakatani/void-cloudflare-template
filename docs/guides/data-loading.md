@@ -1,15 +1,42 @@
-# ページのデータの読み込みの失敗
+# ページのデータの読み込みと、その失敗
 
-ページの loader が読めなかったときの返し方、描画の失敗を受ける境界の置き方、失敗した画面から再試行させるときの手順と、その形にしている理由を持つ。
+ページのデータを loader で読む手順、loader が読めなかったときの返し方、client に届く文言の書き方、描画の失敗を受ける境界の置き方、失敗した画面から再試行させるときの手順と、その形にしている理由を持つ。
 
-| 決定                                                                                                                            | ADR      |
-| ------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                  | ADR-0016 |
-| 描画の失敗は root の layout と区画の error boundary で受け、当たらない URL と server の失敗には静的な 404 と 500 のページを返す | ADR-0050 |
-| 検索の条件は、打鍵が止まったときと Enter で URL に replace で書き、loader は読み込みの失敗と見つからない行を値で返す            | ADR-0057 |
-| 遷移は Void の View Transitions でクロスフェードにし、送信とダイアログの Popup はクロスフェードに混ぜない                       | ADR-0058 |
+| 決定                                                                                                                                | ADR      |
+| ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                      | ADR-0016 |
+| 描画の失敗は root の layout と区画の error boundary で受け、当たらない URL と server の失敗には静的な 404 と 500 のページを返す     | ADR-0050 |
+| inline の script を許さない CSP を送り、Void の deferred props を使わない                                                           | ADR-0051 |
+| ドメインの schema と query は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
+| 一覧の上に重ねるダイアログは、一覧のページの query で開き、保存と削除は一覧の絶対 URL へ redirect して条件を保つ                    | ADR-0056 |
+| 検索の条件は、打鍵が止まったときと Enter で URL に replace で書き、loader は読み込みの失敗と見つからない行を値で返す                | ADR-0057 |
+| 遷移は Void の View Transitions でクロスフェードにし、送信とダイアログの Popup はクロスフェードに混ぜない                           | ADR-0058 |
+| ページのデータは loader の props だけで読み、client に取得とキャッシュの層を置かず、リンクは既定で先読みしない                      | ADR-0062 |
 
 ## how-to
+
+### ページのデータを loader で読む
+
+1. `pages/<path>.server.ts` の `loader` で、ページが描くすべての値を await して返す。query の関数は `src/features/<domain>/*.server.ts` に置き、loader は user と `db` を渡すだけにする (ADR-0055)
+2. ページは `import type { Props } from "./<path>.server"` で型だけを読み、props で受ける ([Void docs「Loaders & Props」][] の Using the Data in Page Components)
+3. 操作のあとの値は action の応答の props に任せ、読み直しは `router.refresh()` で行う (ADR-0062)。client で取得やキャッシュの層 (TanStack Query など) を足さない
+
+- 遅い値も同じ loader で待つ。deferred props は使わない (ADR-0051)。遷移を待たせたくない値が出たら、そのページを分ける (ADR-0062)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。visit は先読みの cache にある値をそのまま描き、取り直した値には入れ替わらない (ADR-0062)。足すときは `prefetch` と `cacheFor` をそのリンクで明示し、行き先の値が hover の時点のものになってよいページに限る。ダイアログを開くリンクには足さない (ADR-0056)
+
+### client に届く文言を書く
+
+production の Void は、loader と action の未知の例外の文言を client へ運ばない。client に届くのは、開発者が選んで書く 3 つの文言だけである (ADR-0055)。
+
+| 文言                                                  | 届き方                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------- |
+| `HTTPException` の `message`                          | その status の `text/plain` の本文になる。production でも届く |
+| `ValidationError` の文言                              | `form.errors` に入る                                          |
+| `withValidator` に渡した valibot の schema の message | 項目ごとに `form.errors` に入る                               |
+
+- 3 つの文言に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。パスや id は載せてよい (ADR-0055)
+- server で調べたい失敗は、`HTTPException` を投げる前に `console.error` に残す。`HTTPException` は server のログに出ない (ADR-0055)
+- 未知の例外は包み直さない。文言は Void が落とし、stack ごと server のログに残る (ADR-0055)
 
 ### loader で読めなかったものを返す
 
@@ -72,6 +99,7 @@ Void 1.4.0 は、loader の結果ごとに次の応答を返す。出典は ADR-
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。
 
 [react.dev「Component」]: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
+[Void docs「Loaders & Props」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/loaders.md
