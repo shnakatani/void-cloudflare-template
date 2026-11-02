@@ -71,6 +71,16 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 - 操作の開始の announce は Action の中の `run` より前、完了は `usePageAction` の `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
 - 決着前の二重発火は Action 層の `isPending` (`aria-disabled`) が塞ぐ。閉包や ref のフラグを足さない (ADR-0016)
 
+## ページは title と見出しを持つ
+
+lint では見ないのでレビューで見る。
+
+- ホーム以外のページを足したら、`pages/<path>.server.ts` で `defineHead` の `head` を export し、`{ title: pageTitle(<ページ名>) }` (`src/lib/page-title.ts`) を返す。書き忘れると title がアプリ名だけになり、遷移の読み上げでホームと区別できず、何も落ちない (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+- title を文字列で直接書かず `pageTitle` を通す。`void.config.ts` の `head.titleTemplate` は使わない (ADR-0049)
+- ページの本文に `<h1>` を 1 つ描き、title のページ名と同じ文字列にする。見出しの行を持つページは `PageHeader` の `title` に渡す (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+- 読み込んだデータで名前が決まるページは、`head()` の 2 つ目の引数 (loader の props) から title を組む (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+- layout に `<h1>` を置かない。遷移のたびに focus が layout の `<h1>` へ移る (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+
 ## 日付と日時の値は意味で分類して持つ
 
 lint では見ないのでレビューで見る。

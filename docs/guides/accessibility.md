@@ -1,6 +1,6 @@
 # アクセシビリティ
 
-axe の検査の置き場所と読み方、抑制の書き方、読み上げの通知の書き方と、accessible name・色以外の手がかり・ナビゲーション・ダイアログの閉じる手段の組み方を持つ。
+axe の検査の置き場所と読み方、抑制の書き方、読み上げの通知の書き方、クライアント遷移の伝え方とページの title と見出しの持たせ方と、accessible name・色以外の手がかり・ナビゲーション・ダイアログの閉じる手段の組み方を持つ。
 
 | 決定                                                                                                                                                 | ADR      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -9,6 +9,7 @@ axe の検査の置き場所と読み方、抑制の書き方、読み上げの�
 | 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ                                                    | ADR-0026 |
 | ページは URL の変化で作り直さず、取得結果の入れ替わりはページの effect が loader の props の入れ替わりで通知し、直前に通知した条件と同じなら出さない | ADR-0027 |
 | a11y の自動検査は story を `error` でテーマごとに走らせ、`incomplete` はどちらの層でも合否に入れない                                                 | ADR-0028 |
+| Void の遷移は router の path の変化で検出し、新しいページの見出しへの focus と title の読み上げで伝える                                              | ADR-0049 |
 
 ## explanation
 
@@ -92,6 +93,25 @@ a11y の検査は、ブラウザテストの中に 2 種類が混ざっている
 - tag は `it` 単位で付ける。a11y の `it` は挙動テストと同じ `describe` の中に混ざっているので、`describe` の単位では分けられない
 - 専用のテストファイルへ分けない。テストの置き場所は壊れる原因で分けており、a11y の検査は挙動テストと同じ原因で壊れる
 - 何もしない形も採らない。どれが a11y の問いかが読めず、a11y だけを単独で走らせられない
+
+### クライアント遷移を伝える仕組み
+
+クライアント遷移では文書が読み込み直されず、スクリーンリーダーは新しいページを読み始めない。`src/components/route-announcer.tsx` の `RouteAnnouncer` が遷移を見て、次の 2 つを行う。伝える遷移と、focus を奪わない条件は ADR-0049 が決める。
+
+| 行うこと                                                                 | 使うもの                                              | 利用者に起きること                                                                    |
+| ------------------------------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `useRouter().path` が変わった描画で、新しいページの見出しへ focus を移す | `src/lib/focus-page-heading.ts` の `focusPageHeading` | スクリーンリーダーは見出しを読み、キーボードの次の Tab は新しいページの先頭から始まる |
+| `useNavigation()` が idle に戻った描画で、`document.title` を読み上げる  | `announce()` (`src/lib/live-announcer.ts`)            | focus の届かない場面の補いになる                                                      |
+
+- `RouteAnnouncer` は `pages/layout.tsx` の `<main>` の外に置く。`<main>` の中は全画面の error boundary が包むので、中に置くと失敗の表示に置き換わったときに検出が止まる
+- focus の移し先は、失敗の見出しの印 (`data-status-heading`。`src/components/parts/status-heading.tsx` の `StatusHeading` が付ける) を持つ要素、無ければ文書順で最初の `<h1>` である。どちらも無いと `<body>` へ移し、`console.warn` を出す
+- 移し先の見出しには `tabindex="-1"` を付け、focus の枠は出さない。理由は ADR-0049 にある
+
+### `head()` を持たないページの title
+
+Void は title を、ページの `head()`、middleware の `headDefaults`、`void.config.ts` の `head` の順に探し、最初に見つかった値を使う ([Void docs「Head Management」][] の Precedence: "Page wins."。Void 1.4.0 の `packages/void/src/pages/head.ts` の `resolveHead` は `pageHead?.title ?? middlewareHead?.title ?? configHead?.title`)。クライアント遷移でも同じ値に書き換わる ([Void docs「Head Management」][] の Client-side updates)。
+
+このテンプレートの middleware は title を返さず、`void.config.ts` の `head.title` はアプリ名だけである。そのため `head()` を持たないページの title はアプリ名だけになり、ホームと同じ文字列になる。`titleTemplate` は使わないので (ADR-0049)、ページ名の付け忘れは型でも実行時の例外でも現れない。
 
 ### 読み込み中の表示の見せ方を選んだ理由
 
@@ -216,6 +236,25 @@ a11y の検査は、ブラウザテストの中に 2 種類が混ざっている
 - 取得結果の文言は、0 件も件数の形で書き、条件が空なら絞り込みの解除を伝える文言にする
 - 取得結果の文言を、空状態の見出しと同じ文字列にしない。テストの `getByText` が live region と見出しの 2 要素に解決する
 
+### ページを足すときに title と見出しを持たせる
+
+遷移の読み上げは title を、遷移の後の focus は `<h1>` を使う (「クライアント遷移を伝える仕組み」)。ページを足したら、ホームを除いて次の 2 つを持たせる。
+
+1. `pages/<path>.server.ts` で `head` を `defineHead` で export し、`{ title: pageTitle(<ページ名>) }` (`src/lib/page-title.ts`) を返す。ページ名は他のページと区別できる名前にする
+2. ページの本文に `<h1>` を 1 つ描く。見出しの行 (操作を並べる帯) を持つページは、`PageHeader` (`src/components/parts/page-header.tsx`) の `title` にページ名を渡す
+
+```ts
+// pages/<path>.server.ts
+export const head = defineHead(() => ({ title: pageTitle("<ページ名>") }));
+```
+
+- `head()` を書き忘れたページの title はアプリ名だけになり、遷移の読み上げでホームと区別できない。何も落ちない (「`head()` を持たないページの title」)
+- title を文字列で直接書かず、`pageTitle` を通す。`<ページ名> — <アプリ名>` の形 (ADR-0049) とアプリ名の変更が、そのページにだけ届かなくなる
+- title のページ名と `<h1>` の文字列を同じにする。ページ名を定数にして、ページと `.server.ts` の両方から読むと、片方だけを書き換えてずれることが無い
+- 読み込んだデータで名前が決まるページは、`head()` の 2 つ目の引数 (loader の props) から title を組み、同じ名前を `<h1>` に渡す ([Void docs「Head Management」][] の Page titles and metadata)
+- layout に `<h1>` を置かない。遷移のたびに、focus がページの見出しでなく layout の `<h1>` へ移る
+- `<h1>` が無いページへ遷移すると focus は `<body>` に落ち、`focusPageHeading` の `console.warn` が出るだけで何も落ちない (ADR-0049)
+
 ### accessible name を与える
 
 名前が要るかと与え方は、[WCAG 2.2 SC 4.1.2][] と、[APG「Providing Accessible Names and Descriptions」][] の Accessible Name Guidance by Role に従う。APG は規格を満たす作り方を示す informative な資料で、要件ではない ([APG「Introduction」][] の APG is Not a Normative Standard)。迷ったら与える側に倒し、与えない判断をしたら理由を実装の近くに残す。この節には、このリポジトリの部品で踏みやすい落とし穴だけを書く。
@@ -276,7 +315,7 @@ a11y の検査は、ブラウザテストの中に 2 種類が混ざっている
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vitest は 5.0.1 に固定した版を指す。WAI-ARIA 1.2、WCAG 2.2、APG の引用は 2026-10-05 に、APG「Providing Accessible Names and Descriptions」と「Introduction」と combobox の 2 つの例、accname 1.2 の引用は 2026-10-06 に、Storybook docs「Accessibility testing」の引用は 2026-10-08 に原文と照らした。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vitest は 5.0.1、Void docs は v1.4.0 に固定した版を指す。WAI-ARIA 1.2、WCAG 2.2、APG の引用は 2026-10-05 に、APG「Providing Accessible Names and Descriptions」と「Introduction」と combobox の 2 つの例、accname 1.2 の引用は 2026-10-06 に、Storybook docs「Accessibility testing」の引用は 2026-10-08 に原文と照らした。
 
 [shadcn docs「Item」]: https://ui.shadcn.com/docs/components/base/item
 [shadcn-ui/ui#11532]: https://github.com/shadcn-ui/ui/issues/11532
@@ -296,6 +335,7 @@ a11y の検査は、ブラウザテストの中に 2 種類が混ざっている
 [Vitest docs「tags」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/tags.md
 [Vitest docs「strictTags」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/stricttags.md
 [APG「Patterns」]: https://www.w3.org/WAI/ARIA/apg/patterns/
+[Void docs「Head Management」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/head.md
 [w3c/aria#1317]: https://github.com/w3c/aria/issues/1317
 [ARIA in HTML]: https://www.w3.org/TR/html-aria/
 [WAI-ARIA 1.2]: https://www.w3.org/TR/wai-aria-1.2/
