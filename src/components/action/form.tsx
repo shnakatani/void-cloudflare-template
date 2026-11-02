@@ -1,6 +1,8 @@
 import {
   createContext,
   use,
+  useEffect,
+  useRef,
   useTransition,
   type ComponentProps,
   type ReactNode,
@@ -23,9 +25,23 @@ type ActionFormProps = Omit<ComponentProps<"form">, "onSubmit" | "children"> & {
  * submit を Transition にする `<form>` (ADR-0016「Action 層」)。`ui/` に対応部品が無い唯一の例外で、
  * 素の `<form>` を包む。pending は子孫の `ActionFormSubmit` が context から読む
  * (React の `<form action>` + `useFormStatus` と同じ形。使わない理由は ADR-0016「Action 層」)。
+ *
+ * `submitAction` が決着して、欄に `aria-invalid="true"` が残っていたら、DOM 順で最初の欄へ focus を移す
+ * (WCAG 3.3.1。`noValidate` の form では、native の検証が行う「最初の誤りの欄へ移す」が働かない)。
+ * 欄に写らない失敗 (toast) と成功では動かさない。TanStack Form は focus の移し先を案内していない (docs の validation の章、2026-11-02)
  */
 function ActionForm({ submitAction, children, ...props }: ActionFormProps) {
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+  const wasPendingRef = useRef(false);
+
+  // pending が終わった commit には、action が置いたエラーの描画が含まれる。その DOM を見て focus を移す
+  useEffect(() => {
+    if (wasPendingRef.current && !isPending) {
+      formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    }
+    wasPendingRef.current = isPending;
+  }, [isPending]);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,7 +53,7 @@ function ActionForm({ submitAction, children, ...props }: ActionFormProps) {
   }
 
   return (
-    <form {...props} onSubmit={handleSubmit}>
+    <form {...props} ref={formRef} onSubmit={handleSubmit}>
       <ActionFormContext value={isPending}>{children}</ActionFormContext>
     </form>
   );

@@ -263,6 +263,8 @@ function NoteForm() {
   );
 }
 
+const LABEL_OF: Record<string, string> = { title: "タイトル", memo: "メモ" };
+
 describe("usePageAction を TanStack Form から使う", () => {
   beforeEach(() => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -306,6 +308,8 @@ describe("usePageAction を TanStack Form から使う", () => {
     await screen.getByRole("button", { name: "保存" }).click();
     await expect.element(screen.getByText("サーバーが受け付けませんでした")).toBeVisible();
 
+    // 決着後の focus はエラーの欄にある。その欄から送信ボタンを押す
+    await expect.element(screen.getByRole("textbox", { name: LABEL_OF[name] })).toHaveFocus();
     vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
     await screen.getByRole("button", { name: "保存" }).click();
     await expect.poll(() => action).toHaveBeenCalledTimes(2);
@@ -315,6 +319,28 @@ describe("usePageAction を TanStack Form から使う", () => {
       params: undefined,
     });
     await expectRemoved(screen.getByText("サーバーが受け付けませんでした"));
+  });
+
+  it.each([
+    { name: "title", note: "検証を持つ field" },
+    { name: "memo", note: "検証を持たない field" },
+  ])("$note の 422 のエラーは、入力を変えずに欄を離れても残る", async ({ name }) => {
+    vi.mocked(action).mockResolvedValue({
+      ok: false,
+      error: actionError(422, { errors: { [name]: "サーバーが受け付けませんでした" } }),
+    });
+    const screen = await render(<NoteForm />);
+    const input = screen.getByRole("textbox", { name: LABEL_OF[name] });
+
+    await userEvent.fill(screen.getByRole("textbox", { name: "タイトル" }), "買い物");
+    await screen.getByRole("button", { name: "保存" }).click();
+    await expect.element(input).toHaveFocus();
+
+    await userEvent.tab();
+
+    await expect.element(input).not.toHaveFocus();
+    await expect.element(input).toBeInvalid();
+    await expect.element(screen.getByText("サーバーが受け付けませんでした")).toBeVisible();
   });
 
   it("別の field のエラーの原因を直して送ると、送れて、古いエラーが消える", async () => {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
@@ -53,5 +54,44 @@ describe("ActionForm", () => {
 
     expect(submitAction).toHaveBeenCalledOnce();
     pending.resolve(undefined);
+  });
+
+  describe("決着後の focus", () => {
+    /** submit で欄を invalid にする (client の検証でも server のエラーでも、欄の `aria-invalid` が変わる形) */
+    function InvalidAfterSubmit({ invalidNames }: { invalidNames: readonly string[] }) {
+      const [invalid, setInvalid] = useState<readonly string[]>([]);
+      return (
+        <ActionForm submitAction={() => setInvalid(invalidNames)}>
+          <input aria-label="名前" aria-invalid={invalid.includes("name")} />
+          <input aria-label="メール" aria-invalid={invalid.includes("email")} />
+          <ActionFormSubmit>保存</ActionFormSubmit>
+        </ActionForm>
+      );
+    }
+
+    it("欄にエラーが出たら最初のエラーの欄へ focus を移す", async () => {
+      const screen = await render(<InvalidAfterSubmit invalidNames={["name", "email"]} />);
+
+      await screen.getByRole("button", { name: "保存" }).click();
+
+      await expect.element(screen.getByRole("textbox", { name: "名前" })).toHaveFocus();
+    });
+
+    it("後ろの欄だけにエラーが出たらその欄へ focus を移す", async () => {
+      const screen = await render(<InvalidAfterSubmit invalidNames={["email"]} />);
+
+      await screen.getByRole("button", { name: "保存" }).click();
+
+      await expect.element(screen.getByRole("textbox", { name: "メール" })).toHaveFocus();
+    });
+
+    it("欄にエラーが出なければ focus を動かさない", async () => {
+      const screen = await render(<InvalidAfterSubmit invalidNames={[]} />);
+      const button = screen.getByRole("button", { name: "保存" });
+
+      await button.click();
+
+      await expect.element(button).toHaveFocus();
+    });
   });
 });

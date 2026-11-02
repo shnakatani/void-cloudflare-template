@@ -7,6 +7,9 @@ import * as v from "valibot";
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
+/** 登録のパスワードの欄に、エラーの前から出す説明 (WCAG 3.3.2) */
+export const SIGN_UP_PASSWORD_DESCRIPTION = `${PASSWORD_MIN_LENGTH} 文字以上`;
+
 /** 項目の呼称。検証メッセージと各項目の `v.metadata({ label })` が同じ定数を使う (ADR-0013) */
 const NAME_LABEL = "名前";
 const EMAIL_LABEL = "メールアドレス";
@@ -18,6 +21,7 @@ function requiredMessage(label: string): string {
 
 /** server が同じ理由で拒んだときにも出す文言 (`auth-error.ts`) */
 export const CREDENTIAL_MESSAGES = {
+  requiredEmail: requiredMessage(EMAIL_LABEL),
   invalidEmail: `${EMAIL_LABEL}の形式が正しくありません`,
   passwordTooShort: `${PASSWORD_LABEL}は ${PASSWORD_MIN_LENGTH} 文字以上にしてください`,
   passwordTooLong: `${PASSWORD_LABEL}は ${PASSWORD_MAX_LENGTH} 文字以下にしてください`,
@@ -28,10 +32,13 @@ const passwordLabel = v.metadata<string, { label: typeof PASSWORD_LABEL }>({
   label: PASSWORD_LABEL,
 });
 
+// valibot の pipe は、検証 (`nonEmpty`) が落ちても次の検証 (`email`) を走らせる。schema と変換は、前の項目が落ちていれば
+// 走らない。間の `v.string()` がその境目で、空のときに必須と形式のエラーが並ぶのを防ぐ
 const email = v.pipe(
   v.string(),
   v.trim(),
-  v.nonEmpty(requiredMessage(EMAIL_LABEL)),
+  v.nonEmpty(CREDENTIAL_MESSAGES.requiredEmail),
+  v.string(),
   v.email(CREDENTIAL_MESSAGES.invalidEmail),
   v.metadata({ label: EMAIL_LABEL }),
 );

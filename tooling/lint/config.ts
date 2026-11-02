@@ -57,6 +57,18 @@ const SERVER_MODULE_IMPORT_PATTERN = {
 };
 
 /**
+ * client の環境で空の stub になる Void の server module (ADR-0055)。`.server` で終わらない module が import しても止める。
+ * 型は import type で読める
+ */
+const SERVER_ONLY_VOID_MODULE_PATHS = ["void/db", "void/kv", "void/storage", "void/email"].map(
+  (name) => ({
+    name,
+    allowTypeImports: true,
+    message: `${name} は server だけで動く。client の環境では空の stub になり、実行時に壊れる。.server の module から import する (ADR-0055)`,
+  }),
+);
+
+/**
  * `vite.config.ts` の `lint`。`lintConfig` の中の文字列のパス (`jsPlugins` の specifier、`overrides` の `files` /
  * `excludeFiles`、`ignorePatterns`) は、このファイルではなく `vite.config.ts` のあるディレクトリから解決される。
  * 切り出し方とパスの解決元は `docs/guides/vite-configuration.md`「block を別のファイルへ切り出す」
@@ -386,7 +398,7 @@ export const lintConfig = {
         "no-restricted-imports": [
           "error",
           {
-            paths: RESTRICTED_BARREL_IMPORTS,
+            paths: [...RESTRICTED_BARREL_IMPORTS, ...SERVER_ONLY_VOID_MODULE_PATHS],
             patterns: [TEST_ONLY_IMPORT_PATTERN, SERVER_MODULE_IMPORT_PATTERN],
           },
         ],

@@ -232,9 +232,11 @@ function SanitizedTextForm({ onSubmit }: StoryArgs) {
 function CustomErrorForm({
   error,
   disableErrorFlat,
+  description,
 }: {
   error: unknown;
   disableErrorFlat?: boolean;
+  description?: string;
 }) {
   const form = useAppForm({
     defaultValues: { name: "" },
@@ -254,7 +256,13 @@ function CustomErrorForm({
           disableErrorFlat={disableErrorFlat}
           validators={{ onDynamic: () => error }}
         >
-          {(field) => <field.FormTextField label="名前" fieldValue={field.state.value} />}
+          {(field) => (
+            <field.FormTextField
+              label="名前"
+              description={description}
+              fieldValue={field.state.value}
+            />
+          )}
         </form.AppField>
         <Field orientation="horizontal">
           <Button type="submit">保存</Button>
@@ -716,6 +724,22 @@ export const SanitizesInput: Story = {
     await userEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(args.onSubmit).toHaveBeenCalledWith("123"));
+  },
+};
+
+/** description はエラーの前から入力の説明になり、エラーが出たあとも残って、エラーと並んで説明になる */
+export const DescriptionBeforeAndWithError: Story = {
+  tags: ["!dev"],
+  render: () => <CustomErrorForm error="名前を入力してください" description="全角 10 文字まで" />,
+  play: async () => {
+    const name = textbox("名前");
+    await expect(name).toHaveAccessibleDescription("全角 10 文字まで");
+
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => expect(name).toBeInvalid());
+    await expect(name).toHaveAccessibleDescription(/全角 10 文字まで/);
+    await expect(name).toHaveAccessibleDescription(/名前を入力してください/);
   },
 };
 

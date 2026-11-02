@@ -9,7 +9,9 @@ import { REPO_ROOT } from "../../lib/repo-root";
 
 /**
  * client で動くコードから `.server` を import させない lint (ADR-0055) が、実際のファイルで発火することを確かめる。
- * 設定の解決後の形は lint-config.test.ts が持つ。こちらは regex と、範囲が重なる override の優先を見る
+ * 設定の解決後の形は lint-config.test.ts が持つ。こちらは regex と、範囲が重なる override の優先を見る。
+ * probe は `src/` の下に書いて `afterAll` で消す。途中で kill されると `src/__server-import-probe-*` が残るので、
+ * `rm -rf src/__server-import-probe-*` で消す
  */
 const VP = resolve(REPO_ROOT, "node_modules", ".bin", "vp");
 const PROBE_DIR = join(REPO_ROOT, "src", `__server-import-probe-${randomUUID()}`);
@@ -21,6 +23,9 @@ const PROBE_FILES = {
     'import type { Secret } from "./data.server";\n\nexport const y: Secret = 1;\n',
   "server-to-server.server.ts":
     'import { secret } from "./data.server";\n\nexport const z = secret;\n',
+  "void-db-import.tsx": 'import { db } from "void/db";\n\nexport const d = db;\n',
+  "void-db-type-import.tsx": 'import type { Db } from "void/db";\n\nexport type D = Db;\n',
+  "void-db-in-server.server.ts": 'import { db } from "void/db";\n\nexport const e = db;\n',
   "helper.test-helpers.ts": "export const h = 1;\n",
   "test-helper-import.tsx": 'import { h } from "./helper.test-helpers";\n\nexport const w = h;\n',
 };
@@ -65,6 +70,10 @@ describe("client から .server の import を止める lint", () => {
     ["server-to-server.server.ts", false],
     // 後の override が ADR-0008 の pattern を渡し忘れると、ここが通ってしまう
     ["test-helper-import.tsx", true],
+    // `.server` で終わらない module が void/db を import しても止める (ADR-0055 の Consequences が認めていた穴)
+    ["void-db-import.tsx", true],
+    ["void-db-type-import.tsx", false],
+    ["void-db-in-server.server.ts", false],
   ])("%s で止まるか: %s", (file, restricted) => {
     expect(restrictedFiles.has(file)).toBe(restricted);
   });
