@@ -31,6 +31,8 @@ export async function browserProject({ compiler }: { compiler: boolean }) {
           "react-day-picker",
           "react-error-boundary",
           "react-dom/client",
+          // `DataTable` が dev のときだけ `import()` で読む (ADR-0018)
+          "@tanstack/react-table-devtools",
         ],
       },
       test: {

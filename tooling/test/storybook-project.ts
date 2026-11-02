@@ -44,8 +44,9 @@ export async function storybookProject({
       optimizeDeps: {
         // 静的な走査で見つからない依存だけを書く (story と preview annotation は Storybook が entries に積む。
         // storybookjs/storybook#33875)。axe-core は addon-a11y が動的 import で読む
-        // (docs/guides/testing/configuration.md「project に `optimizeDeps` を書く理由」)
-        include: ["axe-core"],
+        // (docs/guides/testing/configuration.md「project に `optimizeDeps` を書く理由」)。
+        // @tanstack/react-table-devtools は `DataTable` が dev のときだけ `import()` で読む (ADR-0018)
+        include: ["axe-core", "@tanstack/react-table-devtools"],
       },
       test: {
         name: `storybook-${variant}`,
