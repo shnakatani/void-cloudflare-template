@@ -76,7 +76,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 ### 向き先を clone ごとに connect で保存する理由
 
-- `void secret` と、`--platform` を付けない `void deploy` と `void db` の remote の操作は、`.void/project.json` の向き先を読む ([Void CLI reference「Secrets and Environment」][]、[Void CLI reference「Deployment」][]、[Void CLI reference「Database」][])。このファイルは `void init` と `void connect` だけが書き、`void deploy --platform cloudflare` は書かない (Void 1.4.0 の `cli/project.ts` の `writeDeploymentPlatform` を呼ぶのは `init.ts`・`connect.ts`・`cloudflare-link.ts`)
+- `void secret` と、`--platform` を付けない `void deploy` と `void db` の remote の操作は、`.void/project.json` の向き先を読む ([Void CLI reference「Secrets and Environment」][]、[Void CLI reference「Deployment」][]、[Void CLI reference「Database」][])。`void deploy --platform cloudflare` はこのファイルを書かない。書くのは `void init` と `void connect` と、`--platform` を付けない対話の `void deploy` が既存の Worker へ link したときである (Void 1.4.0 の `cli/project.ts` の `writeDeploymentPlatform` を呼ぶのは `init.ts`・`connect.ts`・`cloudflare-link.ts`)
 - `.void/` は commit しない。Void の docs は `.void/` を生成物とローカルの状態の置き場として ignore する ([Void docs「Project Structure」][] の `.void/`)。`.void/project.json` だけを commit する形は、Void platform の CI が project を選ぶためのもので ([Void docs「First Deployment」][])、Cloudflare へ出す workflow は `--platform cloudflare` を渡すので要らない。テンプレートの `.gitignore` も `void init` の出力どおり `.void` を ignore する
 - clone ごとに connect を打つことになるが、アカウントは commit した `void.lock.json` から読まれ、選び直しにはならない (Void 1.4.0 の `cli/cloudflare-connect.ts` は設定にあるアカウントを優先する)
 
