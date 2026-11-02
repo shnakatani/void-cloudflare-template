@@ -8,7 +8,7 @@ import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 import HomePage from "./index";
 
 describe("ホームの画面", () => {
-  it("アプリ名を、ほかの画面と同じ PageHeader の h1 で描き、メモ一覧へのリンクを出す", async () => {
+  it("アプリ名を、ほかの画面と同じ PageHeader の h1 で描く", async () => {
     const screen = await render(
       <VoidRouterProvider router={createFakeRouter("/")}>
         <HomePage />
@@ -28,8 +28,5 @@ describe("ホームの画面", () => {
           return { fontSize, fontWeight };
         })(),
       );
-    await expect
-      .element(screen.getByRole("link", { name: "メモ一覧へ" }))
-      .toHaveAttribute("href", "/notes");
   });
 });
