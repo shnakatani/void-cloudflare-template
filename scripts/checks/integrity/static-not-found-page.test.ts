@@ -16,6 +16,7 @@ type Element = DefaultTreeAdapterMap["element"];
  * layout も React も通らないので、画面のテストは届かず、アプリ名の title は `APP_NAME` と手で揃える。
  * 要るのは、タブと読み上げに出る title、ページの見出し、行き止まりにしない戻りのリンクの 3 つ。
  * markup の字面ではなく parse した木を見るので、class や id を足しても落ちない。
+ * 見るのは markup の要素と属性で、`hidden` や `aria-hidden` で読み上げから消えるかは見ない。
  */
 
 const document = parse(readFileSync(join(REPO_ROOT, "public", "404.html"), "utf8"));
