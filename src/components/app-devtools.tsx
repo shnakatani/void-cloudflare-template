@@ -20,7 +20,7 @@ function useHydrated(): boolean {
 }
 
 /**
- * dev だけの devtools。production の build では `@tanstack/devtools-vite` が `<TanStackDevtools>` を取り除く (ADR-0061)。
+ * dev だけの devtools。production の build では `@tanstack/devtools-vite` が `<TanStackDevtools>` を取り除く (ADR-0062)。
  * server では描かず、hydration のあとに描く。server の HTML に描くと、ダイアログを開いた URL を直に開いたとき、
  * Base UI のモーダルがダイアログの外の要素に付けた `aria-hidden` が、あとから hydration される devtools の
  * 要素にも付き、属性の食い違いとして警告される (2026-11-02、dev、`@tanstack/react-devtools` 0.10.13)

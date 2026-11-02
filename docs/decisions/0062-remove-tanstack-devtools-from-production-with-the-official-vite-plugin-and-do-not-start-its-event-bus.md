@@ -1,4 +1,4 @@
-# ADR-0061: TanStack Devtools は公式の Vite の plugin で本番から外し、plugin の event bus のサーバは起こさない
+# ADR-0062: TanStack Devtools は公式の Vite の plugin で本番から外し、plugin の event bus のサーバは起こさない
 
 - Status: Accepted
 - Date: 2026-11-03
