@@ -89,7 +89,7 @@ const SERVER_ONLY_VOID_MODULE_PATHS = [
     name: "void/auth",
     allowTypeImports: true,
     message:
-      "void/auth は server だけで動く。client の build は警告だけで通り、読み込んだページが throw する。client では void/client の auth を使う (ADR-0055)",
+      "void/auth は server だけで動く。client の build は警告だけで通り、読み込んだページが throw する。ログイン中の user は loader の props か shared から読み (docs/guides/auth.md「全ページで user を読む」)、ログインの操作は void/client の auth を使う (ADR-0055)",
   },
 ];
 
