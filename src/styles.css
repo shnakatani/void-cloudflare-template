@@ -183,6 +183,26 @@
   @apply has-[>[data-slot=scroll-area-viewport]:focus-visible]:outline-2 has-[>[data-slot=scroll-area-viewport]:focus-visible]:-outline-offset-2 has-[>[data-slot=scroll-area-viewport]:focus-visible]:outline-ring/50;
 }
 
+/* ダイアログの Popup は、遷移のクロスフェード (ADR-0058) に混ぜず、Base UI の開閉のアニメーションのまま見せる。
+   Popup を要素ごとの名前で root の snapshot から切り出し、旧画像を消して、新しい画像 (live の要素) を動かさずに出す。
+   名前は match-element で要素ごとに分け、2 つのダイアログが重なっても名前がぶつからない。Overlay は切り出さない。
+   切り出すと backdrop-filter のぼかしが Overlay の fade に合わせて薄れず、遷移の終わりで消える (ADR-0058) */
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  view-transition-name: match-element;
+  view-transition-class: dialog;
+}
+
+::view-transition-group(.dialog),
+::view-transition-new(.dialog) {
+  animation: none;
+}
+
+::view-transition-old(.dialog) {
+  animation: none;
+  opacity: 0;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
