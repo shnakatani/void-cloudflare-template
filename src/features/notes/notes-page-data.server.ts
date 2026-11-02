@@ -9,7 +9,7 @@ import { getNote, listNotes, type NotesDb } from "./queries.server";
 
 /**
  * 一覧のページの loader の中身。読み込みの失敗と見つからない行を throw せずに値で返す。Void は loader の throw を
- * 静的な 500 のページに替えるので、投げると検索欄と一覧ごと消える (ADR-0050)
+ * 静的な 500 のページに替えるので、投げると検索欄と一覧ごと消える (ADR-0057)
  */
 export async function loadNotesPage(
   db: NotesDb,

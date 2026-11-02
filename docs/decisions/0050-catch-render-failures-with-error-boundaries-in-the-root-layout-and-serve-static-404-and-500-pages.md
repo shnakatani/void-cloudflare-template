@@ -38,7 +38,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 | 区画の失敗の読み上げ       | 捕まえた時点で 1 回、`sectionErrorAnnouncement(message)` を `announce()` (ADR-0026) で流す                                                                                                                 |
 | 全画面のエラー表示の title | 出している間は `document.title` の前に「エラー: 」を付ける。外れたとき、title が付けたときのままなら戻す。遷移の先で失敗したときの読み上げは、ADR-0049 の部品がこの title を読む                           |
 | 全画面のエラー表示の見出し | `FullScreenNotice` の `<h1>`。ページの `<h1>` は描かれないので、遷移の後の focus はこの見出しへ移る (ADR-0049 の `focusPageHeading`)                                                                       |
-| 404                        | `public/404.html`。loader が not found を返すときは `return c.notFound()` と書き、`throw new HTTPException(404)` を使わない                                                                                |
+| 404                        | `public/404.html`。ページの対象そのものが無いとき、loader は `return c.notFound()` と書き、`throw new HTTPException(404)` を使わない。ページは在り、その上の 1 区画の対象が無いときは値で返す (ADR-0057)   |
 | 500                        | `public/500.html`                                                                                                                                                                                          |
 | 静的なページの形           | `<html lang="ja">`、`charset`、viewport、`<ページの見出し> — <アプリ名>` の title、`/error-page.css`、`<main>` の中の `<h1>` と `/` へのリンク。inline の `<script>` と `style` 属性は書かない             |
 | 静的なページの見た目       | `public/error-page.css` が `src/styles.css` の `:root` (light) の `--background`・`--foreground`・`--font-sans` の値を写して持つ。dark は持たない                                                          |
