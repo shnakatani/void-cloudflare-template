@@ -131,10 +131,10 @@ Void 1.4.0 の `c.redirect("/login")` は、要求の query を行き先に混�
 
 Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か所で扱う。どちらも Void が持つもので、このテンプレートは何も足していない。
 
-| 場所                       | 判定                                                                                                                                                                                                                                                                                       | 結果                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| page の action             | `Origin` が要求の origin と違う。`Origin` が無ければ `Sec-Fetch-Site` が `same-origin` でも `none` でもない。どちらも無ければ `Referer` の origin が違う ([Void docs「Actions & Forms」][] の Authentication and origin checks、Void 1.4.0 の `pages/protocol.ts` の `isSameOriginAction`) | 403 で止める                             |
-| session を読むすべての要求 | `POST`・`PUT`・`PATCH`・`DELETE` で、`Origin` が要求の origin とも `trustedOrigins` とも違う ([Void docs「Authentication」][] の Behavior、Void 1.4.0 の `runtime/better-auth-shared.ts` の `sessionHeaders`)                                                                              | cookie を捨て、user の無い要求として通す |
+| 場所                       | 判定                                                                                                                                                                                                                                                                         | 結果                                     |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| page の action             | `Origin` が要求の origin と違う。`Origin` が無ければ、`Sec-Fetch-Site` が `same-origin` でも `none` でもないか、`Referer` の origin が違う ([Void docs「Actions & Forms」][] の Authentication and origin checks、Void 1.4.0 の `pages/protocol.ts` の `isSameOriginAction`) | 403 で止める                             |
+| session を読むすべての要求 | `POST`・`PUT`・`PATCH`・`DELETE` で、`Origin` が要求の origin とも `trustedOrigins` とも違う ([Void docs「Authentication」][] の Behavior、Void 1.4.0 の `runtime/better-auth-shared.ts` の `sessionHeaders`)                                                                | cookie を捨て、user の無い要求として通す |
 
 - cookie を捨てる判定は要求を止めない。`routes/` の handler が守られるのは、user を読み、無ければ止まるからである
 - `Origin`・`Sec-Fetch-Site`・`Referer` のどれも無い要求は、どちらの判定もブラウザの外の client として通す
