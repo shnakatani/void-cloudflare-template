@@ -37,7 +37,9 @@ type ButtonLinkProps = Omit<
  * 無効は `disabled` で表し、`aria-disabled` は直に渡させない。`Link` は無効の状態を持たず、`href` も外せないので、
  * 無効の間は渡された `onClick` に代えて `preventDefault()` だけをする `onClick` を渡す。`Link` は自分の遷移の前に `onClick` を呼び、
  * `defaultPrevented` なら遷移しない (Void 1.4.0 の `packages/react/src/runtime/link.tsx`)。ブラウザの既定の遷移
- * (修飾キーつきの押下) も同じく止まる。薄く描いて pointer を受けないのは、`buttonVariants` の `data-disabled:` の指定である
+ * (修飾キーつきの押下) も同じく止まる。薄く描いて pointer を受けないのは、`buttonVariants` の `data-disabled:` の指定である。
+ * click を経ない開き方は止まらない。focus したリンクのコンテキストメニュー (Shift+F10) の「新しいタブで開く」は
+ * `href` を辿れる見込み (推論で、確かめていない)。止めるには `href` を外して素の `a` に描き替えることになり、無効が解けたときに要素が替わって focus が落ちる
  */
 export function ButtonLink({
   className,
