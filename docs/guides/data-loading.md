@@ -7,6 +7,7 @@
 | mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                  | ADR-0016 |
 | 描画の失敗は root の layout と区画の error boundary で受け、当たらない URL と server の失敗には静的な 404 と 500 のページを返す | ADR-0050 |
 | 検索の条件は、打鍵が止まったときと Enter で URL に replace で書き、loader は読み込みの失敗と見つからない行を値で返す            | ADR-0057 |
+| 遷移は Void の View Transitions でクロスフェードにし、送信とダイアログの Popup はクロスフェードに混ぜない                       | ADR-0058 |
 
 ## how-to
 
