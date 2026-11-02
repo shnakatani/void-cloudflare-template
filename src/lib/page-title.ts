@@ -10,10 +10,13 @@ export function pageTitle(pageName: string): string {
   return `${pageName} — ${APP_NAME}`;
 }
 
+const ERROR_TITLE_PREFIX = "エラー: ";
+
 /**
  * ページの中身を出せず、失敗を出しているときの `<title>`。前に「エラー: 」を付け、タブと遷移の読み上げ (ADR-0049) に
- * 失敗を出す (ADR-0050)。loader が失敗を値で返すページは `head()` で、描画の失敗は全画面のエラー表示が付ける
+ * 失敗を出す (ADR-0050)。loader が失敗を値で返すページは `head()` で、描画の失敗は全画面のエラー表示が付ける。
+ * 両方が起きると同じ title を 2 度通すので、付いていれば重ねない
  */
 export function errorPageTitle(title: string): string {
-  return `エラー: ${title}`;
+  return title.startsWith(ERROR_TITLE_PREFIX) ? title : `${ERROR_TITLE_PREFIX}${title}`;
 }
