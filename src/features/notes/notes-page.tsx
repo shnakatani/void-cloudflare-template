@@ -1,13 +1,24 @@
 import { useDebouncer } from "@tanstack/react-pacer";
 import { useRouter } from "@void/react";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useOptimistic,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react";
 import * as v from "valibot";
 
+import { ButtonLink } from "@/components/parts/button-link";
 import { PageHeader } from "@/components/parts/page-header";
 import { StaleContent } from "@/components/parts/stale-content";
+import { Dialog } from "@/components/ui/dialog";
 import { announce } from "@/lib/live-announcer";
 import { startVisit } from "@/lib/start-visit";
 
+import { NoteDialogContent } from "./note-dialog";
+import { noteCreateLinkProps } from "./note-dialog-focus";
 import {
   NOTE_SEARCH_DEBOUNCE_MS,
   NOTES_RESULTS_ERROR_ANNOUNCEMENT,
@@ -15,10 +26,10 @@ import {
 } from "./note-search";
 import { NoteSearchField } from "./note-search-field";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
-import type { NotesPageData } from "./notes-page-data";
+import { noteDialogKey, notesDocumentTitle, type NotesPageData } from "./notes-page-data";
 import { NotesResults } from "./notes-results";
-import { notesListUrl } from "./notes-url";
-import { noteListFilterSchema, type Note } from "./schema";
+import { noteCreateUrl, notesListUrl } from "./notes-url";
+import { NOTE_ENTITY_LABEL, noteListFilterSchema, type Note } from "./schema";
 
 /** 削除中の行が無いときの値 */
 const NO_DELETING_IDS: readonly Note["id"][] = [];
@@ -40,7 +51,7 @@ function normalizeQuery(text: string): string {
  * 一覧のページ本体。props は loader の値 (`notes-page-data.server.ts`)。URL が変わってもこの部品は作り直されない
  * (ADR-0027)。ダイアログは同じページの query で開く
  */
-export function NotesPage({ q, notes }: NotesPageData) {
+export function NotesPage({ q, notes, dialog }: NotesPageData) {
   const router = useRouter();
 
   // q が外 (戻る・進む・リンク) から変わったときだけ入力欄を q に戻し、このページが求めた q の commit では戻さない。
@@ -97,16 +108,56 @@ export function NotesPage({ q, notes }: NotesPageData) {
     announceResults();
   }, [resultKey]);
 
+  // 保存の Action の間 true。Action が終わると false に戻る。閉じる操作をこの間止める。応答の前に閉じると、
+  // 保存に失敗したときに入力が残らない (完了点「サーバー応答」、ADR-0017)
+  const [saving, markSaving] = useOptimistic(false);
+
+  const handleDialogOpenChange: NonNullable<ComponentProps<typeof Dialog>["onOpenChange"]> = (
+    open,
+    details,
+  ) => {
+    if (open) {
+      return;
+    }
+    if (saving) {
+      details.cancel();
+      return;
+    }
+    // 閉じる操作 (キャンセル・Escape・外側・X) は一覧の URL へ移る。新しい props でダイアログが閉じる
+    startVisit(router, notesListUrl(q));
+  };
+
+  // ダイアログの開閉の title の読み上げ。query だけの遷移は遷移の読み上げの部品 (ADR-0049) が読まないので、
+  // ページが props の変化で読む。直前に読んだダイアログは ref に持ち、初期表示は読まない (ADR-0027 と同じ形)
+  const dialogKey = noteDialogKey(dialog);
+  const announcedDialogKey = useRef(dialogKey);
+  const announceDialogTitle = useEffectEvent(() => {
+    announce(notesDocumentTitle(dialog));
+  });
+  useEffect(() => {
+    if (announcedDialogKey.current === dialogKey) {
+      return;
+    }
+    announcedDialogKey.current = dialogKey;
+    announceDialogTitle();
+  }, [dialogKey]);
+
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader
         title={NOTES_PAGE_TITLE}
         actions={
-          <NoteSearchField
-            value={field.text}
-            onValueChange={handleTextChange}
-            onSubmit={handleSubmit}
-          />
+          <>
+            <NoteSearchField
+              value={field.text}
+              onValueChange={handleTextChange}
+              onSubmit={handleSubmit}
+            />
+            {/* 一覧の絞り込みを保ったまま開き、閉じたら同じ一覧へ戻る */}
+            <ButtonLink href={noteCreateUrl(q)} {...noteCreateLinkProps()}>
+              ＋ {NOTE_ENTITY_LABEL}を追加
+            </ButtonLink>
+          </>
         }
       />
       <div className="flex flex-1 flex-col p-4">
@@ -115,6 +166,18 @@ export function NotesPage({ q, notes }: NotesPageData) {
           <NotesResults q={q} notes={notes} deletingIds={NO_DELETING_IDS} />
         </StaleContent>
       </div>
+      {/* Root は開閉をまたいで残し、open を URL の query から導く。中身は種類と id で作り直す */}
+      <Dialog open={dialog.kind !== "closed"} onOpenChange={handleDialogOpenChange}>
+        <NoteDialogContent
+          key={dialogKey}
+          dialog={dialog}
+          q={q}
+          saving={saving}
+          onSaveStart={() => {
+            markSaving(true);
+          }}
+        />
+      </Dialog>
     </div>
   );
 }

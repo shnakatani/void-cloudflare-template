@@ -180,3 +180,18 @@ export const noteListFilterSchema = v.object({
   ),
 });
 export type NoteListFilter = v.InferOutput<typeof noteListFilterSchema>;
+
+/**
+ * 追加の action の body。入力の項目と、保存のあと戻る一覧の q。action の URL は q を持てない
+ * (`ActionUrl` は `<page>?<action 名>` だけを許す) ので、body で受けて redirect の URL を組む
+ */
+export const noteCreateBodySchema = v.object({
+  ...noteInputSchema.entries,
+  q: noteListFilterSchema.entries.q,
+});
+
+/** 更新の action の body。対象の id と入力の項目と、戻る一覧の q */
+export const noteUpdateBodySchema = v.object({
+  ...noteUpdateSchema.entries,
+  q: noteListFilterSchema.entries.q,
+});
