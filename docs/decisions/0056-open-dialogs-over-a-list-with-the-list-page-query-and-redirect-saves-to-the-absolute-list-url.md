@@ -101,6 +101,9 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 - Void docs「Pages API」: `node_modules/void/docs/reference/api/pages.md`
 - Void docs「Scroll Restoration」: `node_modules/void/docs/guide/pages-routing/overview.md`
 - Void docs「Actions & Forms」の Named Actions: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
-- Void 1.4.0 のソース: `packages/void/src/pages/scan.ts` (`scanPages`)、`packages/void/src/pages/action-key.ts`
+- Void 1.4.0 のソース: `packages/void/src/pages/scan.ts` (`scanPages`)、`packages/void/src/pages/action-key.ts`、`packages/react/src/runtime/pages-client.ts` (`finishNavigation`)、`packages/void/src/pages/navigation-engine.ts` (`makeCommit`)
+- Base UI docs「Dialog」の Popup の Data Attributes (`data-open`): `node_modules/@base-ui/react/docs/react/components/dialog.md`
+- `@base-ui/react` 1.9.0 のソース: `floating-ui-react/components/FloatingFocusManager.mjs` (return focus の後始末)
+- React docs「useRef」(描画中に `ref.current` を読み書きしない): https://react.dev/reference/react/useRef
 - voidzero-dev/void#648 (相対の redirect が要求の query を混ぜる)
 - WAI-ARIA APG「Dialog (Modal) Pattern」: https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/
