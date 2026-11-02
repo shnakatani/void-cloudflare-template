@@ -102,7 +102,7 @@ lint では見ないのでレビューで見る。
 - props のダイアログが閉じた後も、直前に開いていたダイアログの中身を Root の `onOpenChangeComplete(false)` まで描く。中身をすぐ外すと Popup が閉じるアニメーションを流さずに消える (ADR-0056「閉じる見せ方」)
 - 閉じる操作の `startVisit` には `viewTransition: false` を渡す。クロスフェードにすると Overlay が Base UI の閉じ方より長く残る (ADR-0056「閉じる見せ方」)
 - `finalFocus` に `finalFocusToOpener(<開いた元のリンクを data 属性で探す関数>)` (`src/lib/dialog-final-focus.ts`) を渡す。閉じたら開いた元のリンクへ、無ければ見出しへ移し、別のダイアログに替わったら触れない。`finalFocus` からリンクを返すと、替わるときに focus がリンクを経由する (ADR-0056)
-- 操作中の行の開くリンクは `Button` の `focusableWhenDisabled` と `disabled` に描き替える。native の `disabled` は tab 順から外れ、focus が `<body>` へ落ちる (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
+- 操作中の行の開くリンクは `ButtonLink` の `disabled` で止め、無効のボタンに描き替えない。操作が失敗して無効が解けると要素が替わり、focus が `<body>` へ落ちる (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
 - ダイアログを足したら、閉じたときの focus をページのテストで確かめる。開いた元のリンクの探し方を誤っても、型検査も Base UI も気付かない (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
 - 替わったときに開いた元のリンクが focus を受けないことは、`recordFocusins` (`src/test/assert/focusin.ts`) の記録で確かめる。`toHaveFocus` の retry では捉えられない (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
 

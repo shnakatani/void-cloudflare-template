@@ -118,12 +118,12 @@ ADR-0056 に沿って、一覧のページの query で開く追加と編集の�
 | キャンセルの `DialogClose`                                     | 保存中は `disabled` を渡す                                                                                                                                                                                                                                                                                                                    |
 | `ActionDialogContent` (フォームを持たないなら `DialogContent`) | `finalFocus` に `finalFocusToOpener` (`src/lib/dialog-final-focus.ts`) の関数を渡す。引数には、開いた元のリンクを data 属性で `document.querySelector` して返す関数を渡す                                                                                                                                                                     |
 | 保存と削除の action                                            | `usePageAction` / `usePageActionForm` に `pageQuery` を渡し、一覧の条件を保った絶対 URL へ redirect する (`docs/guides/react/updates.md`「mutation の書き方」)                                                                                                                                                                                |
-| 操作中 (削除中など) の行の開くリンク                           | `Button` の `focusableWhenDisabled` と `disabled` に描き替え、tab 順に残す。`ButtonLink` は無効の状態を持たない                                                                                                                                                                                                                               |
+| 操作中 (削除中など) の行の開くリンク                           | `ButtonLink` の `disabled` を渡す (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)                                                                                                                                                                                                                                                 |
 
 - 保存中に close を止める条件は、そのダイアログ自身の保存の pending だけにする。止めずに閉じると、閉じる遷移が保存の送信を取り消し、入力も消える (ADR-0056)
 - `key` を渡さないと、開いたまま別の値の URL へ移ったとき、打ち始めた form が前の値のまま残る。ページは URL の変化で作り直されない (ADR-0027)
 - 閉じた props で中身をすぐ外すと、Popup は閉じるアニメーションを流さずに消える。閉じる操作の visit をクロスフェードにすると、Overlay が旧画面の snapshot に残り、Base UI の閉じ方より長く薄れる (ADR-0056「閉じる見せ方」、ADR-0058)
-- 操作中の開くリンクを native の `disabled` のボタンにしない。tab 順から外れ、focus を持っていた利用者の位置が `<body>` へ落ちる
+- 操作中の開くリンクを無効のボタンに描き替えない。操作が失敗して無効が解けると要素が替わり、focus を持っていた利用者の位置が `<body>` へ落ちる
 - `finalFocus` の探し方を誤っても、型検査も Base UI も気付かない。ダイアログを足したら、ページのテストで次の 3 つを確かめる
   - 閉じる操作で閉じたら、開いた元のリンクへ focus が戻る (無ければページの見出しへ)
   - 保存したら、開いた元のリンクへ focus が戻る

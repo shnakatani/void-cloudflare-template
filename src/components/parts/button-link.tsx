@@ -18,6 +18,11 @@ type ButtonLinkProps = Omit<
      * 幅を保つ (ADR-0042)。変えるのは見た目だけで、状態の伝え方は呼び出し側が決める (ADR-0026)。渡さない呼び出しの DOM は変わらない
      */
     isPending?: boolean;
+    /**
+     * 開かせない間 (操作中の行など) true。同じ `a` のまま `aria-disabled` と `data-disabled` を付け、押下を止める。
+     * 要素を替えないので、focus を持ったまま無効が解けても focus は動かない
+     */
+    disabled?: boolean;
   };
 
 /**
@@ -29,14 +34,17 @@ type ButtonLinkProps = Omit<
  *
  * `ref` は型が許さない。実行時に渡すと `{...rest}` が `Link` 内部の ref を上書きし、`prefetch="visible"` の観測が働かなくなる。
  *
- * 無効なリンクは持たない。`disabled` と `aria-disabled` は型で外してある。`Link` は無効の状態で遷移を止めず、
- * `buttonVariants` の薄くする指定 (`data-disabled:`・`disabled:`) も a には当たらない。無効にしたい操作はリンクではなくボタンで表す。
+ * 無効は `disabled` で表し、`aria-disabled` は直に渡させない。`Link` は無効の状態を持たず、`href` も外せないので、
+ * 無効の間は渡された `onClick` に代えて `preventDefault()` だけをする `onClick` を渡す。`Link` は自分の遷移の前に `onClick` を呼び、
+ * `defaultPrevented` なら遷移しない (Void 1.4.0 の `packages/react/src/runtime/link.tsx`)。ブラウザの既定の遷移
+ * (修飾キーつきの押下) も同じく止まる。薄く描いて pointer を受けないのは、`buttonVariants` の `data-disabled:` の指定である
  */
 export function ButtonLink({
   className,
   variant,
   size,
   isPending,
+  disabled = false,
   children,
   ...props
 }: ButtonLinkProps) {
@@ -47,6 +55,7 @@ export function ButtonLink({
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
+      {...(disabled && { "aria-disabled": true, "data-disabled": "", onClick: preventNavigation })}
     >
       {isPending === undefined ? (
         children
@@ -55,4 +64,8 @@ export function ButtonLink({
       )}
     </Link>
   );
+}
+
+function preventNavigation(event: { preventDefault: () => void }) {
+  event.preventDefault();
 }

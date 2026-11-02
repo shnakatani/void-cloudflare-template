@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vite-plus/test";
+import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
 import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
@@ -59,6 +60,47 @@ describe("ButtonLink", () => {
     );
 
     await screen.getByRole("link").click();
+
+    expect(router.visits.map((visit) => visit.url)).toEqual(["/notes"]);
+  });
+
+  it("disabled の間は aria-disabled のリンクのまま focus を受け、押しても Enter でも遷移を要求しない", async () => {
+    const { router, screen } = await renderWithRouter(
+      <ButtonLink href="/notes" disabled>
+        メモ一覧へ
+      </ButtonLink>,
+    );
+    const link = screen.getByRole("link", { name: "メモ一覧へ" });
+    await expect.element(link).toHaveAttribute("aria-disabled", "true");
+
+    // pointer を受けないので、ヒットテストを越える force でも a には届かない。キーボードの押下で確かめる
+    await userEvent.tab();
+    await expect.element(link).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+
+    await expect.element(link).toHaveFocus();
+    expect(router.visits).toEqual([]);
+  });
+
+  it("disabled が解けると、focus を持ったまま押せるようになる", async () => {
+    const { router, screen } = await renderWithRouter(
+      <ButtonLink href="/notes" disabled>
+        メモ一覧へ
+      </ButtonLink>,
+    );
+    const link = screen.getByRole("link", { name: "メモ一覧へ" });
+    await userEvent.tab();
+    await expect.element(link).toHaveFocus();
+
+    await screen.rerender(
+      <VoidRouterProvider router={router}>
+        <ButtonLink href="/notes">メモ一覧へ</ButtonLink>
+      </VoidRouterProvider>,
+    );
+    await expect.element(link).not.toHaveAttribute("aria-disabled");
+    await expect.element(link).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
 
     expect(router.visits.map((visit) => visit.url)).toEqual(["/notes"]);
   });
