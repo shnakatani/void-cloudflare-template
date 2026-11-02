@@ -36,9 +36,14 @@ export function finalFocusToOpener(findOpener: () => HTMLElement | null): FinalF
   };
 }
 
-/** Base UI の Dialog と AlertDialog の Popup は、開いている間 `data-open` を持つ */
+/**
+ * `src/components/ui/` の Dialog と AlertDialog の Popup が開いているか。Popup は開いている間 `data-open` を持つ。
+ * Popover の Popup も `role="dialog"` と `data-open` を持つので、role ではなく Popup の `data-slot` で探す
+ */
 function hasOpenDialog(): boolean {
   return (
-    document.querySelector('[role="dialog"][data-open], [role="alertdialog"][data-open]') !== null
+    document.querySelector(
+      '[data-slot="dialog-content"][data-open], [data-slot="alert-dialog-content"][data-open]',
+    ) !== null
   );
 }

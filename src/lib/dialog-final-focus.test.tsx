@@ -3,6 +3,7 @@ import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTitle } from "@/components/ui/popover";
 import { recordFocusins } from "@/test/assert/focusin";
 
 import { finalFocusToOpener } from "./dialog-final-focus";
@@ -59,6 +60,27 @@ describe("finalFocusToOpener", () => {
     finalFocusToOpener(findLink)("mouse");
 
     await expect.element(screen.getByRole("heading", { name: "ページ" })).toHaveFocus();
+  });
+
+  it("Popover が開いていても、開いた元へ移す", async () => {
+    // Popover の Popup も role="dialog" と data-open を持つ。替わったダイアログと取り違えないことを見る
+    const screen = await render(
+      <>
+        <a href="/x" data-opener="">
+          開いた元
+        </a>
+        <Popover open>
+          <PopoverContent initialFocus={false}>
+            <PopoverTitle>ポップオーバー</PopoverTitle>
+          </PopoverContent>
+        </Popover>
+      </>,
+    );
+    await expect.element(screen.getByRole("dialog", { name: "ポップオーバー" })).toBeVisible();
+
+    finalFocusToOpener(findLink)("mouse");
+
+    await expect.element(screen.getByRole("link", { name: "開いた元" })).toHaveFocus();
   });
 
   it("閉じたあとに別のダイアログが開いていれば、focus に触れない", async () => {
