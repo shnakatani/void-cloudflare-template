@@ -7,6 +7,7 @@ import {
   notesListUrl,
   parseNotesPageQuery,
   firstValueQuery,
+  pendingNoteDialogQuery,
   pendingNoteEditId,
 } from "./notes-url";
 
@@ -103,5 +104,17 @@ describe("pendingNoteEditId", () => {
     ],
   ])("%s ときは null", (_, navigation) => {
     expect(pendingNoteEditId(navigation)).toBeNull();
+  });
+});
+
+describe("pendingNoteDialogQuery", () => {
+  it("一覧へ読み込み中なら、行き先で開くダイアログを返す", () => {
+    expect(pendingNoteDialogQuery(loading(noteCreateUrl("x")))).toEqual({ kind: "create" });
+    expect(pendingNoteDialogQuery(loading(noteEditUrl(7, "")))).toEqual({ kind: "edit", id: 7 });
+    expect(pendingNoteDialogQuery(loading(notesListUrl("x")))).toEqual({ kind: "closed" });
+  });
+
+  it("一覧でない path へ読み込み中なら closed", () => {
+    expect(pendingNoteDialogQuery(loading("/other?new"))).toEqual({ kind: "closed" });
   });
 });

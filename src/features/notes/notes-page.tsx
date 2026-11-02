@@ -1,27 +1,20 @@
 import { useDebouncer } from "@tanstack/react-pacer";
 import { useNavigation, useRouter } from "@void/react";
-import {
-  useEffect,
-  useEffectEvent,
-  useOptimistic,
-  useRef,
-  useState,
-  type ComponentProps,
-} from "react";
+import { useEffect, useEffectEvent, useOptimistic, useRef, useState } from "react";
 import * as v from "valibot";
 
 import { ButtonLink } from "@/components/parts/button-link";
 import { DeleteConfirmDialog, type DeleteTarget } from "@/components/parts/delete-confirm-dialog";
 import { PageHeader } from "@/components/parts/page-header";
 import { StaleContent } from "@/components/parts/stale-content";
-import { Dialog } from "@/components/ui/dialog";
+import { QueryDialog } from "@/components/screens/query-dialog";
 import { usePageAction } from "@/hooks/use-page-action";
 import { dialogOpenerProps, dialogOpenerRef } from "@/lib/dialog-final-focus";
 import { announce } from "@/lib/live-announcer";
 import { startVisit } from "@/lib/start-visit";
 
 import { noteDeleteDialogHandle } from "./note-delete-dialog-handle";
-import { NoteDialogContent } from "./note-dialog";
+import { NoteDialogContent, pendingNoteDialog } from "./note-dialog";
 import { NOTE_CREATE_OPENER } from "./note-dialog-focus";
 import {
   NOTE_SEARCH_DEBOUNCE_MS,
@@ -30,14 +23,15 @@ import {
 } from "./note-search";
 import { NoteSearchField } from "./note-search-field";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
-import {
-  noteDialogKey,
-  notesDocumentTitle,
-  type NotesPageData,
-  type OpenNoteDialogState,
-} from "./notes-page-data";
+import { noteDialogKey, notesDocumentTitle, type NotesPageData } from "./notes-page-data";
 import { NotesResults } from "./notes-results";
-import { noteCreateUrl, notesListQuery, notesListUrl, pendingNoteEditId } from "./notes-url";
+import {
+  noteCreateUrl,
+  notesListQuery,
+  notesListUrl,
+  pendingNoteDialogQuery,
+  pendingNoteEditId,
+} from "./notes-url";
 import { NOTE_ENTITY_LABEL, noteListFilterSchema, type Note } from "./schema";
 
 type SearchField = {
@@ -59,7 +53,8 @@ function normalizeQuery(text: string): string {
  */
 export function NotesPage({ q, notes, dialog }: NotesPageData) {
   const router = useRouter();
-  const pendingEditId = pendingNoteEditId(useNavigation());
+  const navigation = useNavigation();
+  const pendingEditId = pendingNoteEditId(navigation);
 
   // q が外 (戻る・進む・リンク) から変わったときだけ入力欄を q に戻し、このページが求めた q の commit では戻さない。
   // debounce の visit から commit までの間に打った文字を消さないため。求めた q は commit で消費する。残すと、
@@ -176,54 +171,6 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     }
   }
 
-  const handleDialogOpenChange: NonNullable<ComponentProps<typeof Dialog>["onOpenChange"]> = (
-    open,
-    details,
-  ) => {
-    if (open) {
-      return;
-    }
-    if (saving) {
-      details.cancel();
-      return;
-    }
-    // 閉じる操作 (キャンセル・Escape・外側・X) は一覧の URL へ移る。新しい props でダイアログが閉じる。
-    // 同じ一覧に戻るので scroll を保つ。Void は新しい遷移で先頭へ scroll し、開いた元の行のリンクへ戻した focus が画面の外へ出る。
-    // クロスフェードにしない。Overlay が Base UI の閉じ方より長く残る (ADR-0056「閉じる見せ方」)
-    abandonSearch();
-    startVisit(router, notesListUrl(q), { preserveScroll: true, viewTransition: false });
-  };
-
-  // ダイアログの開閉の title の読み上げ。query だけの遷移は遷移の読み上げの部品 (ADR-0049) が読まないので、
-  // ページが props の変化で読む。直前に読んだダイアログは ref に持ち、初期表示は読まない (ADR-0027 と同じ形)
-  const dialogKey = noteDialogKey(dialog);
-
-  // 閉じた props の間も、直前に開いていたダイアログを閉じ終わるまで描く。中身を外すと Popup が閉じるアニメーションを
-  // 流さずに消える。閉じ終わりは Base UI が onOpenChangeComplete で知らせる (ADR-0056「閉じる見せ方」)
-  const [closingDialog, setClosingDialog] = useState<OpenNoteDialogState | null>(null);
-  const [previousDialog, setPreviousDialog] = useState(dialog);
-  if (previousDialog !== dialog) {
-    setPreviousDialog(dialog);
-    if (dialog.kind !== "closed") {
-      setClosingDialog(null);
-    } else if (previousDialog.kind !== "closed") {
-      setClosingDialog(previousDialog);
-    }
-  }
-  const renderedDialog = dialog.kind === "closed" ? (closingDialog ?? dialog) : dialog;
-
-  const announcedDialogKey = useRef(dialogKey);
-  const announceDialogTitle = useEffectEvent(() => {
-    announce(notesDocumentTitle({ notes, dialog }));
-  });
-  useEffect(() => {
-    if (announcedDialogKey.current === dialogKey) {
-      return;
-    }
-    announcedDialogKey.current = dialogKey;
-    announceDialogTitle();
-  }, [dialogKey]);
-
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader
@@ -265,26 +212,25 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
         onConfirm={confirmDelete}
         fallbackFocusRef={dialogOpenerRef(NOTE_CREATE_OPENER)}
       />
-      {/* Root は開閉をまたいで残し、open を URL の query から導く。中身は種類と id で作り直す */}
-      <Dialog
-        open={dialog.kind !== "closed"}
-        onOpenChange={handleDialogOpenChange}
-        onOpenChangeComplete={(open) => {
-          if (!open) {
-            setClosingDialog(null);
-          }
-        }}
-      >
-        <NoteDialogContent
-          key={noteDialogKey(renderedDialog)}
-          dialog={renderedDialog}
-          q={q}
-          saving={saving}
-          onSaveStart={() => {
-            markSaving(true);
-          }}
-        />
-      </Dialog>
+      <QueryDialog
+        dialog={dialog.kind === "closed" ? null : dialog}
+        dialogKey={noteDialogKey}
+        pending={pendingNoteDialog(pendingNoteDialogQuery(navigation))}
+        closeHref={notesListUrl(q)}
+        blocksClose={saving}
+        onClose={abandonSearch}
+        title={notesDocumentTitle({ notes, dialog })}
+        renderDialog={(open) => (
+          <NoteDialogContent
+            dialog={open}
+            q={q}
+            saving={saving}
+            onSaveStart={() => {
+              markSaving(true);
+            }}
+          />
+        )}
+      />
     </div>
   );
 }

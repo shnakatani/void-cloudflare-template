@@ -1,18 +1,7 @@
-import { useRouter } from "@void/react";
-
-import { Button } from "@/components/ui/button";
-import {
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { StatusDialogContent, type PendingQueryDialog } from "@/components/screens/query-dialog";
 import { usePageActionForm } from "@/hooks/use-page-action";
 import { finalFocusToOpener } from "@/lib/dialog-final-focus";
 import { announce } from "@/lib/live-announcer";
-import { toastMutationError } from "@/lib/mutation-error";
 
 import { NOTE_CREATE_OPENER, noteEditOpener } from "./note-dialog-focus";
 import { NoteFormContent, useNoteForm } from "./note-form";
@@ -22,9 +11,9 @@ import {
   NOTE_LOAD_FAILED_DIALOG_TITLE,
   NOTE_NOT_FOUND_DIALOG_TITLE,
 } from "./notes-page-constants";
-import type { NoteDialogState, NoteView } from "./notes-page-data";
-import { noteCreateQuery, noteEditQuery } from "./notes-url";
-import type { Note, NoteInput } from "./schema";
+import type { NoteView, OpenNoteDialogState } from "./notes-page-data";
+import { noteCreateQuery, noteEditQuery, type NoteDialogQuery } from "./notes-url";
+import type { NoteInput } from "./schema";
 
 /** フォームの初期値 (追加は常に空) */
 const EMPTY_NOTE_INPUT = { title: "", body: "", dueDate: null } satisfies NoteInput;
@@ -39,28 +28,59 @@ type NoteFormDialogProps = {
 };
 
 /**
- * ページの `Dialog` の Root の中身。開いているダイアログの種類で描き分ける。
+ * ページの `QueryDialog` の中身。開いているダイアログの種類で描き分ける。
  * 閉じるのは、閉じる操作でページが一覧の URL へ移ったときと、保存の action が一覧へ redirect したときで、
  * どちらも新しい props の `dialog` が `closed` になって閉じる
  */
 export function NoteDialogContent({
   dialog,
   ...formProps
-}: { dialog: NoteDialogState } & NoteFormDialogProps) {
+}: { dialog: OpenNoteDialogState } & NoteFormDialogProps) {
   switch (dialog.kind) {
-    case "closed":
-      return null;
     case "create":
       return <NoteCreateDialogContent {...formProps} />;
     case "edit":
       return <NoteEditDialogContent note={dialog.note} {...formProps} />;
     case "edit-not-found":
-      return <NoteNotFoundDialogContent id={dialog.id} />;
+      // 編集の URL の id の行が無い (別の user の行も同じ)。一覧は背後に残る
+      return (
+        <StatusDialogContent
+          status="not-found"
+          title={NOTE_NOT_FOUND_DIALOG_TITLE}
+          openerId={dialog.id === null ? null : noteEditOpener(dialog.id)}
+        />
+      );
     case "edit-failed":
-      return <NoteLoadFailedDialogContent id={dialog.id} />;
+      return (
+        <StatusDialogContent
+          status="load-failed"
+          title={NOTE_LOAD_FAILED_DIALOG_TITLE}
+          openerId={noteEditOpener(dialog.id)}
+        />
+      );
     default: {
       const unhandled: never = dialog;
-      throw new Error(`unhandled NoteDialogState: ${JSON.stringify(unhandled)}`);
+      throw new Error(`unhandled OpenNoteDialogState: ${JSON.stringify(unhandled)}`);
+    }
+  }
+}
+
+/** 読み込み中の遷移が開こうとしているダイアログ (`pendingNoteDialogQuery`) を、読み込み中のダイアログの値にする */
+export function pendingNoteDialog(query: NoteDialogQuery): PendingQueryDialog | null {
+  switch (query.kind) {
+    case "closed":
+      return null;
+    case "create":
+      return { key: "create", title: NOTE_CREATE_DIALOG_TITLE, openerId: NOTE_CREATE_OPENER };
+    case "edit":
+      return {
+        key: `edit-${String(query.id)}`,
+        title: NOTE_EDIT_DIALOG_TITLE,
+        openerId: query.id === null ? null : noteEditOpener(query.id),
+      };
+    default: {
+      const unhandled: never = query;
+      throw new Error(`unhandled NoteDialogQuery: ${JSON.stringify(unhandled)}`);
     }
   }
 }
@@ -129,45 +149,5 @@ function NoteEditDialogContent({
         return submit();
       }}
     />
-  );
-}
-
-/** 編集の URL の id の行が無い (別の user の行も同じ)。一覧は背後に残る */
-function NoteNotFoundDialogContent({ id }: { id: Note["id"] | null }) {
-  return (
-    <DialogContent finalFocus={finalFocusToOpener(id === null ? null : noteEditOpener(id))}>
-      <DialogHeader>
-        <DialogTitle>{NOTE_NOT_FOUND_DIALOG_TITLE}</DialogTitle>
-        <DialogDescription>削除されたか、URL が誤っています。</DialogDescription>
-      </DialogHeader>
-      <DialogFooter>
-        <DialogClose render={<Button type="button" variant="outline" />}>閉じる</DialogClose>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
-
-/** 編集の 1 件を読み込めなかった。例外の文言は出さない。再試行は loader を読み直す */
-function NoteLoadFailedDialogContent({ id }: { id: Note["id"] }) {
-  const router = useRouter();
-  return (
-    <DialogContent finalFocus={finalFocusToOpener(noteEditOpener(id))}>
-      <DialogHeader>
-        <DialogTitle>{NOTE_LOAD_FAILED_DIALOG_TITLE}</DialogTitle>
-        <DialogDescription>時間をおいて再試行してください。</DialogDescription>
-      </DialogHeader>
-      <DialogFooter>
-        <DialogClose render={<Button type="button" variant="outline" />}>閉じる</DialogClose>
-        <Button
-          onClick={() => {
-            router.refresh({ viewTransition: false }).catch((error: unknown) => {
-              toastMutationError(error);
-            });
-          }}
-        >
-          再試行
-        </Button>
-      </DialogFooter>
-    </DialogContent>
   );
 }
