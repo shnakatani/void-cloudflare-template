@@ -41,7 +41,7 @@ Void は `voidReact({ viewTransitions: true })` で、遷移を `document.startV
 
 ## Decision
 
-**遷移は `vite.config.ts` の `voidReact({ viewTransitions: true })` でクロスフェードにする。page の action の送信はクロスフェードにしない。ダイアログの Popup はクロスフェードから切り出し、Base UI の開閉のアニメーションのまま見せる。ブラウザが自分で遷移のアニメーションを出した戻る・進むでは、View Transition を動かさない。**
+**遷移は `vite.config.ts` の `voidReact({ viewTransitions: true })` でクロスフェードにする。page の action の送信と、再試行の `router.refresh()` はクロスフェードにしない。ダイアログの Popup はクロスフェードから切り出し、Base UI の開閉のアニメーションのまま見せる。ブラウザが自分で遷移のアニメーションを出した戻る・進むでは、View Transition を動かさない。**
 
 | 遷移                                               | クロスフェード                                               | 決める場所                                                |
 | -------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
@@ -90,7 +90,7 @@ Safari のスワイプのように、ブラウザが自分で遷移のアニメ�
 - 一覧の上のダイアログを戻る・進むで閉じると、Popup は Base UI の閉じ方で消えるが、Overlay は root のクロスフェードで 250ms かけて薄れる。戻る・進むの遷移の `viewTransition` を Void の外から変える口が無い (Context の表)。閉じる操作は `viewTransition: false` で、Popup も Overlay も Base UI の閉じ方になる (ADR-0056)
 - Popup を切り出す `match-element` は Chrome 137、Safari 18.4、Firefox 144 から。対応しないブラウザでは Popup が root のクロスフェードに入り、閉じる遷移で旧画面の Popup が 250ms かけて薄れる
 - 戻る・進むの読み込みの間に `pointerdown` か `keydown` が来ると、属性が先に外れ、ブラウザの遷移と View Transition が二重に動く
-- 属性は次の `pointerdown`・`keydown`・`popstate` まで残る。それらを伴わずに始まる遷移 (タイマーから始める `router.visit()`、`pointerdown` と `keydown` を出さない支援技術の操作) は、属性が残っていればクロスフェードしない
+- 属性は次の `pointerdown`・`keydown` か、ブラウザがアニメーションを出さなかった戻る・進むまで残る。それらを伴わずに始まる遷移 (タイマーから始める `router.visit()`、`pointerdown` と `keydown` を出さない支援技術の操作) は、属性が残っていればクロスフェードしない
 - 検索の visit も、打鍵が止まって URL が変わるたびにクロスフェードになる (ADR-0057)
 - `prefers-reduced-motion: reduce` でもクロスフェードは止まらない (2026-11-02、dev で `reducedMotion: "reduce"` を偽装して、root の animation が 250ms のままだった)。クロスフェードは opacity の変化で、WCAG 2.3.3 の motion animation に当たらない。ダイアログの開閉は registry の部品の閉じ方のままで、reduced motion の扱いも registry の部品に従う
 - 遷移が続けて始まると、飛ばされた View Transition の `AbortError` が unhandled rejection になる (Context の実測)。遷移は完了し、`src/` には `unhandledrejection` を受ける処理が無いので、本番では console に出るだけである。ブラウザテストは偽の router で描き、Void の View Transition を始めないので、テストの設定で `AbortError` を外す処理は持たない。テストで View Transition を自分で始めるときは、前の遷移の `finished` を待ってから次を始める
