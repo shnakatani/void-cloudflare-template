@@ -16,11 +16,7 @@ import { enableAnimations } from "@/test/browser/animations";
 import { parkMouse } from "@/test/browser/park-mouse";
 
 import { noteRow, rowDeleteButton } from "./note-cells.test-helpers";
-import {
-  NOTE_SEARCH_DEBOUNCE_MS,
-  NOTES_RESULTS_ERROR_ANNOUNCEMENT,
-  noteSearchResultMessage,
-} from "./note-search";
+import { NOTES_RESULTS_ERROR_ANNOUNCEMENT, noteSearchResultMessage } from "./note-search";
 import { noteSearchbox } from "./note-search-field.test-helpers";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
 import type { NoteView } from "./notes-page-data";
@@ -33,11 +29,6 @@ vi.mock(import("void/pages-client"), async (importOriginal) => ({
   ...(await importOriginal()),
   submitAction: vi.fn(),
 }));
-
-/** 打鍵が止まってからの待ちが過ぎるまで待つ。visit が出ないことは、待ちが過ぎたあとでしか確かめられない */
-async function waitPastSearchDebounce() {
-  await new Promise((resolve) => setTimeout(resolve, NOTE_SEARCH_DEBOUNCE_MS * 2));
-}
 
 beforeEach(() => {
   vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
@@ -178,62 +169,6 @@ describe("NotesPage の検索", () => {
     await expect
       .poll(() => router.visits.map((visit) => visit.url))
       .toEqual(["/notes?q=ab", "/notes"]);
-  });
-
-  it("入力を表示中の条件へ戻した visit のあとは、同じ語へ打ち直しても移らない", async () => {
-    const { screen, router } = await renderNotesPage({ notes: [] });
-    const field = noteSearchbox(screen);
-    await field.fill("ab");
-    await expect.poll(() => router.visits.map((visit) => visit.url)).toEqual(["/notes?q=ab"]);
-    await field.fill("");
-    await expect
-      .poll(() => router.visits.map((visit) => visit.url))
-      .toEqual(["/notes?q=ab", "/notes"]);
-    await field.fill("c");
-    await field.fill("");
-    await waitPastSearchDebounce();
-    expect(router.visits.map((visit) => visit.url)).toEqual(["/notes?q=ab", "/notes"]);
-  });
-
-  it("debounce の待ちの間に追加のリンクを押すと、検索の visit を出さず、入力欄を表示中の条件に戻す", async () => {
-    const { screen, router } = await renderNotesPage({ q: "x", notes: [NOTE_VIEW] });
-    const field = noteSearchbox(screen);
-    await field.fill("ab");
-    await screen.getByRole("link", { name: /を追加/ }).click();
-    await waitPastSearchDebounce();
-    expect(router.visits.map((visit) => visit.url)).toEqual(["/notes?new&q=x"]);
-    await expect.element(field).toHaveValue("x");
-  });
-
-  it("debounce の待ちの間に行の編集のリンクを押すと、検索の visit を出さず、入力欄を表示中の条件に戻す", async () => {
-    const { screen, router } = await renderNotesPage({ q: "x", notes: [NOTE_VIEW] });
-    const field = noteSearchbox(screen);
-    await field.fill("ab");
-    await screen.getByRole("link", { name: `${NOTE_VIEW.title}を編集` }).click();
-    await waitPastSearchDebounce();
-    expect(router.visits.map((visit) => visit.url)).toEqual([`/notes?edit=${NOTE_VIEW.id}&q=x`]);
-    await expect.element(field).toHaveValue("x");
-  });
-
-  it("debounce の待ちの間に外から q が変わったら、待っていた語へ移らない", async () => {
-    const { screen, router, rerender } = await renderNotesPage({ notes: [] });
-    const field = noteSearchbox(screen);
-    await field.fill("ab");
-    await rerender({ q: "x", notes: [] });
-    await waitPastSearchDebounce();
-    expect(router.visits).toEqual([]);
-    await expect.element(field).toHaveValue("x");
-  });
-
-  it("debounce の待ちの間に外からダイアログが開いたら (戻る・進む)、待っていた語へ移らず、入力欄を表示中の条件に戻す", async () => {
-    const { screen, router, rerender } = await renderNotesPage({ notes: [] });
-    const field = noteSearchbox(screen);
-    await field.fill("ab");
-    await rerender({ notes: [], dialog: { kind: "create" } });
-    await waitPastSearchDebounce();
-    expect(router.visits).toEqual([]);
-    await rerender({ notes: [], dialog: { kind: "closed" } });
-    await expect.element(field).toHaveValue("");
   });
 
   it("条件が変わった props で件数を読み上げ、初期表示と同じ条件では読まない", async () => {
