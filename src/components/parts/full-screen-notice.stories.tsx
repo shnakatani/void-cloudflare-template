@@ -7,9 +7,9 @@ import { FullScreenNotice } from "./centered-card";
 const meta = {
   component: FullScreenNotice,
   args: {
-    title: "ページが見つかりません",
-    description: "お探しのページは存在しないか、移動された可能性があります。",
-    children: <Button>ホームへ戻る</Button>,
+    title: "エラーが発生しました",
+    description: "ページを表示できませんでした。時間をおいて再試行してください。",
+    children: <Button className="w-full">再試行</Button>,
   },
 } satisfies Meta<typeof FullScreenNotice>;
 

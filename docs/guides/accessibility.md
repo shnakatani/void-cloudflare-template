@@ -113,26 +113,6 @@ Void は title を、ページの `head()`、middleware の `headDefaults`、`vo
 
 このテンプレートの middleware は title を返さず、`void.config.ts` の `head.title` はアプリ名だけである。そのため `head()` を持たないページの title はアプリ名だけになり、ホームと同じ文字列になる。`titleTemplate` は使わないので (ADR-0049)、ページ名の付け忘れは型でも実行時の例外でも現れない。
 
-### 読み込み中の表示の見せ方を選んだ理由
-
-読み込み中の表示 (ページ全体を置き換える skeleton と `PendingContent`) を支援技術にどう見せるかは、W3C に推奨の形が無い。[APG「Patterns」][] に読み込み中のパターンは無く、skeleton 専用の role の提案は、ARIA WG のメンバーが「`aria-live` / `aria-busy` と visually hidden text で足りる」として閉じた ([w3c/aria#1317][])。そこで次の 3 種の情報から形を決めた (2026-09-28 に調査)。
-
-| 情報                   | 分かったこと                                                                                                                                                                                                                                          | 出典                                                                               |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 仕様                   | `<table>` に別の role を載せると、`<th>` / `<td>` は対応する role を失う。status は `aria-atomic="true"` の live region                                                                                                                               | [ARIA in HTML][] の `th` / `td` の行、[WAI-ARIA 1.2][] の `status`                 |
-| 支援技術の対応         | JAWS は `aria-busy="true"` の要素を読み飛ばし、NVDA・VoiceOver・TalkBack・Narrator は中身をそのまま読む ([a11ysupport.io の `aria-busy.json`][]、2019〜2021 年の測定)。2026-03-12 の ARIA WG でも「JAWS treats it like aria-hidden」と報告された      | [a11ysupport.io の `aria-busy.json`][]、[w3c/aria#2737][] (`aria-busy` の中の構造) |
-| デザインシステムの実装 | 表の読み込み中を持つ系統 (Carbon、Primer、AWS Cloudscape、Twilio Paste、PatternFly、Ant Design、Salesforce Lightning、Atlassian、React Spectrum) はどれも本物の table と列見出しを残す。告知は区画ごとに 1 回にする (Primer、PatternFly、Fluent、EUI) | [Cloudscape の `src/table/skeleton-rows.tsx`][]、[Primer docs「Loading」][]        |
-
-| 案                                                                                                                                                          | 評価                                                                                                                                            | 採否     |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 本物の列見出しを持つ table を見せ、skeleton の行を `aria-hidden` にし、「読み込み中」の行を 1 つ置く ([Cloudscape の `src/table/skeleton-rows.tsx`][] の形) | 表の読み込み中を持つ系統の多数派と同じく table のまま見せる。読み込み中は 1 回だけ読まれる                                                      | **採用** |
-| table 全体を `aria-hidden` にし、外側に「読み込み中」を置く ([Adrian Roselli「More Accessible Skeletons」][] の形)                                          | 読み込み中は 1 回で済むが、table を隠す系統は調べた範囲に無い                                                                                   | 却下     |
-| 外側を status にして列見出し付きの table を見せ、本文は空のセルのまま                                                                                       | 空のセルが並んで読まれる。`aria-busy` を付けると JAWS で table ごと消える                                                                       | 却下     |
-| `<table role="status" aria-busy="true">`                                                                                                                    | th と td が role を失い、columnheader が a11y tree に出ない。見出しが空なので axe の `empty-table-header` が出る。JAWS は status ごと読み飛ばす | 却下     |
-
-- 「読み込み中」の行を画面に出さないのは、skeleton の見た目を読み込み後の表に近づけるためである。registry の `TableRow` / `TableCell` は下線と余白を持ち込むので、この行だけ素の `<tr>` / `<td>` で置く
-- pending 表示は条件付きで mount されるので、表示した時点で読み上げられる保証は無い。支援技術は通常、live region の変化だけを伝え、最初から入っている中身は伝えない ([WAI-ARIA 1.3 Editor's Draft][] の live region の節「Typically, assistive technology will only convey changes to a live region」)。読み込みの開始と完了の告知は扱っていない
-
 ### `ItemGroup` をネイティブのリストで組む理由
 
 [shadcn docs「Item」][] は `ItemGroup` を、`Item` を束ねて list of items を作る部品と書く (冒頭の "Group it with the `ItemGroup` component to create a list of items." と Group の節の "Use `ItemGroup` to group related items together."。shadcn 4.21.0 の `item.mdx`)。ただし、リストとしてのマークアップ (`ul` / `li` や `role`) は示さない。registry の `ItemGroup` は `role="list"` を持つが `Item` は `listitem` にならず、空のリストとして読まれる ([shadcn-ui/ui#11532][])。上流には、`ItemGroup` から `role="list"` を外し、リストとして読ませたいときは `role="list"` と `role="listitem"` を足す形を docs に書く PR がある ([shadcn-ui/ui#12085][]、2026-10-01 作成、2026-10-02 時点で open)。
@@ -157,18 +137,6 @@ Void は title を、ページの `head()`、middleware の `headDefaults`、`vo
 | 2 グループ以上なら全グループに見出しを置く | 公式の例で全グループに見出しを置くのは Base UI の Group labels のデモだけで、a11y の要件ではない。見出しの有無は画面の設計で、名前を補う判断とは別である | 却下     |
 
 ## how-to
-
-### 読み込み中の表示を組む
-
-対象は 読み込み中の表示 (ページ全体を置き換える skeleton と `PendingContent`) である。理由と却下した案は「読み込み中の表示の見せ方を選んだ理由」にある。
-
-| 対象                    | 組み方                                                                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 表の skeleton           | `TableSkeleton` に本物の列見出しを渡す。列見出しは実テーブルの列定義と同じ定数から採る                                    |
-| skeleton の図形         | `aria-hidden` で隠す。図形は情報を持たず、読ませると空の要素が並ぶ                                                        |
-| 「読み込み中」の文言    | 区画ごとに 1 つだけ置く。図形ごとに置くと、同じ文言が図形の数だけ読まれる                                                 |
-| `aria-busy`             | pending 表示に付けない。読み込み中を伝える属性ではなく ([WAI-ARIA 1.2][] の `aria-busy`)、JAWS は付けた要素ごと読み飛ばす |
-| `<table>` に載せる role | 載せない。`th` / `td` が role を失い、列見出しが支援技術に出ない                                                          |
 
 ### a11y の tag を付ける
 
@@ -263,7 +231,7 @@ export const head = defineHead(() => ({ title: pageTitle("<ページ名>") }));
 - Base UI 1.8.0 の Checkbox と Radio は、既定 (`nativeButton` が false) では根が `span` で、隠れた input に `<label htmlFor>` を結ぶか、`<label>` で包むと、その label の id を根の `aria-labelledby` に写す。写すのはクライアントの layout effect の中なので (`internals/labelable-provider/useAriaLabelledBy.js`)、サーバーが返す HTML の時点では根に名前が無い。サーバーの HTML から名前を持たせるときは、label に id を付けて根の `aria-labelledby` で指す (`FormCheckboxField`)
 - 入力欄を popup の中に置くと、Combobox の trigger は combobox になる (`combobox/trigger/ComboboxTrigger.js` の `inputInsidePopup`)。このリポジトリの `ComboboxTrigger` は既定で `aria-label="候補を開く"` を持つので、この形では欄の名前を `aria-label` か `aria-labelledby` で渡す。popup の中の `ComboboxInput` は既定 (`showTrigger`) で名前を渡せない trigger を内に持ち、それも combobox になるので、`showTrigger={false}` にする。`aria-labelledby` は `aria-label` より先に名前に使われる ([accname 1.2][] の 2B LabelledBy と 2D AriaLabel)
 - Base UI 1.8.0 の Select と Combobox の listbox (Combobox の `grid` では grid) は、Select.Label や Combobox.Label を置いても名前を持たない (`select/list/SelectList.js`、`combobox/list/ComboboxList.js`)。listbox には欄の名前を付ける。[APG「Providing Accessible Names and Descriptions」][] の表の listbox と grid の行は名前を Required とし、APG の [Select-Only Combobox の例][APG「Select-Only Combobox Example」] は listbox に欄のラベルを `aria-labelledby` で指し、[Editable Combobox With List Autocomplete の例][APG「Editable Combobox With List Autocomplete Example」] は listbox に `aria-label` で名前 ("States") を付ける。このリポジトリの `SelectContent` と `ComboboxList` は名前の属性を型で必須にする (空文字までは止めない。`SelectContent` は受けた名前を listbox へ渡し、`FormSelectField` は見える label を `aria-labelledby` で指す)。axe-core 4.14.0 は combobox の popup の listbox を名前の検査から外し (`no-naming-method-matches`)、grid は名前を必須のロールとして扱わない (`accessibleNameRequired: false`) ので、story の axe では名前の欠けを検出できない
-- registry の `Spinner` は `role="status"` と `aria-label="Loading"` だけを持ち、中身の文字を持たない。`aria-hidden` にして見た目だけに使い、読み込み中であることは「読み込み中の表示を組む」の形で伝える
+- registry の `Spinner` は `role="status"` と `aria-label="Loading"` だけを持ち、中身の文字を持たない。`aria-hidden` にして見た目だけに使い、状態の読み上げを持たせない (操作は ADR-0026、遷移は ADR-0057)
 - `status` に、中身と同じ文言の名前を付けない。[APG「Providing Accessible Names and Descriptions」][] の表の status の行は "Some screen readers announce the name of a status element before announcing the content of the status element." と書く
 - 名前の文字を、inline でない子要素 (flex や grid の item、block、inline-block) へ分けない。2026-10-06 に Playwright 1.63.0 の Chromium 153.0.8010.12 で、button に `<span>Ab</span><span>cd</span>` を置くと、子が inline なら名前は `Abcd`、親が flex か grid、または子が block か inline-block なら `Ab cd` だった。子の境界で空白を入れるかは仕様で決まっていない ([accname 1.2][] の 2F の注記、[w3c/accname#225][])
 - 略記と全文を出し分けるときは、可視の側を `aria-hidden` にし、全文を 1 つの `sr-only` に置く
@@ -334,17 +302,8 @@ export const head = defineHead(() => ({ title: pageTitle("<ページ名>") }));
 [Vitest docs「Test Tags」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/guide/test-tags.md
 [Vitest docs「tags」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/tags.md
 [Vitest docs「strictTags」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/stricttags.md
-[APG「Patterns」]: https://www.w3.org/WAI/ARIA/apg/patterns/
 [Void docs「Head Management」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/head.md
-[w3c/aria#1317]: https://github.com/w3c/aria/issues/1317
-[ARIA in HTML]: https://www.w3.org/TR/html-aria/
 [WAI-ARIA 1.2]: https://www.w3.org/TR/wai-aria-1.2/
-[a11ysupport.io の `aria-busy.json`]: https://github.com/accessibilitysupported/a11ysupport.io/blob/master/data/tests/tech/aria/aria-busy.json
-[w3c/aria#2737]: https://github.com/w3c/aria/issues/2737
-[Cloudscape の `src/table/skeleton-rows.tsx`]: https://github.com/cloudscape-design/components/blob/main/src/table/skeleton-rows.tsx
-[Primer docs「Loading」]: https://primer.style/product/ui-patterns/loading/
-[Adrian Roselli「More Accessible Skeletons」]: https://adrianroselli.com/2020/11/more-accessible-skeletons.html
-[WAI-ARIA 1.3 Editor's Draft]: https://w3c.github.io/aria/
 [Vitest docs「hideSkippedTests」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/hideskippedtests.md
 [APG「Landmark Regions」]: https://www.w3.org/WAI/ARIA/apg/practices/landmark-regions/
 [WCAG 2.2 SC 1.1.1]: https://www.w3.org/TR/WCAG22/#non-text-content

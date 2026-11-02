@@ -34,7 +34,7 @@ export function cellInColumn(screen: Screen, row: Locator, header: string): Loca
 }
 
 /**
- * 列見出しの幅 (px) を、見出しの並びの順に返す (`DataTable` / `TableSkeleton`)。列幅は中身でなく列の size で決まる (ADR-0042)。
+ * 列見出しの幅 (px) を、見出しの並びの順に返す (`DataTable`)。列幅は中身でなく列の size で決まる (ADR-0042)。
  * 同期に読むので、描き終わりを待つときは `expect.poll` で包む。モーダルの表示中は一覧が aria-hidden なので
  * `includeHidden` で引く。
  */

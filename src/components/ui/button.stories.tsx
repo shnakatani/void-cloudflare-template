@@ -58,7 +58,7 @@ export const DestructiveIcon: Story = {
   },
 };
 
-/** リンクの意匠 */
+/** リンクの意匠。遷移を伴うなら `ButtonLink` (parts) を使う */
 export const Link: Story = {
   args: { variant: "link", children: "詳細を見る" },
 };

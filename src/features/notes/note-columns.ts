@@ -18,7 +18,7 @@ import type { Note } from "./schema";
 import { NOTE_FIELD_LABELS } from "./schema";
 
 /**
- * 一覧の列の id と見出しと幅 (既定の文字サイズのときの px)。列の順もここが持つ。
+ * 一覧の列の id と見出しと幅 (既定の文字サイズのときの px)。列の順は `noteColumns` の配列が持つ。
  * 行を開くボタン・日時・操作の列は、中身が 1 行に収まる幅にする。タイトルは折り返し、本文は切り詰めて、全文は行を開いて出す (`note-cells.tsx`)。
  * 行を開くボタンの列も見出しを文字で持つ。空の見出しは axe の empty-table-header に当たる
  */
@@ -41,7 +41,7 @@ const helper = createColumnHelper<DataTableFeatures, NoteRow>();
 const base = columnBaseFrom(NOTE_COLUMNS);
 
 /**
- * メモ一覧の列定義 (ADR-0018)。列の順・id・見出し・幅は `NOTE_COLUMNS` が持つ。
+ * メモ一覧の列定義 (ADR-0018)。id・見出し・幅は `NOTE_COLUMNS` が持ち、列の順はこの配列が持つ。
  * 描画を持つ列は `cell` にコンポーネントの参照を渡す (`FlexRender` が cell の context を
  * props にして描く。TanStack Table「Flex Render」)。JSX はこのファイルに書かない
  */

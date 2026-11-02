@@ -3,8 +3,8 @@ import type { ColumnDef_ColumnSizing, IdIdentifier, RowData } from "@tanstack/re
 import type { DataTableFeatures } from "./data-table-features";
 
 /**
- * 列の見出しと幅。幅は既定の文字サイズのときの px で持つ。`DataTable` と読み込み中の `TableSkeleton` が、
- * `columnWidthFrom` で rem に換算して列見出しに当てる
+ * 列の見出しと幅。幅は既定の文字サイズのときの px で持つ。`DataTable` が `columnWidthFrom` で rem に換算して
+ * 列見出しに当てる
  */
 export interface DataTableColumnBase {
   header: string;
