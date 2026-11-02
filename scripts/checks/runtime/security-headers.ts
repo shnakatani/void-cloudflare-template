@@ -17,9 +17,9 @@ import { findScriptSrcSelfViolations } from "../../lib/script-src-violations.ts"
  * SSR の page (`/login`)、`public/` の静的な asset (`/robots.txt`)、route の無い path の 404 と、ログインが要る SSR の page
  * (`/` と `/notes`) を見る。
  * Void の docs「Custom Headers」の Scope は、ヘッダの rule が静的な asset・SSR の page・API の
- * 応答に掛かると書く。3 つは、その応答の種類を 1 つずつ代表する。2026-11-01 に Void 1.4.0
- * (`@cloudflare/vite-plugin` 1.66.0) の `vp preview` で、この 3 つとビルド出力の hash 付きの
- * CSS の応答に 6 件すべてが乗ることを確かめた。hash 付きの asset を検査に入れないのは、
+ * 応答に掛かると書く。ログインの要らない 3 つ (`/login`、`/robots.txt`、404) は、その応答の種類を 1 つずつ代表する。
+ * 2026-11-01 に Void 1.4.0 (`@cloudflare/vite-plugin` 1.66.0) の `vp preview` で、この 3 つとビルド出力の hash 付きの
+ * CSS の応答に、`EXPECTED_HEADERS` のうち CSP 以外の 6 件が乗ることを確かめた。hash 付きの asset を検査に入れないのは、
  * ファイル名がビルドごとに変わり、検査する path をビルド出力から探すことになるため。
  * ログインが要るページは、未ログインでは 302 になり、302 の応答は検査の対象の種類に入っていないので、検査のユーザーで
  * ログインしてから読む
