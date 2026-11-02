@@ -6,6 +6,7 @@ paths:
   - "pages/**/*.server.ts"
   - "pages/**/*.server.tsx"
   - "auth.ts"
+  - "routes/**"
 ---
 
 # DB と認証
@@ -31,4 +32,6 @@ paths:
 - 守るページを prerender しない。`.md` のページと loader の無い island のページを守る path の下に置かない (ADR-0053)
 - middleware の redirect は `new URL(<path>, c.req.url).href` の絶対 URL で渡す。相対の path は要求の query を行き先に混ぜる (`docs/guides/auth.md`「保護する path を足す」)
 - page の loader と action に `defineHandler(middleware, handler)` で middleware を渡さない。保護は global の middleware に置く (`docs/guides/auth.md`「page の loader に middleware を渡さない理由」)
+- `routes/` の `POST`・`PUT`・`PATCH`・`DELETE` の handler は、書く前に `requireAuth(c)` で user を読む。`routes/` には page の action の origin の判定が掛からず、別の origin からの要求は session の cookie を捨てられて user が無いだけで、止まらない (`docs/guides/auth.md`「`routes/` に書き込みの handler を足す」)
+- ログインしていなくても書く handler と、Void の session でない cookie を読む handler には origin の判定 (Hono の `csrf()` など) を足す。`GET` の handler で書かない (`docs/guides/auth.md`「`routes/` に書き込みの handler を足す」)
 - `shared` に足す項目は `SharedUser` と middleware の詰め替えの両方に足し、`Date` は文字列か数値にする (`docs/guides/auth.md`「全ページで user を読む」)
