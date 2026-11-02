@@ -53,6 +53,16 @@ Void 1.4.0 の `action()` は、Action の中で await すると決着しない�
 
 `getValidationErrors` と `isAbortError` (`void/pages-client`) は `node_modules/void/docs/reference/api.md`「User-Facing Imports」に載らない。`@void/react` の adapter が使う内部用で、`void/package.json` の exports には出ている (2026-11-02、Void 1.4.0)。Void を上げたら確かめる。消えたら、`VoidActionError.body` を自前で読む形と `error.name === "AbortError"` の判定に戻す。
 
+### 制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない
+
+| 出典                                                                                                           | 内容                                                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Void docs「Actions & Forms」の Named Actions                                                                   | `POST /users/42?update&tab=profile` がページを描き直すと、address bar は `/users/42?tab=profile` に残り、`c.redirect('/users/42')` は `/users/42?tab=profile` へ移る。action の URL がページの query を運ぶ前提で、相対の redirect は要求の query を混ぜる |
+| Void 1.4.0 のソース (`dist/protocol-*.mjs` の `handlePageMutation`、`dist/pages/client.mjs` の `submitAction`) | 検証の失敗 (422) では、要求の URL から action の名前の key を除いた URL で loader を走らせ直し、`errors` を載せたページを返す。client はそのページを commit してから `ok: false` を返す                                                                    |
+| Void 1.4.0 が生成する `.void/routes.d.ts` の `ActionUrl`                                                       | `<page>` か `<page>?<action 名>` だけを許す。query を載せた URL を `ParseActionUrl` に通すと action 名が `update&tab` のように読まれ、送る値の型が `never` になる                                                                                          |
+
+ページの query でダイアログを開くページで、server の検証の失敗を返した (2026-11-02、dev、Void 1.4.0)。action の URL に query が無いと、ページは query の無い URL で描き直され、ダイアログが閉じ、エラーを置いた form ごと unmount して何も出なかった。query を載せると、ダイアログは開いたまま欄にエラーが出た。
+
 ## Decision
 
 **mutation は `src/components/action/` の部品の `action` prop から、`usePageAction` の `run` で呼ぶ。失敗は `run` が通知し、Action の reject にしない。決着前の二重発火は Transition の `isPending` だけで塞ぐ。**
@@ -95,6 +105,20 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 | それ以外の throw (401・403・500・502・通信の失敗) | 生の error を `console.warn` に残し、固定の文言の toast に出して `false`                    | toast は Action の持ち主が unmount した後も出る (2026-11-02 に dev で確認)。境界に任せると、閉じたダイアログや消した行の失敗が消える                                      |
 | `onSuccess` の throw                              | `console.error` に残して reject する                                                        | 書き込みは成功しているので、「操作に失敗しました」の toast は誤りになる。Action の持ち主が unmount していれば、console にだけ残る                                         |
 
+ページの URL が query (ダイアログを開く key、絞り込みの条件) を持つときは、`pageQuery` に `?` を除いた query を渡し、`run` が action の URL の後ろに載せて送る。検証の失敗でも、ページは同じ query の URL で描き直される (「制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない」)。
+
+- 型を抑えるのは hook の中の 1 か所 (`src/hooks/use-page-action.ts` の `actionUrlWithPageQuery`) にする。呼び出し側は query の無い `ActionUrl` を渡すので、送る値の型は生成された型のまま検査される
+- action はページの条件を body ではなく `c.req.query()` で読み、redirect は `new URL(<path>, c.req.url).href` の絶対 URL で返す。相対の URL は、載せた query (閉じるはずのダイアログの key を含む) を行き先に混ぜる (voidzero-dev/void#648)
+
+ページの query の運び方は次から選んだ。
+
+| 案                                                      | 評価                                                                                                                                                                                 | 採否     |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| `pageQuery` で action の URL に載せる                   | Void の docs の Named Actions の形。検証の失敗でも成功の redirect でも、ページの query が残る。`ActionUrl` が許さないので、hook の 1 か所で型を抑える                                | **採用** |
+| 条件を body で送り、action が redirect の URL を組む    | 成功の redirect では条件が残る。検証の失敗の描き直しは action の URL のページなので、query が落ちてダイアログが閉じ、エラーも出ない (2026-11-02 に dev で確認)                       | 却下     |
+| action が自分で検証し、`c.json({ errors }, 422)` を返す | GET でない ok でない応答は commit されず throw される (ソースで確認)。`withValidator` を外すので、生成される body の型が `Record<string, unknown>` になり、client の型の検査が消える | 却下     |
+| hook が router の今の URL から query を自動で載せる     | 汎用の hook が、呼び出し元のページの URL のどの key を描き直しに残すかを推し量ることになる                                                                                           | 却下     |
+
 ### 検討した選択肢
 
 | 案                                                                                | 評価                                                                                                                                                                       | 採否     |
@@ -112,12 +136,14 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 
 - `usePageAction` を通さずに `action()` を呼ぶと、`ok: false` が通知の無い失敗になり、throw は境界に届くか消える。lint で検出できないため、レビューで見る
 - 401・403・500 も toast で伝わり、画面は差し替わらない。Error Boundary (ADR-0050) が `usePageAction` の送信から受けるのは `onSuccess` の throw だけになる。画面ごと差し替えたい失敗 (認証切れでログインへ送るなど) を扱うときは、`run` の失敗の分岐に足す
+- `pageQuery` の渡し忘れは lint でも型でも止まらない。渡し忘れると、検証の失敗でページの query が落ち、エラーも出ない。レビューで見る
 - 取り消された送信がサーバーで走るかは、取り消した時点で要求がサーバーに届いていたかで分かれる。分かれ方と、後の送信が前を取り消すときの見え方は ADR-0017 が持つ
 - 後続作業
   - 値を持つ部品の `changeAction` 版 (`checkbox` / `select` / `toggle` / `toggle-group` / `radio-group` / `combobox`)。`useOptimistic` で表示を先に進める設計が要り、Button 系とは別に扱う
   - React Aria への基盤変更の ADR。発火条件は「React Aria (adobe/react-spectrum#9894) の実装が出荷した」か「a11y 要件で Base UI に不足が出た」のどちらか
 - 再評価条件
   - Base UI (mui/base-ui#5133) か React Aria (adobe/react-spectrum#9894) が出荷したら、Action 層の内部実装をライブラリの `action` prop へ寄せる
+  - Void の `ActionUrl` が query を載せた URL を許すようになったら、`pageQuery` の型の抑制を外す
 
 ## 出典
 
