@@ -47,7 +47,7 @@ Void 1.4.0 は nonce を発行しない。`routing.headers` は静的な文字�
 
 - 遅いデータは loader で待つ。deferred props で後から届ける形は使えない。Void が nonce に対応したら決め直す
 - `<script>` を足すときは、`src` を持つ module の script にする。JSX や head の inline の `<script>` は本番で止まる
-- dev では inline の script が止まらないので、inline の script の違反は dev で見えない。`vp run verify:security-headers` はヘッダの値を確かめ、本番の HTML で違反が出ないことは `vp preview` でブラウザのコンソールを見て確かめる
+- dev では inline の script が止まらないので、inline の script の違反は dev で見えない。`vp run verify:security-headers` が、本番の成果物の HTML の応答から `script-src 'self'` で止まる script (inline の `<script>`、別の origin の `src`、イベントハンドラの属性、`javascript:` の URL) を探して落とす。ログインが要るページは 302 になり、この検査に入らない
 - `vp run verify:security-headers` は、`/`、`/robots.txt`、404 の応答に上の CSP が乗っていることを見る。期待する値は検査の側に写しで持つので、値を変えたら `void.config.ts` と検査の両方を直す
 - `NODE_ENV=development` のまま `vp build` を打つと、緩めた CSP が成果物に入る。検査がこの値を落とす
 

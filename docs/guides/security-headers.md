@@ -6,9 +6,10 @@
 
 ### CSP の下で script を足す
 
-- `<script>` は `src` を持つ module の script にする。inline の `<script>` は本番で実行されない。dev は `script-src` に `'unsafe-inline'` が付くので止まらず、違反は `vp preview` でしか見えない (ADR-0051)
+- `<script>` は `src` を持つ module の script にする。inline の `<script>` は本番で実行されない。dev は `script-src` に `'unsafe-inline'` が付くので止まらず、違反は本番の成果物でしか見えない (ADR-0051)
 - Void の deferred props は使わない。値が nonce の無い inline の script で届き、解決しない (ADR-0051)
-- 本番の HTML が違反を出さないことは、`vp run verify:build` のあとに `vp preview` で開き、ブラウザのコンソールに CSP の違反が無いことで確かめる
+- 本番の HTML に CSP で止まる script が無いことは、`vp run verify:security-headers` が `/login` と 404 の HTML で見る。inline の `<script>`、別の origin の `src`、イベントハンドラの属性、`javascript:` の URL を落とす。判定は `scripts/lib/script-src-violations.ts`
+- ログインが要るページは 302 になり、検査に入らない。そのページに script を足したら、`vp run verify:build` のあとに `vp preview` で開き、ブラウザのコンソールに CSP の違反が無いことを見る
 
 ### ヘッダを足す・変える
 

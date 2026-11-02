@@ -1,5 +1,6 @@
 import { CheckFailure, startPreview } from "../../lib/preview-server.ts";
 import { type ExpectedHeader, findHeaderViolations } from "../../lib/response-headers.ts";
+import { findScriptSrcSelfViolations } from "../../lib/script-src-violations.ts";
 
 /**
  * `void.config.ts` の `routing.headers` で付けたセキュリティヘッダが、実際の応答に乗っている
@@ -17,6 +18,10 @@ import { type ExpectedHeader, findHeaderViolations } from "../../lib/response-he
  * CSS の応答に 6 件すべてが乗ることを確かめた。hash 付きの asset を検査に入れないのは、
  * ファイル名がビルドごとに変わり、検査する path をビルド出力から探すことになるため。
  * `/` を使わないのは、未ログインでは 302 になり、302 の応答は検査の対象の種類に入っていないため
+ *
+ * HTML の応答 (`/login` と 404) は、本文の script が CSP の `script-src 'self'` で止まらないことも見る (ADR-0051)。
+ * dev は `script-src` に `'unsafe-inline'` を足すので、inline の script を足しても dev では動き、本番の成果物で
+ * だけ hydration が止まる。ログインが要るページは 302 になるので、この検査では見ない
  */
 
 /**
@@ -51,6 +56,8 @@ async function run(): Promise<void> {
   const server = await startPreview("security-headers");
   try {
     const violations: string[] = [];
+    const scriptViolations: string[] = [];
+    const scannedHtmlPaths: string[] = [];
     for (const { path, status } of CHECKED_RESPONSES) {
       // redirect を追うと、移り先の応答を検査してしまう
       // oxlint-disable-next-line eslint/no-await-in-loop -- 1 つのサーバへ数件を順に聞くだけで、並列にしても得るものが無い
@@ -74,8 +81,24 @@ async function run(): Promise<void> {
           EXPECTED_HEADERS,
         ).map((violation) => `${path} (${status.toString()}) ${violation}`),
       );
+      if (response.headers.get("Content-Type")?.startsWith("text/html")) {
+        // oxlint-disable-next-line eslint/no-await-in-loop -- 上の fetch と同じく、数件を順に読むだけ
+        const html = await response.text();
+        scannedHtmlPaths.push(path);
+        scriptViolations.push(
+          ...findScriptSrcSelfViolations(html, response.url).map(
+            (violation) => `${path} (${status.toString()}) ${violation}`,
+          ),
+        );
+      }
     }
     server.assertStillRunning();
+    if (scannedHtmlPaths.length === 0) {
+      // 0 件を通すと、Content-Type が変わったときに script の検査が黙って空になる
+      throw new CheckFailure(
+        "HTML の応答が 1 つも無く、script を確かめられない。検査する path を見直す",
+      );
+    }
     if (violations.length > 0) {
       throw new CheckFailure(
         [
@@ -85,12 +108,21 @@ async function run(): Promise<void> {
         ].join("\n"),
       );
     }
+    if (scriptViolations.length > 0) {
+      throw new CheckFailure(
+        [
+          "HTML に、CSP の script-src 'self' で止まる script がある (ADR-0051)。",
+          "inline の script・イベントハンドラの属性・javascript: の URL を、同じ origin の src を持つ module の script に移す。",
+          ...scriptViolations.map((violation) => `  - ${violation}`),
+        ].join("\n"),
+      );
+    }
   } finally {
     await server.stop();
   }
 
   console.log(
-    `[security-headers] ${EXPECTED_HEADERS.length.toString()} 件すべてが ${CHECKED_RESPONSES.map(({ path, status }) => `${path} (${status.toString()})`).join("、")} の応答に乗っている`,
+    `[security-headers] ${EXPECTED_HEADERS.length.toString()} 件すべてが ${CHECKED_RESPONSES.map(({ path, status }) => `${path} (${status.toString()})`).join("、")} の応答に乗っていて、HTML の応答に CSP で止まる script が無い`,
   );
 }
 
