@@ -17,7 +17,8 @@ import { columnWidthFrom } from "./data-table-columns";
 import type { DataTableFeatures, DataTableMeta } from "./data-table-features";
 import { dataTableFeatures } from "./data-table-features";
 
-// Table Devtools への登録は dev だけで読み、`import()` を DEV の三項に入れる (理由は app-devtools.tsx と同じ)。
+// Table Devtools への登録は dev だけで読み、`import()` を DEV の三項に入れる。production の build は三項ごと
+// `import()` を消し、chunk を出力しない。この hook は `@tanstack/devtools-vite` が本番から外す対象に入らない (ADR-0061)。
 // 静的に import すると、production で hook が NoOp に替わっても、その先の devtools の UI が参照する font が
 // `dist/client/assets` に出力される (2026-11-02、`@tanstack/react-table-devtools` 9.3.1)。
 // `lazy` は部品の型引数を落とし、行の型ごとの table を渡せないので、module を `use` で読む
