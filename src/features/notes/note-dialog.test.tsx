@@ -235,13 +235,15 @@ describe("追加のダイアログ", () => {
     await expectNoteDialogClosed(screen);
   });
 
-  it("キャンセルで閉じると一覧の URL へ移る", async () => {
+  it("キャンセルで閉じると、一覧の scroll の位置を保って一覧の URL へ移る", async () => {
     const { screen, router } = await renderNotesPage({ q: "x", dialog: { kind: "create" } });
     await titleTextbox(screen).fill("一時入力");
 
     await cancelButton(screen).click();
 
-    await expect.poll(() => router.visits).toEqual([{ url: "/notes?q=x", options: undefined }]);
+    await expect
+      .poll(() => router.visits)
+      .toEqual([{ url: "/notes?q=x", options: { preserveScroll: true } }]);
   });
 
   it("保存に失敗すると固定文言を toast に出し、server の raw message は表示しない", async () => {
@@ -339,6 +341,18 @@ describe("追加のダイアログ", () => {
     await expect.element(createLink(screen)).toHaveAttribute("href", "/notes?new&q=x");
   });
 
+  it("追加のリンクを押すと、一覧の scroll の位置を保って追加の URL へ移る", async () => {
+    const { screen, router } = await renderNotesPage({ q: "x" });
+
+    await createLink(screen).click();
+
+    await expect
+      .poll(() => router.visits)
+      .toEqual([
+        { url: "/notes?new&q=x", options: expect.objectContaining({ preserveScroll: true }) },
+      ]);
+  });
+
   it("閉じると追加のリンクへ focus が戻り、開閉で見出しを経由しない", async () => {
     const { screen, rerender } = await renderNotesPage();
     createLink(screen).element().focus();
@@ -354,6 +368,21 @@ describe("追加のダイアログ", () => {
 });
 
 describe("編集のダイアログ", () => {
+  it("行の編集のリンクを押すと、一覧の scroll の位置を保って編集の URL へ移る", async () => {
+    const { screen, router } = await renderNotesPage({ notes: [NOTE_VIEW] });
+
+    await screen.getByRole("link", { name: `${NOTE_VIEW.title}を編集` }).click();
+
+    await expect
+      .poll(() => router.visits)
+      .toEqual([
+        {
+          url: expect.stringContaining(`edit=${NOTE_VIEW.id}`),
+          options: expect.objectContaining({ preserveScroll: true }),
+        },
+      ]);
+  });
+
   it("見出しと、今の値が入ったフォームで開く", async () => {
     const { screen } = await renderNotesPage({ dialog: { kind: "edit", note: NOTE_VIEW } });
 
