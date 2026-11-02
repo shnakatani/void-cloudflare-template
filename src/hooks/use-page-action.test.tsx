@@ -20,6 +20,7 @@ import { usePageAction, usePageActionForm } from "./use-page-action";
 declare module "void/routes" {
   interface PageActionMap {
     "/page-action-test": { body: { title: string; memo: string } };
+    "/page-action-named-test": { actions: { save: { body: { title: string } } } };
   }
 }
 
@@ -164,6 +165,42 @@ describe("usePageAction", () => {
       url: ACTION_URL,
       error,
     });
+  });
+
+  // Void は検証の失敗を action の URL のページとして描き直すので、ページの query は action の URL が運ぶ
+  it("ページの query を、名前つきの action の URL の後ろに & で続けて送る", async () => {
+    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    const { result } = await renderHook(() =>
+      usePageAction("/page-action-named-test?save", { pageQuery: "new&q=%E4%BC%9A" }),
+    );
+
+    await result.current.run({ title: "a" });
+
+    expect(action).toHaveBeenCalledExactlyOnceWith("/page-action-named-test?save&new&q=%E4%BC%9A", {
+      data: { title: "a" },
+      method: undefined,
+      params: undefined,
+    });
+  });
+
+  it("名前の無い action では、ページの query を ? で続けて送る", async () => {
+    vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
+    const { result } = await renderHook(() => usePageAction(ACTION_URL, { pageQuery: "edit=1" }));
+
+    await result.current.run({ title: "a", memo: "" });
+
+    expect(action).toHaveBeenCalledExactlyOnceWith(`${ACTION_URL}?edit=1`, {
+      data: { title: "a", memo: "" },
+      method: undefined,
+      params: undefined,
+    });
+  });
+
+  it("? で始まるページの query は、ページが読めない key になるので呼び出しの誤りとして throw する", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(
+      renderHook(() => usePageAction(ACTION_URL, { pageQuery: "?edit=1" })),
+    ).rejects.toThrow("pageQuery は ? と & を除いて渡す");
   });
 
   it("遷移などで取り消された送信は、toast も警告も出さずに false を返す", async () => {

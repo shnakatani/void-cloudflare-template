@@ -14,8 +14,18 @@ type ActionRest<U extends ActionUrl> = typeof action<U> extends (
   ? Rest
   : never;
 
-/** `action()` に渡す `method` と `params` */
-type ActionCallOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest<U>[0]>, "data">;
+/** `action()` に渡す `method` と `params` に、action の URL に載せるページの query を足したもの */
+type ActionCallOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest<U>[0]>, "data"> & {
+  /**
+   * action を呼ぶページの URL の query を、`?` を除いて渡す (`new&q=%E4%BC%9A`)。action の URL の後ろに載せる。
+   *
+   * Void は検証の失敗 (422) を、action の URL から action の名前を除いた URL のページとして描き直し、その props を commit する。
+   * query を載せないと、ページは query の無い URL で描き直され、query で開いていたダイアログや絞り込みが消え、
+   * 422 のエラーを置いた form も unmount して何も出ない。載せる形は Void の docs の
+   * `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`「Named Actions」(`POST /users/42?update&tab=profile`)
+   */
+  pageQuery?: string;
+};
 
 type PageActionCallbacks = {
   /**
@@ -32,6 +42,21 @@ export type PageActionOptions<U extends ActionUrl> = ActionCallOptions<U> & Page
 
 export type PageActionFormOptions<U extends ActionUrl> = ActionCallOptions<U> &
   Pick<PageActionCallbacks, "onSuccess">;
+
+/** action の URL の後ろにページの query を載せる。named action の名前は最初の key なので、後ろに `&` で続ける */
+function actionUrlWithPageQuery<U extends ActionUrl>(url: U, pageQuery: string | undefined): U {
+  if (pageQuery === undefined || pageQuery === "") {
+    return url;
+  }
+  if (pageQuery.startsWith("?") || pageQuery.startsWith("&")) {
+    // 載せると `?new` が key になり、ページは `new` を読めない。黙って閉じたダイアログに戻らないよう呼び出しの誤りとして止める
+    throw new Error(`pageQuery は ? と & を除いて渡す: ${pageQuery}`);
+  }
+  // Void 1.4.0 の `.void/routes.d.ts` が生成する `ActionUrl` は `<page>` か `<page>?<action 名>` だけを許し、query を載せた URL を型に持たない。
+  // 載せた URL を `ParseActionUrl` に通すと action 名が `create&new` になり、送る値の型が消えるので、型は元の `U` のまま渡す
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- ActionUrl が query を載せた URL を許さない (上のコメント)
+  return `${url}${url.includes("?") ? "&" : "?"}${pageQuery}` as U;
+}
 
 /**
  * Void の page の action を、Action (`startTransition` に渡す非同期関数) から呼ぶ入口。
@@ -58,14 +83,15 @@ export function usePageAction<U extends ActionUrl>(
   url: U,
   options: PageActionOptions<U>,
 ): { run: (data: ResolveActionBody<U>) => Promise<boolean> } {
-  const { onSuccess, onValidationError, method, params } = options;
+  const { onSuccess, onValidationError, method, params, pageQuery } = options;
+  const target = actionUrlWithPageQuery(url, pageQuery);
 
   async function run(data: ResolveActionBody<U>): Promise<boolean> {
     // `rest` は U で分かれる条件型で、U が決まらないこの関数の中では組み立てを検査できない。
     // 値の組は呼び出し側で `PageActionOptions<U>` として検査済み
     // oxlint-disable-next-line typescript/consistent-type-assertions -- U に依存する rest の型を関数の中で組めない (上のコメント)
     const rest = [{ data, method, params }] as ActionRest<U>;
-    const result = await action(url, ...rest).catch((error: unknown) => {
+    const result = await action(target, ...rest).catch((error: unknown) => {
       if (!isAbortError(error)) {
         toastMutationError(error);
       }

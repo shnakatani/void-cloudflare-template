@@ -22,13 +22,14 @@ import {
   NOTE_NOT_FOUND_DIALOG_TITLE,
 } from "./notes-page-constants";
 import type { NoteDialogState, NoteView } from "./notes-page-data";
+import { noteCreateQuery, noteEditQuery } from "./notes-url";
 import type { Note, NoteInput } from "./schema";
 
 /** フォームの初期値 (追加は常に空) */
 const EMPTY_NOTE_INPUT = { title: "", body: "", dueDate: null } satisfies NoteInput;
 
 type NoteFormDialogProps = {
-  /** 表示中の一覧の q。保存のあと action がこの q の一覧へ redirect する */
+  /** 表示中の一覧の q。保存の action の URL に載せ、action はこの q の一覧へ redirect する */
   q: string;
   /** 保存の Action の間 true (ページの useOptimistic) */
   saving: boolean;
@@ -71,12 +72,14 @@ function NoteCreateDialogContent({ q, saving, onSaveStart }: NoteFormDialogProps
       announce("保存しています");
       // 完了の通知に対象名が要る。onSuccess は送った値を受けないので、run の true を見て通知する。
       // true を返すのは onSuccess と同じく新しい props の commit の前
-      if (await run({ ...input, q })) {
+      if (await run(input)) {
         announce(`『${input.title}』を保存しました`);
       }
     },
   });
-  const { run, submit } = usePageActionForm(form, "/notes?create", {});
+  const { run, submit } = usePageActionForm(form, "/notes?create", {
+    pageQuery: noteCreateQuery(q),
+  });
   return (
     <NoteFormContent
       heading={NOTE_CREATE_DIALOG_TITLE}
@@ -102,12 +105,14 @@ function NoteEditDialogContent({
     onSubmit: async (input) => {
       announce("更新しています");
       // 対象名は更新後の title。更新は別の行でも並行しうるので、どれが終わったかを対象名で区別する (ADR-0026)
-      if (await run({ id: note.id, ...input, q })) {
+      if (await run({ id: note.id, ...input })) {
         announce(`『${input.title}』を更新しました`);
       }
     },
   });
-  const { run, submit } = usePageActionForm(form, "/notes?update", {});
+  const { run, submit } = usePageActionForm(form, "/notes?update", {
+    pageQuery: noteEditQuery(note.id, q),
+  });
   return (
     <NoteFormContent
       heading={NOTE_EDIT_DIALOG_TITLE}

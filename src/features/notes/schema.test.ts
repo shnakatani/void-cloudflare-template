@@ -6,12 +6,10 @@ import {
   NOTE_FIELD_LABELS,
   NOTE_QUERY_MAX_LENGTH,
   NOTE_TITLE_MAX_LENGTH,
-  noteCreateBodySchema,
   noteIdSchema,
   noteInputSchema,
   noteListFilterSchema,
   noteSchema,
-  noteUpdateBodySchema,
   noteUpdateSchema,
 } from "./schema";
 
@@ -336,31 +334,5 @@ describe("noteListFilterSchema", () => {
     const result = v.safeParse(noteListFilterSchema, { q: 1 });
     expect(result.success).toBe(false);
     expect(result.issues?.[0]?.message).toBe("検索語は文字列で指定してください");
-  });
-});
-
-describe("noteCreateBodySchema", () => {
-  it("入力の項目と、一覧の q を受け、q は一覧と同じく正規化する", () => {
-    expect(
-      v.parse(noteCreateBodySchema, { title: " a ", body: "", dueDate: null, q: " x " }),
-    ).toEqual({ title: "a", body: "", dueDate: null, q: "x" });
-  });
-
-  it("q が無ければ空文字にする (form の欄でない q の失敗をフィールドのエラーにしない)", () => {
-    expect(v.parse(noteCreateBodySchema, { title: "a", body: "", dueDate: null }).q).toBe("");
-  });
-});
-
-describe("noteUpdateBodySchema", () => {
-  it("対象の id と入力の項目と、一覧の q を受け、q は一覧と同じく正規化する", () => {
-    expect(
-      v.parse(noteUpdateBodySchema, { id: 1, title: " a ", body: "", dueDate: null, q: " x " }),
-    ).toEqual({ id: 1, title: "a", body: "", dueDate: null, q: "x" });
-  });
-
-  it("q が無ければ空文字にする (form の欄でない q の失敗をフィールドのエラーにしない)", () => {
-    expect(v.parse(noteUpdateBodySchema, { id: 1, title: "a", body: "", dueDate: null }).q).toBe(
-      "",
-    );
   });
 });

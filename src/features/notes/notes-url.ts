@@ -37,8 +37,8 @@ export function parseNotesPageQuery(
   return { q, dialog: { kind: "closed" } };
 }
 
-function urlWith(parts: readonly string[]): string {
-  return parts.length === 0 ? NOTES_PATH : `${NOTES_PATH}?${parts.join("&")}`;
+function urlWith(query: string): string {
+  return query === "" ? NOTES_PATH : `${NOTES_PATH}?${query}`;
 }
 
 /** 空の q は URL に書かない */
@@ -47,13 +47,23 @@ function qParts(q: string): string[] {
 }
 
 export function notesListUrl(q: string): string {
-  return urlWith(qParts(q));
+  return urlWith(qParts(q).join("&"));
+}
+
+/** 追加のダイアログを開いた一覧の query (`?` を除く)。保存の action の URL にも載せる */
+export function noteCreateQuery(q: string): string {
+  return [CREATE_KEY, ...qParts(q)].join("&");
 }
 
 export function noteCreateUrl(q: string): string {
-  return urlWith([CREATE_KEY, ...qParts(q)]);
+  return urlWith(noteCreateQuery(q));
+}
+
+/** 編集のダイアログを開いた一覧の query (`?` を除く)。保存の action の URL にも載せる */
+export function noteEditQuery(id: Note["id"], q: string): string {
+  return [`${EDIT_KEY}=${String(id)}`, ...qParts(q)].join("&");
 }
 
 export function noteEditUrl(id: Note["id"], q: string): string {
-  return urlWith([`${EDIT_KEY}=${String(id)}`, ...qParts(q)]);
+  return urlWith(noteEditQuery(id, q));
 }
