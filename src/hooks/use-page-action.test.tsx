@@ -16,7 +16,7 @@ import { expectAbsent, expectRemoved } from "@/test/assert/absent";
 
 import { usePageAction, usePageActionForm } from "./use-page-action";
 
-// テンプレートにはまだ action を持つ page が無く、`ActionUrl` が never になる。テストの中でだけ action を 1 つ足す
+// サンプルの page に依らないよう、テストの中でだけ action を 1 つ足す
 declare module "void/routes" {
   interface PageActionMap {
     "/page-action-test": { body: { title: string; memo: string } };
