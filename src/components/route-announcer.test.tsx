@@ -104,6 +104,18 @@ describe("RouteAnnouncer", () => {
     await expectAnnouncements(["B — アプリ"]);
   });
 
+  it("待ちより早く、ページを変えずに終わった遷移では、何も伝えない", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={loading} />);
+    await screen.rerender(<Harness router={router} />);
+
+    // 伝えなかったことは、後に来る path の遷移の読み上げまでの並びで見る
+    setDocumentTitle("C — アプリ");
+    router.navigate("/c");
+    await expectAnnouncements(["C — アプリ"]);
+  });
+
   it("押した要素に focus が残ったまま path が変わっても、見出しへ移す", async () => {
     const router = createFakeRouter("/a");
     const screen = await render(<Harness router={router} />);

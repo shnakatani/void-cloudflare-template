@@ -27,18 +27,18 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 
 ## Decision
 
-| 項目             | 決定                                                                                                                                                                                                                                                                  |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 伝え方           | 新しいページの見出しへの focus 移動と、title の読み上げを併用する                                                                                                                                                                                                     |
-| 伝える遷移       | `useRouter().path` が変わる遷移。戻る・進むも同じに扱う                                                                                                                                                                                                               |
-| 伝えない遷移     | query か hash だけの変化と、最初の描画                                                                                                                                                                                                                                |
-| 検出             | root の layout に置いた部品 (`src/components/route-announcer.tsx`) の `useEffect` で見る。`useRouter().path` が変わった描画で見出しへ focus を移し、その後 `useNavigation()` が idle に戻った描画で title を読み上げる。扱った path を ref に持ち、同じなら何もしない |
-| focus の移し先   | `focusPageHeading` (`src/lib/focus-page-heading.ts`) が選ぶ。失敗の見出しの印の要素、無ければ最初の `<h1>`、どちらも無ければ `<body>`。`focus({ preventScroll: true, focusVisible: false })` で枠を出さない                                                           |
-| focus を奪わない | `useNavigation().state` が idle 以外になってから path が変わるまでに、利用者かアプリが focus を動かしていたら移さない。そのとき focus が `<body>` か `null` に落ちていれば移す。モーダルのダイアログが開いていれば移さない                                            |
-| 読み上げ         | `document.title` をそのまま、`announce()` (ADR-0026) の polite で流す。文言は足さない                                                                                                                                                                                 |
-| title の形       | `<ページ名> — <アプリ名>`。ページ名を持つページは `head()` で `{ title: pageTitle("<ページ名>") }` (`src/lib/page-title.ts`) を返す。ホームと `head()` を持たないページは `void.config.ts` の `head.title` (アプリ名だけ)                                             |
-| 待ちの読み上げ   | 行き先の path が今の path と違う `"loading"` が `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`、1000ms) を超えたら、`announce()` の polite で「読み込み中」を 1 回流す。下の「待ちの読み上げ」                                                              |
-| 置き場           | `pages/layout.tsx` の `<main>` の外。ページを包む error boundary を足すときも、その外に置く。境界の中に置くと、失敗の画面に置き換わったときに検出が止まる                                                                                                             |
+| 項目             | 決定                                                                                                                                                                                                                                                                             |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 伝え方           | 新しいページの見出しへの focus 移動と、title の読み上げを併用する                                                                                                                                                                                                                |
+| 伝える遷移       | `useRouter().path` が変わる遷移。戻る・進むも同じに扱う                                                                                                                                                                                                                          |
+| 伝えない遷移     | query か hash だけの変化と、最初の描画                                                                                                                                                                                                                                           |
+| 検出             | root の layout に置いた部品 (`src/components/route-announcer.tsx`) の `useEffect` で見る。`useRouter().path` が変わった描画で見出しへ focus を移し、その後 `useNavigation()` が idle に戻った描画で title を読み上げる。扱った path を ref に持ち、同じなら何もしない            |
+| focus の移し先   | `focusPageHeading` (`src/lib/focus-page-heading.ts`) が選ぶ。失敗の見出しの印の要素、無ければ最初の `<h1>`、どちらも無ければ `<body>`。`focus({ preventScroll: true, focusVisible: false })` で枠を出さない                                                                      |
+| focus を奪わない | `useNavigation().state` が idle 以外になってから path が変わるまでに、利用者かアプリが focus を動かしていたら移さない。そのとき focus が `<body>` か `null` に落ちていれば移す。モーダルのダイアログが開いていれば移さない                                                       |
+| 読み上げ         | `document.title` をそのまま、`announce()` (ADR-0026) の polite で流す。文言は足さない                                                                                                                                                                                            |
+| title の形       | `<ページ名> — <アプリ名>`。ページ名を持つページは `head()` で `{ title: pageTitle("<ページ名>") }` (`src/lib/page-title.ts`) を返す。ホームと `head()` を持たないページは `void.config.ts` の `head.title` (アプリ名だけ)                                                        |
+| 待ちの読み上げ   | 行き先の path が今の path と違う `"loading"` が `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`、1000ms) を超えたら、`announce()` の polite で「読み込み中」を 1 回流す。流した遷移がページを変えずに終わったら、「読み込みを終えました」を流す。下の「待ちの読み上げ」 |
+| 置き場           | `pages/layout.tsx` の `<main>` の外。ページを包む error boundary を足すときも、その外に置く。境界の中に置くと、失敗の画面に置き換わったときに検出が止まる                                                                                                                        |
 
 ### 検討した案: 伝え方
 
@@ -118,10 +118,12 @@ Gatsby 2019 のテストの、枠についての証言は両方向にある。�
 
 遷移の間、Void は前のページを描いたまま残し (ADR-0057)、目に見える印は `aria-hidden` の帯と押したリンクの `Spinner` だけである。WCAG 2.2 Understanding「Status Messages」は status message の定義に "the waiting state of an application" を含め、例に "The screen reader announces \"application busy\"." を挙げる。
 
-- 伝える遷移は、完了で title を読み上げる遷移と同じ範囲 (path が変わる遷移) にする。query だけの遷移の待ちを伝えると、その完了はこの部品が読まないので、待ちだけが聞こえる
+- 伝える遷移は、完了で title を読み上げる遷移と同じ範囲 (path が変わる遷移) にする。query だけの遷移は、待ちと完了を件数の通知 (ADR-0027) と query で開くダイアログ (ADR-0056) が伝える
 - 待ちは、`useNavigation()` が `"loading"` で、行き先 (`location`) の path が `useRouter().path` と違う間とする。新しいページが描かれて path が行き先に揃うか、遷移が終わると、待ちも終わる
 - 別のページを待つ間に、次の別のページへの遷移が始まっても測り直さず、重ねて読まない。帯も遷移の間は描いたまま残る。間に query だけの遷移が入ると待ちは終わり、次の別のページへの遷移で測り直す
-- 文言は「読み込み中」だけにし、行き先の名前を載せない。行き先は完了の title が伝える (ADR-0026 の開始の文言と同じ考え)
+- 「読み込み中」を流した遷移がページを変えずに終わったら、「読み込みを終えました」を流す。目で見る利用者には帯が消えることで終わりが伝わるが、ページが変わらないので focus も title も動かない。WCAG の同じ文書の "Removal of status text" は、待ちの表示が消えることを "non-sighted users would be unaware of this change, unless the end of the waiting state results in a change of context for the user" とし、見えない status message ("system available") で同じ情報を渡す形を挙げる
+- ページを変えずに終わる遷移は、Void 1.4.0 のソースで次の 3 つである。今の path への redirect (`navigation-engine.ts` は redirect 先を commit の行き先にだけ書き、`useNavigation()` の `location` は始めの URL のまま残る)、今のページの中の遷移 (query か hash だけの遷移、今の path へのリンク) が始まって待っていた遷移を取り消したとき (`prepareVisit` が前の遷移を abort する)、ページのデータを読む途中の失敗のうち Void が文書の読み込みに替えないもの (`pages-client.ts` の `schedule` が shell の reject を受けて `fail` を dispatch する)。通信の失敗と Void の応答でない応答は `window.location.href` で文書ごと読み込むので、ブラウザが新しい文書を読む (下の「実測: 待ちの読み上げ」の loader が throw するページの行)
+- 文言は「読み込み中」と「読み込みを終えました」だけにし、行き先の名前を載せない。行き先は完了の title が伝える (ADR-0026 の開始の文言と同じ考え)。終わりの文言に名前が無くても、待つ遷移は同時に 1 つなので、どの待ちの終わりかは取り違えない
 - 送信 (`"submitting"`) と `router.refresh()` の読み直しは伝えない。pending は押した部品が持つ (ADR-0017、ADR-0026)
 
 | 案                                                                         | 評価                                                                                                                                                                                                                                   | 採否         |
@@ -129,8 +131,10 @@ Gatsby 2019 のテストの、枠についての証言は両方向にある。�
 | この部品が、別のページを待つ間 1000ms を超えたら `announce()` で 1 回流す  | 完了の読み上げと同じ部品・同じ範囲で、ADR-0026 の常設の region を通る。1000ms はダイアログの読み込み中 (ADR-0056) と同じ値                                                                                                             | **採用**     |
 | 帯 (`NavigationProgress`) に visually hidden の `role="status"` を組にする | 条件付きで mount する live region は読まれないか挙動が揺れる (ADR-0026)。常設にすると region が 1 組のほかに増える                                                                                                                     | 却下         |
 | 帯と同じ 300ms で伝える                                                    | 待たずに終わる遷移でも「読み込み中」の直後に title が続く (下の「調査結果」で、待たせない遷移の title は押してから 411ms)。WCAG の同じ文書は "there is a risk of making an application too \"chatty\" for a screen reader user" とする | 却下         |
-| query だけの遷移 (検索の replace、一覧の上のダイアログを開く) も伝える     | 検索は件数の通知 (ADR-0027) が完了を伝え、打鍵の途中に割り込む。ダイアログは 1000ms で読み込み中のダイアログへ focus が移り、その名前が読まれる (ADR-0056)。同じ待ちを 2 重に伝える                                                    | 却下         |
+| query だけの遷移 (検索の replace、query で開くダイアログを開く) も伝える   | 検索は件数の通知 (ADR-0027) が完了を伝え、打鍵の途中に割り込む。ダイアログは 1000ms で読み込み中のダイアログへ focus が移り、その名前が読まれる (ADR-0056)。同じ待ちを 2 重に伝える                                                    | 却下         |
 | 遷移の値 (`useNavigation()` の object) ごとに待ちを測り直す                | 待ちの途中でリンクを押すたびに 0 から測り直し、押し続けると伝わらない。読み上げた後に押すと 2 回目を読む                                                                                                                               | 却下         |
+| ページを変えずに終わった遷移の終わりを伝えない                             | 待ちの表示だけが目から消え、支援技術の利用者は待ちが終わったことを知れない ("Removal of status text")                                                                                                                                  | 却下         |
+| ページを変えずに終わった遷移の終わりに、今のページの title を読み上げる    | ページが変わったように聞こえる。query か hash だけの遷移が取り消したときにも title を読み、「伝えない遷移」と食い違う                                                                                                                  | 却下         |
 | Void の `navigationFallback`                                               | Void 1.4.0 は `voidReact()` から渡す口を持たず (ADR-0056 の Context)、受け皿はページの位置に描かれて前のページごと置き換わる                                                                                                           | 成り立たない |
 
 ### title の組み方
@@ -148,9 +152,9 @@ Gatsby 2019 のテストの、枠についての証言は両方向にある。�
 - ページ名を持つページは、`.server.ts` の `head()` で `pageTitle` を返す必要がある。書き忘れると title がアプリ名だけになり、遷移の読み上げでホームと区別できない
 - 各ページは `<h1>` を持つ必要がある。無いと focus は `<body>` に落ち、`focusPageHeading` が `console.warn` を出す
 - 遷移の直後は、Tab を押すまで focus の位置が目では見えない。Gatsby 2019 の拡大鏡と音声操作の被験者は枠が位置をつかむのに役立つと答えており、この利用者には手がかりが減る。見出しの枠の有無を比べたテストは見つかっていない
-- 検出は Void の内部の 3 つの順序に乗る。新しいページの描画で `useRouter().path` が変わること、`useNavigation()` が idle に戻る描画の時点で `document.title` が新しい値になっていること、遷移の開始ごとに `useNavigation()` の値が新しくなること。どれも docs に書かれていない。Void を上げたら、dev server で 2 つのページの間を遷移し、読み上げの region に新しいページの title が入ることを確かめる。遷移の先には、layout effect で同期の更新を起こすページも含める。loader を遅らせた遷移では、title の前に「読み込み中」が 1 回だけ入ることも確かめる
+- 検出は Void の内部の 3 つの順序に乗る。新しいページの描画で `useRouter().path` が変わること、`useNavigation()` が idle に戻る描画の時点で `document.title` が新しい値になっていること、遷移の開始ごとに `useNavigation()` の値が新しくなること。どれも docs に書かれていない。Void を上げたら、dev server で 2 つのページの間を遷移し、読み上げの region に新しいページの title が入ることを確かめる。遷移の先には、layout effect で同期の更新を起こすページも含める。loader を遅らせた遷移では、title の前に「読み込み中」が 1 回だけ入ること、今の path へ redirect する遷移では「読み込み中」の後に「読み込みを終えました」が入ることも確かめる
 - Void が遷移の開始と完了を購読する API を持ったら、この検出を作り直す
-- 見出しの focus と title の読み上げがスクリーンリーダーでどう聞こえるかは、一次資料で決着していない。この実装 (title を `useNavigation()` が idle に戻った描画で読み上げ、待ちが続けば先に「読み込み中」を読む) は、Void 1.4.0 の上で支援技術を使って聞いていない。聞いて確かめる手順は `docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」が持つ。聞こえ方が悪ければ、読み上げの文言と強さを見直す
+- 見出しの focus と title の読み上げがスクリーンリーダーでどう聞こえるかは、一次資料で決着していない。この実装 (title を `useNavigation()` が idle に戻った描画で読み上げ、待ちが続けば先に「読み込み中」を読み、ページが変わらずに終われば「読み込みを終えました」を読む) は、Void 1.4.0 の上で支援技術を使って聞いていない。聞いて確かめる手順は `docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」が持つ。聞こえ方が悪ければ、読み上げの文言と強さを見直す
 - 入れない改善: 戻る・進むで戻った先で、前に focus していた要素へ focus を戻す。MPA で bfcache から戻ったときと揃う形で (whatwg/html#6696、2021-10-14 にマージ。"the focused element stays the same/not reset")、Navigation API の explainer も traverse の例に挙げる。ただし explainer 自身が "the notion of \"the same element\" is not generally stable" とし、要素を識別子で覚える仕組みが要る。ブラウザの実装も揃っていない (wpt.fyi の `back-forward-cache/focus.html` は、2026-09-28 の時点で Edge 154 だけが 1/1 の結果を持ち、Chrome・Firefox・Safari は結果が無い)。いまの実装は、戻った先でも新しいページの見出しへ focus を移す (下の「調査結果」のブラウザの戻るの行)
 - 偽の router (ADR-0048) は title の書き換えを再現しない。`src/components/route-announcer.test.tsx` は、新しいページの描画と遷移の完了の間に `document.title` を置き換えて確かめる。title の順序は下の「調査結果」の dev server の実測が持つ
 
@@ -181,16 +185,18 @@ idle に戻った effect で読み上げる形では、続けてブラウザの�
 
 2026-11-03、Void 1.4.0 の dev server を playwright-cli 0.1.19 の headless の Chromium 156.0.8078.74 で操作した。ページのデータの要求 (`x-voidpages: true` の GET) を Playwright の route で遅らせ、live region に足されたノードを時刻つきで記録した。時刻は最初の操作からの経過である。
 
-| 操作                                                                | 要求の遅れ | live region に入った文言                                                                                                           |
-| ------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| ホームから、loader で DB を読むページへ `Link` で移る               | 2000ms     | 1088ms に「読み込み中」、3145ms に `<ページ名> — <アプリ名>`                                                                       |
-| 同じ遷移を遅らせずに行う                                            | なし       | 411ms に `<ページ名> — <アプリ名>`                                                                                                 |
-| ブラウザの戻る (ホームへ)                                           | 2000ms     | 1011ms に「読み込み中」、2047ms に `<アプリ名>`                                                                                    |
-| ブラウザの進む                                                      | 2000ms     | 1017ms に「読み込み中」、2083ms に `<ページ名> — <アプリ名>`                                                                       |
-| 同じリンクを 0ms・500ms・1700ms に押す                              | 2000ms     | 1038ms に「読み込み中」、4106ms に `<ページ名> — <アプリ名>`                                                                       |
-| 検索の語を query に書く入力欄に打つ (query だけの replace の visit) | 2000ms     | 2343ms に件数の通知 (ADR-0027) だけ                                                                                                |
-| query で開くダイアログ (ADR-0056) を開く (query だけの遷移)         | 2500ms     | 2553ms にダイアログの title だけ。1600ms の時点で focus は読み込み中のダイアログの閉じるボタン                                     |
-| loader が throw するページへ移る                                    | 2000ms     | 1027ms に「読み込み中」。その後 Void が文書ごと読み込み、静的な 500 のページ (title「エラーが発生しました — <アプリ名>」) が開いた |
+| 操作                                                                                                           | 要求の遅れ | live region に入った文言                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| ホームから、loader で DB を読むページへ `Link` で移る                                                          | 2000ms     | 1088ms に「読み込み中」、3145ms に `<ページ名> — <アプリ名>`                                                                       |
+| 同じ遷移を遅らせずに行う                                                                                       | なし       | 411ms に `<ページ名> — <アプリ名>`                                                                                                 |
+| ブラウザの戻る (ホームへ)                                                                                      | 2000ms     | 1011ms に「読み込み中」、2047ms に `<アプリ名>`                                                                                    |
+| ブラウザの進む                                                                                                 | 2000ms     | 1017ms に「読み込み中」、2083ms に `<ページ名> — <アプリ名>`                                                                       |
+| 同じリンクを 0ms・500ms・1700ms に押す                                                                         | 2000ms     | 1038ms に「読み込み中」、4106ms に `<ページ名> — <アプリ名>`                                                                       |
+| 検索の語を query に書く入力欄に打つ (query だけの replace の visit)                                            | 2000ms     | 2343ms に件数の通知 (ADR-0027) だけ                                                                                                |
+| query で開くダイアログ (ADR-0056) を開く (query だけの遷移)                                                    | 2500ms     | 2553ms にダイアログの title だけ。1600ms の時点で focus は読み込み中のダイアログの閉じるボタン                                     |
+| loader が throw するページへ移る                                                                               | 2000ms     | 1027ms に「読み込み中」。その後 Void が文書ごと読み込み、静的な 500 のページ (title「エラーが発生しました — <アプリ名>」) が開いた |
+| ログインした後にブラウザの戻るでログインのページへ戻る (middleware がホームへ redirect し、ページは変わらない) | 2000ms     | 1009ms に「読み込み中」、2055ms に「読み込みを終えました」。title は読まれない                                                     |
+| 別のページを待つ間 (押してから 1500ms) に、同じページの hash のリンク (確かめるために置いた) を押す            | 2000ms     | 1088ms に「読み込み中」、1610ms に「読み込みを終えました」                                                                         |
 
 - 遷移の待ちの間 (押してから 1300ms) と遷移の後に、axe-core を WCAG 2.2 AA と best-practice の規則で当て、違反は 0 件だった
 

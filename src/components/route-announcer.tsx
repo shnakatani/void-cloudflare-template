@@ -1,5 +1,5 @@
 import { useNavigation, useRouter } from "@void/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import type { NavigationState } from "void/pages-client";
 
 import { focusPageHeading } from "@/lib/focus-page-heading";
@@ -37,11 +37,15 @@ function recordFocusChanges(): FocusChangeRecord {
 }
 
 /**
- * 別のページへの遷移の読み込みが `PENDING_DISPLAY_DELAY_MS` を超えたら、「読み込み中」を 1 回読み上げる (ADR-0049「待ちの読み上げ」)。
+ * 別のページへの遷移の読み込みが `PENDING_DISPLAY_DELAY_MS` を超えたら、「読み込み中」を 1 回読み上げ、`announced` を立てる (ADR-0049「待ちの読み上げ」)。
  * 依存は遷移の値ではなく、別のページを待っているかに置く。待ちの途中で次の別のページへの遷移が始まっても測り直さず、重ねて読み上げない。
  * 新しいページが描かれて path が行き先に揃うか、遷移が終わると、待ちは終わる
  */
-function useAnnounceNavigationWait(path: string, navigation: NavigationState) {
+function useAnnounceNavigationWait(
+  path: string,
+  navigation: NavigationState,
+  announced: RefObject<boolean>,
+) {
   const waiting =
     navigation.state === "loading" &&
     navigation.location !== null &&
@@ -52,12 +56,13 @@ function useAnnounceNavigationWait(path: string, navigation: NavigationState) {
       return;
     }
     const timer = setTimeout(() => {
+      announced.current = true;
       announce("読み込み中");
     }, PENDING_DISPLAY_DELAY_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [waiting]);
+  }, [waiting, announced]);
 }
 
 /**
@@ -69,7 +74,7 @@ function useAnnounceNavigationWait(path: string, navigation: NavigationState) {
  * idle に戻った描画 (遷移の完了) の effect で title を読み上げる。Void は新しいページを描いた後、遷移を完了する前に
  * `document.title` を書き換えるので、完了の時点の title は新しいページの値になっている。
  * 新しいページの描画の effect で読むと、ページの layout effect が同期の更新を起こしたときに前の title を読む。
- * query だけの変化と最初の描画では伝えない。
+ * query だけの変化と最初の描画では伝えない。「読み込み中」を読み上げた遷移がページを変えずに終わったら、その終わりだけを伝える。
  */
 export function RouteAnnouncer(): null {
   const { path } = useRouter();
@@ -77,7 +82,8 @@ export function RouteAnnouncer(): null {
   const focusChanges = useRef<FocusChangeRecord | null>(null);
   const handledPath = useRef(path);
   const titlePending = useRef(false);
-  useAnnounceNavigationWait(path, navigation);
+  const waitAnnounced = useRef(false);
+  useAnnounceNavigationWait(path, navigation, waitAnnounced);
 
   // 依存は state ではなく値そのものに置く。Void は遷移を始めるたびに新しい値を作り、ページの描画では同じ値を保つ
   // (pages-client.ts の appReducer)。state で見ると、遷移が重なったときに前の遷移の記録が残る
@@ -103,9 +109,18 @@ export function RouteAnnouncer(): null {
     }
     // Void の遷移では、新しいページの描画と遷移の完了は別の描画に来る。path の変化と idle が同じ描画に来たら
     // (commit が失敗して前のページへ戻るとき) ここで続けて読み上げる
-    if (titlePending.current && navigation.state === "idle") {
+    if (navigation.state !== "idle") {
+      return;
+    }
+    if (titlePending.current) {
       titlePending.current = false;
+      waitAnnounced.current = false;
       announce(document.title);
+    } else if (waitAnnounced.current) {
+      // ページが変わらずに終わった遷移 (今の path への redirect、今のページの中の遷移による取り消し) では
+      // title を読まないので、「読み込み中」の終わりを伝える (ADR-0049「待ちの読み上げ」)
+      waitAnnounced.current = false;
+      announce("読み込みを終えました");
     }
   }, [path, navigation]);
 

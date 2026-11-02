@@ -82,6 +82,47 @@ describe("RouteAnnouncer の読み込み中", () => {
     await expectAnnouncements(["読み込み中", "B — アプリ", "読み込み中"]);
   });
 
+  it("「読み込み中」を伝えた遷移がページを変えずに終わったら、終わりを伝える", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/b")} />);
+    await expectAnnouncements(["読み込み中"]);
+    await screen.rerender(<Harness router={router} />);
+
+    await expectAnnouncements(["読み込み中", "読み込みを終えました"]);
+  });
+
+  it("「読み込み中」を伝えた遷移が今のページの query だけの遷移に替わって終わっても、終わりを伝える", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/b")} />);
+    await expectAnnouncements(["読み込み中"]);
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/a?q=x")} />);
+    router.navigate("/a?q=x");
+    await screen.rerender(<Harness router={router} />);
+
+    await expectAnnouncements(["読み込み中", "読み込みを終えました"]);
+  });
+
+  it("「読み込み中」の後に title を読み上げた遷移は、後のページの中の遷移で終わりを伝えない", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/b")} />);
+    await expectAnnouncements(["読み込み中"]);
+    router.navigate("/b");
+    setDocumentTitle("B — アプリ");
+    await screen.rerender(<Harness router={router} />);
+    await expectAnnouncements(["読み込み中", "B — アプリ"]);
+
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/b?q=x")} />);
+    router.navigate("/b?q=x");
+    await screen.rerender(<Harness router={router} />);
+    // 伝えなかったことは、後に来る path の遷移の読み上げまでの並びで見る
+    setDocumentTitle("C — アプリ");
+    router.navigate("/c");
+    await expectAnnouncements(["読み込み中", "B — アプリ", "C — アプリ"]);
+  });
+
   it("query だけが変わる遷移の待ちは伝えない", async () => {
     const router = createFakeRouter("/a");
     const screen = await render(<Harness router={router} />);
