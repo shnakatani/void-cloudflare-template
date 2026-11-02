@@ -83,6 +83,14 @@ lint では見ないのでレビューで見る。
 - layout に `<h1>` を置かない。遷移のたびに focus が layout の `<h1>` へ移る (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 - ページを足したとき、見出しか title を変えたときは、VoiceOver で遷移と戻るの読み上げを聞いて確かめる。自動テストは聞こえ方を見られない (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 
+## 遷移の行き先は path の定数で渡す
+
+型検査も lint も行き先を見ないのでレビューで見る (ADR-0059)。
+
+- `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit`、`c.redirect` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。Void 1.4.0 では在らない path を書いても、押すまで 404 に気付けない (ADR-0059)
+- query を持つ URL は、query の組み方を持つ関数で組み、呼び出し側で `?` と `&` を連結しない (ADR-0059)
+- ページのファイルを動かしたら、その path の定数を直す。定数と `pages/` の対応は何も検査しない (ADR-0059)
+
 ## ページの失敗は loader の値と区画の境界で受ける
 
 lint では見ないのでレビューで見る。
