@@ -47,26 +47,51 @@ const TEST_ONLY_IMPORT_PATTERN = {
 
 /**
  * server だけで動く module を止める pattern (ADR-0055)。Void は client から `.server.ts` を import するのを止めず、
- * client の環境では `void/db` が空の stub になって実行時に壊れる (Void 1.4.0 の plugin-client-stubs.ts)
+ * client の環境では `void/db` が空の stub になって実行時に壊れる (Void 1.4.0 の plugin-client-stubs.ts)。
+ * Void は `.server.tsx` などの拡張子も server の companion として読むので、拡張子ごと当てる
  */
 const SERVER_MODULE_IMPORT_PATTERN = {
-  regex: "\\.server(\\.ts)?$",
+  regex: "\\.server(\\.[cm]?[jt]sx?)?$",
   allowTypeImports: true,
   message:
     "server だけで動く module。client で動くコードから値を import しない。型は import type で読む (ADR-0055)",
 };
 
+/** server の module のファイル。client の import の禁止から外す */
+const SERVER_MODULE_FILES = "**/*.server.*";
+
 /**
- * client の環境で空の stub になる Void の server module (ADR-0055)。`.server` で終わらない module が import しても止める。
- * 型は import type で読める
+ * client の環境で stub に差し替わる Void の server module (ADR-0055)。`void/live` と `void/durable` は
+ * build が止めるので載せない。paths の name は完全一致なので、`void/email/testing` は `void/email` と別に要る
  */
-const SERVER_ONLY_VOID_MODULE_PATHS = ["void/db", "void/kv", "void/storage", "void/email"].map(
-  (name) => ({
+const STUBBED_VOID_MODULES = [
+  "void/db",
+  "void/kv",
+  "void/storage",
+  "void/ai",
+  "void/queues",
+  "void/isr",
+  "void/sandbox",
+  "void/email",
+  "void/email/testing",
+];
+
+/**
+ * `.server` で終わらない module が import しても止める Void の server module (ADR-0055)。型は import type で読める
+ */
+const SERVER_ONLY_VOID_MODULE_PATHS = [
+  ...STUBBED_VOID_MODULES.map((name) => ({
     name,
     allowTypeImports: true,
-    message: `${name} は server だけで動く。client の環境では空の stub になり、実行時に壊れる。.server の module から import する (ADR-0055)`,
-  }),
-);
+    message: `${name} は server だけで動く。client の環境では stub に差し替わり、実行時に壊れる。.server の module から import する (ADR-0055)`,
+  })),
+  {
+    name: "void/auth",
+    allowTypeImports: true,
+    message:
+      "void/auth は server だけで動く。client の build は警告だけで通り、読み込んだページが throw する。client では void/client の auth を使う (ADR-0055)",
+  },
+];
 
 /**
  * `vite.config.ts` の `lint`。`lintConfig` の中の文字列のパス (`jsPlugins` の specifier、`overrides` の `files` /
@@ -396,7 +421,7 @@ export const lintConfig = {
       // client で動くコードから server の module を止める (ADR-0055)。上の override と範囲が重なるファイルは
       // 後のこの override の options だけが効くので、テスト専用コードの pattern とバレルの paths もここで渡す
       files: ["src/**", "pages/**"],
-      excludeFiles: ["**/*.server.ts", ...companionGlobs("**/"), "src/test/**"],
+      excludeFiles: [SERVER_MODULE_FILES, ...companionGlobs("**/"), "src/test/**"],
       rules: {
         "no-restricted-imports": [
           "error",

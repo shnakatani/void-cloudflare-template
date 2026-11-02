@@ -160,9 +160,9 @@ const EXPECTED_OVERRIDES = [
   },
   {
     // client で動くコードから .server の module の値を import させない (ADR-0055)。
-    // *.server.ts は server で動くので外す
+    // *.server.* は server で動くので外す
     files: ["src/**", "pages/**"],
-    excludeFiles: ["**/*.server.ts", "src/test/**"],
+    excludeFiles: ["**/*.server.*", "src/test/**"],
     rules: { "no-restricted-imports": "deny" },
   },
 ];
