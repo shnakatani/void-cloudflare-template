@@ -35,3 +35,10 @@ paths:
 - `routes/` の `POST`・`PUT`・`PATCH`・`DELETE` で、ログインした user の行を書く handler は、書く前に `requireAuth(c)` で user を読む。`routes/` には page の action の origin の判定が掛からず、別の origin からの要求は session の cookie を捨てられて user が無いだけで、止まらない (ADR-0060)
 - Void の session でない cookie を読む handler には origin の判定 (Hono の `csrf()` など) を足す。`GET` の handler で書かない (ADR-0060)
 - `shared` に足す項目は `SharedUser` と middleware の詰め替えの両方に足し、`Date` は文字列か数値にする (`docs/guides/auth.md`「全ページで user を読む」)
+
+## 認可
+
+- 行の所有は query の関数の `userId` の条件で判定し、ロールなど所有以外の条件は page の loader・action と `routes/` の handler の先頭で、`requireAuth(c)` で読んだ user から判定する。global の middleware にロールの判定を載せない (ADR-0064)
+- ロールは `auth.ts` の Better Auth の `admin()` plugin で `AuthUser` に持たせ、判定は `src/features/auth/` の純粋関数に書く。`role` はコンマ区切りの文字列 (`docs/guides/auth.md`「認可を足す」)
+- loader で判定が外れたら `HTTPException(403)` を throw せず、権限が無いことを表す値を返してページが説明を描く。throw すると `text/plain` の 403 になる。action と `routes/` の handler は `throw new HTTPException(403, { message })` (`docs/guides/auth.md`「認可を足す」)
+- 画面の出し分け (`useShared()` のロール) を判定の代わりにしない。loader・action・handler は client を通さずに呼べる (ADR-0064)
