@@ -104,6 +104,23 @@ describe("RouteAnnouncer の読み込み中", () => {
     await expectAnnouncements(["読み込み中", "読み込みを終えました"]);
   });
 
+  it("終わりを伝えた後の、今のページの中の遷移では終わりを伝えない", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/b")} />);
+    await expectAnnouncements(["読み込み中"]);
+    await screen.rerender(<Harness router={router} />);
+    await expectAnnouncements(["読み込み中", "読み込みを終えました"]);
+
+    await screen.rerender(<Harness router={router} navigation={loadingTo("/a?q=y")} />);
+    router.navigate("/a?q=y");
+    await screen.rerender(<Harness router={router} />);
+    // 伝えなかったことは、後に来る path の遷移の読み上げまでの並びで見る
+    setDocumentTitle("C — アプリ");
+    router.navigate("/c");
+    await expectAnnouncements(["読み込み中", "読み込みを終えました", "C — アプリ"]);
+  });
+
   it("「読み込み中」の後に title を読み上げた遷移は、後のページの中の遷移で終わりを伝えない", async () => {
     const router = createFakeRouter("/a");
     const screen = await render(<Harness router={router} />);
