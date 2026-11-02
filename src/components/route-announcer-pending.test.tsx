@@ -16,6 +16,10 @@ function loadingTo(path: string): NavigationState {
   return { state: "loading", location: new URL(path, "http://localhost"), method: "GET" };
 }
 
+function submittingTo(path: string): NavigationState {
+  return { state: "submitting", location: new URL(path, "http://localhost"), method: "POST" };
+}
+
 function PageHeading() {
   return <h1>{useRouter().path}</h1>;
 }
@@ -88,6 +92,17 @@ describe("RouteAnnouncer の読み込み中", () => {
     // 伝えなかったことは、後に来る待ちの無い path の遷移の読み上げまでの並びで見る
     setDocumentTitle("B — アプリ");
     router.navigate("/b");
+    await expectAnnouncements(["B — アプリ"]);
+  });
+
+  it("送信の待ちは、別のページへ移るときも伝えない", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={submittingTo("/b")} />);
+    router.navigate("/b");
+    setDocumentTitle("B — アプリ");
+    await screen.rerender(<Harness router={router} />);
+
     await expectAnnouncements(["B — アプリ"]);
   });
 });
