@@ -140,7 +140,7 @@ popup の全体が viewport に収まることは、`src/test/assert/viewport.ts
 - 後の通知を得るために操作を足さない。足した操作の通知は別のテストが見ている経路で、壊れると 2 本とも落ちて原因を切り分けにくい
 - 履歴は `src/test/browser/browser-setup.tsx` が取り、vitest の `clearMocks` (既定で有効) が毎テストの前に消す。書き込み先の region が無ければ `readAnnouncements` が throw するので、届いていない通知では通らない
 - pending の検証は項目の状態 (行の静的テキスト、ボタンの `aria-disabled`) と announcer の通知で行う。`getByRole("status", { name })` で項目の pending を掴まない。項目に `role="status"` は付けていない (ADR-0026)
-- 同じ通知の経路を 2 つのテストで見ない。検索欄を持つ一覧では、ページのテストが debounce 後と無効化済みキャッシュの決着を、route の wrapper のテストが Enter と戻るを見る
+- 同じ通知の経路を 2 つのテストで見ない。検索欄を持つ一覧では、打鍵が止まって移る経路と Enter で移る経路を、別のテストが 1 経路ずつ見る
 
 ### assert の helper を書き、型を絞る
 

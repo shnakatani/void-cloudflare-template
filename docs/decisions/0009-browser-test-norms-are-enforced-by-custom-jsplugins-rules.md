@@ -48,7 +48,6 @@
 | 生 DOM を読む場所 (操作を挟んだか) の残りの形         | 実行時の履歴で決まり、式の構造で表せない。レビューで見る                                                                                                                                           |
 | 合成イベントを使わない                                | 合成イベントを送る helper を `src/test/` に置かないことで経路を持たない                                                                                                                            |
 | animation を無効にする既定                            | `src/test/browser/browser-setup.tsx` の setup が持ち、書き手が選ぶものではない                                                                                                                     |
-| route の wrapper のテストの置き方                     | 置き方の選択で、式の形に出ない。レビューで見る                                                                                                                                                     |
 | `expectAbsent` の肯定 anchor が同じ操作の効果を表すか | 構文で決まらない。直前の文が肯定 assert かどうかなら見られるが、違反が 0 件で守る対象が無い。要件は `no-bare-absence-assertion` の診断メッセージと `src/test/assert/absent.ts` の docstring に置く |
 | `expectAbsent` と `expectRemoved` のどちらが正しいか  | ルールが見るのは「名前を付けたか」で、「名前が正しいか」ではない。素で書けば必ずどちらかを選ぶ地点に立たされることだけを買う                                                                       |
 
