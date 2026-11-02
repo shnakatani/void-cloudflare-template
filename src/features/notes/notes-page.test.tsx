@@ -1,14 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { useRouter } from "@void/react";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
+import { render } from "vitest-browser-react";
 import { submitAction } from "void/pages-client";
 
 import {
   confirmDeleteButton,
   deleteConfirmDescription,
 } from "@/components/parts/delete-confirm-dialog.test-helpers";
+import { RouteAnnouncer } from "@/components/route-announcer";
 import { MUTATION_ERROR_FALLBACK_MESSAGE } from "@/lib/mutation-error";
+import { pageTitle } from "@/lib/page-title";
 import { expectNoA11yViolations } from "@/test/a11y/a11y";
 import { deferMock } from "@/test/app/defer-mock";
+import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 import { expectAbsent, expectRemoved } from "@/test/assert/absent";
 import { expectAnnouncements, readAnnouncements } from "@/test/assert/live-announcer";
 import { expectText, type Screen } from "@/test/assert/screen-assertions";
@@ -16,10 +21,15 @@ import { enableAnimations } from "@/test/browser/animations";
 import { parkMouse } from "@/test/browser/park-mouse";
 
 import { noteRow, rowDeleteButton } from "./note-cells.test-helpers";
-import { NOTES_RESULTS_ERROR_ANNOUNCEMENT, noteSearchResultMessage } from "./note-search";
+import {
+  NOTES_RESULTS_ERROR_ANNOUNCEMENT,
+  NOTES_RESULTS_ERROR_MESSAGE,
+  noteSearchResultMessage,
+} from "./note-search";
 import { noteSearchbox } from "./note-search-field.test-helpers";
+import { NotesPage } from "./notes-page";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
-import type { NoteView } from "./notes-page-data";
+import { notesDocumentTitle, type NotesPageData, type NoteView } from "./notes-page-data";
 import { NOTE_VIEW, OTHER_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
 import { noteEditUrl } from "./notes-url";
@@ -77,6 +87,52 @@ describe("NotesPage の一覧", () => {
     const { screen, router } = await renderNotesPage({ notes: null });
     await screen.getByRole("button", { name: "再試行" }).click();
     await expect.poll(() => router.refreshCount).toBe(1);
+  });
+
+  it("一覧を読めなかったら、ページ名の h1 を残して失敗の見出しを h2 で描く", async () => {
+    const { screen } = await renderNotesPage({ notes: null });
+    await expect
+      .element(screen.getByRole("heading", { level: 2, name: NOTES_RESULTS_ERROR_MESSAGE }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: NOTES_PAGE_TITLE }))
+      .toBeVisible();
+    await expect.element(screen.getByRole("heading", { level: 1 })).toHaveLength(1);
+  });
+
+  // 遷移の後の focus は、ページ名の h1 ではなく失敗の見出しへ移る (ADR-0049 の focusPageHeading)。
+  // 遷移の伝え方は root の layout の RouteAnnouncer が持つので、同じ組み合わせで描く
+  it("別のページから一覧へ移って一覧を読めなかったら、失敗の見出しへ focus を移し、「エラー: 」を付けた title を読み上げる", async () => {
+    const router = createFakeRouter("/");
+    const failed: NotesPageData = { q: "", notes: null, dialog: { kind: "closed" } };
+    function Harness() {
+      const { path } = useRouter();
+      return (
+        <>
+          {path === "/notes" ? <NotesPage {...failed} /> : <h1>ホーム</h1>}
+          <RouteAnnouncer />
+        </>
+      );
+    }
+    const screen = await render(
+      <VoidRouterProvider router={router}>
+        <Harness />
+      </VoidRouterProvider>,
+    );
+    await expect.element(screen.getByRole("heading", { name: "ホーム" })).toBeInTheDocument();
+    // Void は遷移の commit で head() の title を document.title に書く。偽の router は書かないので、遷移の前に置く
+    const previousTitle = document.title;
+    document.title = notesDocumentTitle(failed);
+    onTestFinished(() => {
+      document.title = previousTitle;
+    });
+
+    router.navigate("/notes");
+
+    await expect
+      .element(screen.getByRole("heading", { level: 2, name: NOTES_RESULTS_ERROR_MESSAGE }))
+      .toHaveFocus();
+    await expectAnnouncements([`エラー: ${pageTitle(NOTES_PAGE_TITLE)}`]);
   });
 
   it("押した行の編集のダイアログを読み込む間、その行の編集のリンクにだけ Spinner を出す", async () => {

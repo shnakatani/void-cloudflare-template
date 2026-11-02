@@ -2,7 +2,11 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { pageTitle } from "@/lib/page-title";
 
-import { NOTE_EDIT_DIALOG_TITLE, NOTES_PAGE_TITLE } from "./notes-page-constants";
+import {
+  NOTE_CREATE_DIALOG_TITLE,
+  NOTE_EDIT_DIALOG_TITLE,
+  NOTES_PAGE_TITLE,
+} from "./notes-page-constants";
 import { noteDialogKey, notesDocumentTitle, toNoteView } from "./notes-page-data";
 import { NOTE } from "./schema.test-helpers";
 
@@ -29,9 +33,20 @@ describe("ダイアログの key と title", () => {
   });
 
   it("閉じていれば一覧の title、編集なら編集の title", () => {
-    expect(notesDocumentTitle({ kind: "closed" })).toBe(pageTitle(NOTES_PAGE_TITLE));
-    expect(notesDocumentTitle({ kind: "edit", note: toNoteView(NOTE) })).toBe(
-      pageTitle(NOTE_EDIT_DIALOG_TITLE),
+    expect(notesDocumentTitle({ notes: [], dialog: { kind: "closed" } })).toBe(
+      pageTitle(NOTES_PAGE_TITLE),
+    );
+    expect(
+      notesDocumentTitle({ notes: [], dialog: { kind: "edit", note: toNoteView(NOTE) } }),
+    ).toBe(pageTitle(NOTE_EDIT_DIALOG_TITLE));
+  });
+
+  it("一覧を読めなかったら、閉じているときの title の前に「エラー: 」を付け、開いたダイアログの title には付けない", () => {
+    expect(notesDocumentTitle({ notes: null, dialog: { kind: "closed" } })).toBe(
+      `エラー: ${pageTitle(NOTES_PAGE_TITLE)}`,
+    );
+    expect(notesDocumentTitle({ notes: null, dialog: { kind: "create" } })).toBe(
+      pageTitle(NOTE_CREATE_DIALOG_TITLE),
     );
   });
 });

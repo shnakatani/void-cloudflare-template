@@ -19,7 +19,7 @@ export const loader = defineHandler((c) => loadNotesPage(db, requireAuth(c).id, 
 
 export type Props = InferProps<typeof loader>;
 
-export const head = defineHead<Props>((_c, props) => ({ title: notesDocumentTitle(props.dialog) }));
+export const head = defineHead<Props>((_c, props) => ({ title: notesDocumentTitle(props) }));
 
 /**
  * 保存のあと戻る一覧の絶対 URL。画面は action の URL にページの query を載せて送る (`usePageAction` の `pageQuery`)。

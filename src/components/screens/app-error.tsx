@@ -6,14 +6,13 @@ import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { ActionButton } from "@/components/action/button";
 import { FullScreenNotice } from "@/components/parts/centered-card";
 import { focusPageHeading } from "@/lib/focus-page-heading";
+import { errorPageTitle } from "@/lib/page-title";
 
 /**
  * 本文に出す固定の文言。原因ではなく次に取れる行動だけを伝える
  * (`lib/mutation-error.ts` の `MUTATION_ERROR_FALLBACK_MESSAGE` と対になる意匠)
  */
 export const APP_ERROR_MESSAGE = "ページを表示できませんでした。時間をおいて再試行してください。";
-
-const ERROR_TITLE_PREFIX = "エラー: ";
 
 /**
  * 全画面のエラー表示 (ADR-0050)。例外の文言は出さない。production の Void は server の例外の中身を client へ渡さず、
@@ -40,7 +39,7 @@ export function AppError({
 
   useEffect(() => {
     const pageTitle = document.title;
-    const errorTitle = `${ERROR_TITLE_PREFIX}${pageTitle}`;
+    const errorTitle = errorPageTitle(pageTitle);
     document.title = errorTitle;
     return () => {
       if (document.title === errorTitle) {

@@ -9,3 +9,11 @@ import { APP_NAME } from "./app-name";
 export function pageTitle(pageName: string): string {
   return `${pageName} — ${APP_NAME}`;
 }
+
+/**
+ * ページの中身を出せず、失敗を出しているときの `<title>`。前に「エラー: 」を付け、タブと遷移の読み上げ (ADR-0049) に
+ * 失敗を出す (ADR-0050)。loader が失敗を値で返すページは `head()` で、描画の失敗は全画面のエラー表示が付ける
+ */
+export function errorPageTitle(title: string): string {
+  return `エラー: ${title}`;
+}

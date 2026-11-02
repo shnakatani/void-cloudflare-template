@@ -1,6 +1,7 @@
 import { useRouter } from "@void/react";
 
 import { DataTable } from "@/components/parts/data-table";
+import { StatusHeading } from "@/components/parts/status-heading";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -75,13 +76,18 @@ export function NotesResults({
   );
 }
 
-/** loader が一覧を読めなかったときの区画。検索欄は区画の外に残る。再試行は loader を読み直す */
+/**
+ * loader が一覧を読めなかったときの区画。検索欄は区画の外に残る。再試行は loader を読み直す。
+ * 見出しは状態の見出し (h2) にし、遷移でこのページへ来たときの focus をページ名の h1 でなくここへ移す (ADR-0049)
+ */
 function NotesLoadFailed() {
   const router = useRouter();
   return (
     <Empty>
       <EmptyHeader>
-        <EmptyTitle>{NOTES_RESULTS_ERROR_MESSAGE}</EmptyTitle>
+        <EmptyTitle>
+          <StatusHeading title={NOTES_RESULTS_ERROR_MESSAGE} />
+        </EmptyTitle>
       </EmptyHeader>
       <EmptyContent>
         <Button
