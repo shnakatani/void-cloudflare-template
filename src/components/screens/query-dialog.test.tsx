@@ -12,8 +12,8 @@ import { enableAnimations } from "@/test/browser/animations";
 
 import { QueryDialog, StatusDialogContent, type PendingQueryDialog } from "./query-dialog";
 
-// 読み込み中を出すまでの待ちを縮める。待ちの長さはこのファイルでは測らない
-vi.mock(import("@/lib/pending-display"), () => ({ PENDING_DISPLAY_DELAY_MS: 0 }));
+// 読み込み中を出すまでの待ちを縮める (`src/lib/__mocks__/pending-display.ts`)
+vi.mock(import("@/lib/pending-display"));
 
 type Item = { readonly id: string };
 

@@ -42,8 +42,8 @@ vi.mock(import("void/pages-client"), async (importOriginal) => ({
   ...(await importOriginal()),
   submitAction: vi.fn(),
 }));
-// 読み込み中のダイアログを出すまでの待ちを縮める。待ちの長さは `QueryDialog` の側の値で、このファイルでは測らない
-vi.mock(import("@/lib/pending-display"), () => ({ PENDING_DISPLAY_DELAY_MS: 0 }));
+// 読み込み中を出すまでの待ちを縮める (`src/lib/__mocks__/pending-display.ts`)
+vi.mock(import("@/lib/pending-display"));
 
 const CREATE_ACTION_URL = "/notes?create";
 

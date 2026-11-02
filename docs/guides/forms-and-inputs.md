@@ -129,7 +129,7 @@ ADR-0056 に沿って、一覧のページの query で開く追加と編集の�
   - 閉じる操作で閉じたら、開いた元のリンクへ focus が戻る (無ければページの見出しへ)
   - 保存したら、開いた元のリンクへ focus が戻る
   - 別のダイアログに替わったとき (別の値の URL へ、追加と編集の行き来、読み込み中から本物へ)、開いた元のリンクが focus を受けない
-- 読み込み中を出すまでの待ちは `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`) が持つ。読み込み中を確かめるテストは、`vi.mock(import("@/lib/pending-display"), () => ({ PENDING_DISPLAY_DELAY_MS: 0 }))` で縮め、テストごとに待ちの分だけ遅くしない
+- 読み込み中を出すまでの待ちは `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`) が持つ。読み込み中を確かめるテストは、`vi.mock(import("@/lib/pending-display"))` (`src/lib/__mocks__/pending-display.ts`) で 0 に縮め、テストごとに待ちの分だけ遅くしない
 - `finalFocus` からリンクを返さない。Base UI は `finalFocus` を、閉じたのか別のダイアログに替わったのかが分かる前に呼ぶ。返したリンクは替わるときにも focus を受ける。`finalFocusToOpener` は Base UI に `false` を返し、commit の後に開いているダイアログが無いときだけ移す (ADR-0056)
 - 替わったときに開いた元のリンクが受ける focus は、すぐに替わる側の入力欄へ移るので、`toHaveFocus` の retry では捉えられない。替わる前に `recordFocusins` (`src/test/assert/focusin.ts`) で記録を始め、替わる側の入力欄の `toHaveFocus` を待ってから、記録に開いた元のリンクが無いことを見る。ダイアログが開いている間は背後の要素が `aria-hidden` になり、`getByRole` は既定で引かないので、記録の要素は可視の文字か `aria-label` で見分ける
 
