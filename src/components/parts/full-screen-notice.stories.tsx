@@ -1,24 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
+import { Button } from "@/components/ui/button";
 
-import { ButtonLink } from "./button-link";
 import { FullScreenNotice } from "./centered-card";
 
 const meta = {
   component: FullScreenNotice,
   args: {
-    title: "ページが見つかりません",
-    description: "お探しのページは存在しないか、移動された可能性があります。",
-    children: <ButtonLink href="/">ホームへ戻る</ButtonLink>,
+    title: "エラーが発生しました",
+    description: "ページを表示できませんでした。時間をおいて再試行してください。",
+    children: <Button className="w-full">再試行</Button>,
   },
-  decorators: [
-    (Story) => (
-      <VoidRouterProvider router={createFakeRouter("/")}>
-        <Story />
-      </VoidRouterProvider>
-    ),
-  ],
 } satisfies Meta<typeof FullScreenNotice>;
 
 export default meta;
