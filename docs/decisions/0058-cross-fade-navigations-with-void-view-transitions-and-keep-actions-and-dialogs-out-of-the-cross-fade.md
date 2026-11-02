@@ -14,7 +14,7 @@ Void は `voidReact({ viewTransitions: true })` で、遷移を `document.startV
 | Void 1.4.0 のソース `packages/react/src/runtime/pages-client.ts`   | 遷移ごとに `options.viewTransition ?? viewTransitions` で決める。shell (loader の値) が届いてから `startViewTransition` を呼び、更新の callback は新しい props の commit まで待つ。返った `ViewTransition` は使わない。`types` を渡す口は無い |
 | Void 1.4.0 のソース `packages/void/src/pages/client.ts`            | page の action の送信 (`submitAction`) と `router.refresh()` も `router.visit()` を通るので、上の判定に乗る                                                                                                                                   |
 | Void 1.4.0 のソース `packages/void/src/pages/navigation-engine.ts` | 戻る・進むは Void 自身の `popstate` の listener が決まった options で visit を始める。遷移ごとに View Transition を切る口は無い                                                                                                               |
-| WCAG 2.3.3 (Understanding 2.3.3)                                   | motion animation は "does not include changes of color, blurring, or opacity which do not change the perceived size, shape, or position"。クロスフェードは opacity の変化である                                                               |
+| WCAG 2.3.3 (Understanding 2.3.3)                                   | motion animation は "does not include changes of color, blurring, or opacity which do not change the perceived size, shape, or position"。WCAG 2.2 の errata (2025-06-27) で、ぼかしは除外から外れた。クロスフェードは opacity の変化である   |
 | CSS View Transitions Level 1                                       | 擬似要素は accessibility tree に出ない。旧画面の snapshot は静止画である                                                                                                                                                                      |
 
 2026-11-02 に Void 1.5.0 の `@void/react` の `dist/runtime/pages-client.mjs` と同梱の docs を読み、上の 3 つのソースの挙動が同じであることを確かめた。`gh search issues` / `gh search prs` (`--repo voidzero-dev/void`、語は `view transition`・`viewTransition`・`hasUAVisualTransition`・`startViewTransition`・`transition types`・`popstate transition`) では、遷移ごとの type や戻る・進むの判定を足す issue と PR は見つからなかった。
@@ -33,11 +33,11 @@ Void は `voidReact({ viewTransitions: true })` で、遷移を `document.startV
 
 前の View Transition が始まりきる前に次の遷移が始まると、`AbortError: Transition was skipped. New ViewTransition started` が unhandled rejection になった。Void は返った `ViewTransition` を使わないので、`ready` の reject を誰も拾わない。次の表は、`startViewTransition` を包まず、`ready` も読まずに、`unhandledrejection` と Playwright の `pageerror` を数えた (同日、同じ Chromium)。
 
-| 操作                                                         | 繰り返し | unhandled rejection          |
-| ------------------------------------------------------------ | -------- | ---------------------------- |
-| Enter で確定する検索を 3 回続ける (間を 0・10・20・30・40ms) | 5 回     | 0ms と 20ms の 2 回で各 2 件 |
-| 編集のリンクのあと、0・15・30・45・60ms で戻る               | 5 回     | 0 件                         |
-| `startViewTransition` を続けて 2 回呼ぶ                      | 1 回     | 2 件                         |
+| 操作                                                               | 繰り返し | unhandled rejection          |
+| ------------------------------------------------------------------ | -------- | ---------------------------- |
+| Enter で確定する検索を 3 回続ける (間を 0・10・20・30・40ms)       | 5 回     | 0ms と 20ms の 2 回で各 2 件 |
+| 一覧の上のダイアログを開くリンクのあと、0・15・30・45・60ms で戻る | 5 回     | 0 件                         |
+| `startViewTransition` を続けて 2 回呼ぶ                            | 1 回     | 2 件                         |
 
 ## Decision
 
@@ -89,7 +89,8 @@ Safari のスワイプのように、ブラウザが自分で遷移のアニメ�
 
 - 一覧の上のダイアログを戻る・進むで閉じると、Popup は Base UI の閉じ方で消えるが、Overlay は root のクロスフェードで 250ms かけて薄れる。戻る・進むの遷移の `viewTransition` を Void の外から変える口が無い (Context の表)。閉じる操作は `viewTransition: false` で、Popup も Overlay も Base UI の閉じ方になる (ADR-0056)
 - Popup を切り出す `match-element` は Chrome 137、Safari 18.4、Firefox 144 から。対応しないブラウザでは Popup が root のクロスフェードに入り、閉じる遷移で旧画面の Popup が 250ms かけて薄れる
-- 戻る・進むの読み込みの間に `pointerdown` か `keydown` が来ると、属性が先に外れ、ブラウザの遷移と View Transition が二重に動く。新しい操作が来ない限り、属性は次の遷移まで残らない
+- 戻る・進むの読み込みの間に `pointerdown` か `keydown` が来ると、属性が先に外れ、ブラウザの遷移と View Transition が二重に動く
+- 属性は次の `pointerdown`・`keydown`・`popstate` まで残る。それらを伴わずに始まる遷移 (タイマーから始める `router.visit()`、`pointerdown` と `keydown` を出さない支援技術の操作) は、属性が残っていればクロスフェードしない
 - 検索の visit も、打鍵が止まって URL が変わるたびにクロスフェードになる (ADR-0057)
 - `prefers-reduced-motion: reduce` でもクロスフェードは止まらない (2026-11-02、dev で `reducedMotion: "reduce"` を偽装して、root の animation が 250ms のままだった)。クロスフェードは opacity の変化で、WCAG 2.3.3 の motion animation に当たらない。ダイアログの開閉は registry の部品の閉じ方のままで、reduced motion の扱いも registry の部品に従う
 - 遷移が続けて始まると、飛ばされた View Transition の `AbortError` が unhandled rejection になる (Context の実測)。遷移は完了し、`src/` には `unhandledrejection` を受ける処理が無いので、本番では console に出るだけである。ブラウザテストは偽の router で描き、Void の View Transition を始めないので、テストの設定で `AbortError` を外す処理は持たない。テストで View Transition を自分で始めるときは、前の遷移の `finished` を待ってから次を始める
@@ -103,7 +104,7 @@ Safari のスワイプのように、ブラウザが自分で遷移のアニメ�
 
 - Void docs「View Transitions」: `node_modules/void/docs/guide/pages-routing/view-transitions.md`
 - Void 1.4.0 のソース: `packages/react/src/runtime/pages-client.ts` (`startViewTransition`)、`packages/void/src/pages/client.ts` (`submitAction`、`refreshPage`)、`packages/void/src/pages/navigation-engine.ts` (`popstate` の listener)
-- WCAG 2.3.3 の motion animation の定義 (Understanding 2.3.3): https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html
+- WCAG 2.3.3 の motion animation の定義と errata (Understanding 2.3.3): https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html
 - 擬似要素と accessibility tree、`ready` が reject する条件 (CSS View Transitions Level 1): https://www.w3.org/TR/css-view-transitions-1/
 - `view-transition-name: match-element` と `view-transition-class` (CSS View Transitions Level 2): https://www.w3.org/TR/css-view-transitions-2/
 - 戻る・進むでブラウザが遷移のアニメーションを出したかを返す `hasUAVisualTransition` (MDN「PopStateEvent: hasUAVisualTransition」): https://developer.mozilla.org/en-US/docs/Web/API/PopStateEvent/hasUAVisualTransition
