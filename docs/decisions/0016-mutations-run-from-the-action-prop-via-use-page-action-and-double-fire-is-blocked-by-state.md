@@ -6,7 +6,7 @@
 
 ## Context
 
-mutation は、page の action (`.server.ts` の `action` / `actions`) を呼んでサーバーへ書き込む操作を指す。Void の client は `action()` (`@void/react`) で page の action を呼ぶ。
+mutation は、page の action (`.server.ts` の `action` / `actions`) を呼んでサーバーへ書き込む操作を指す。Void の client は `action()` (`@void/react`) で page の action を呼ぶ。`action()` は中で `submitAction` (`void/pages-client`) を呼び、決着も失敗の分かれ方も `submitAction` が決める (`packages/void/src/pages/client.ts` の `createActionClient`。v1.4.0 のソースで確認)。
 
 ### 制約: `action()` の失敗は 2 つの経路に分かれる
 
@@ -45,13 +45,15 @@ Error Boundary は画面ごと差し替わる。`action()` の throw を Action 
 
 `AbortError` は、後から始めた visit が commit 前の visit を abort した結果である (ADR-0017「前提となる仕様」)。部品が消えた後の reject が消えるのは、投げる先の部品が無いためと推論している (react.dev は unmount のときを書いていない)。
 
-### 制約: Action の中の `await action()` は Void 1.4.0 では patch で決着する
+### 制約: Action の中の送信は `_resolveOnShell` を付けて決着させる
 
-Void 1.4.0 の `action()` は、Action の中で await すると決着しない。patch で上流の修正を当てている (ADR-0015「`action()` は shell の到着で resolve する」)。
+- Void 1.4.0 の `action()` は、Action の中で await すると決着しない。`_resolveOnShell` を付けた送信は shell の到着で決着する (ADR-0015「`action()` は shell の到着で resolve する」)
+- `action()` の options (`ActionOptions`) は `data`・`method`・`params` だけで、`preserveScroll` を渡せない (2026-11-02、Void 1.4.0 の `dist/pages/client.d.mts` と、main の 541b508 の `packages/void/src/pages/client.ts`)。Void は `preserveScroll` の無い commit で先頭へ scroll するので、同じページに残る action のあとに画面が先頭へ戻る (Void docs「Scroll Restoration」の New navigation)
+- そのため `usePageAction` は `action()` を通さず、`submitAction` に `method`・`data`・`preserveScroll`・`_resolveOnShell: true` を渡す。`@void/react` 1.4.0 の `useForm` と同じ呼び方である (`packages/react/src/runtime/use-form.ts`)。redirect はブラウザが同じ visit の中で辿るので、渡した `preserveScroll` は redirect 先の commit に効く (`packages/void/src/pages/navigation-engine.ts` の `loadNavigationShell`。v1.4.0 のソースで確認)
 
-### 制約: `usePageAction` が使う `void/pages-client` の 2 つの export は docs に無い
+### 制約: `usePageAction` が使う `void/pages-client` の 4 つの export は docs に無い
 
-`getValidationErrors` と `isAbortError` (`void/pages-client`) は `node_modules/void/docs/reference/api.md`「User-Facing Imports」に載らない。`@void/react` の adapter が使う内部用で、`void/package.json` の exports には出ている (2026-11-02、Void 1.4.0)。Void を上げたら確かめる。消えたら、`VoidActionError.body` を自前で読む形と `error.name === "AbortError"` の判定に戻す。
+`getValidationErrors`・`isAbortError`・`submitAction`・`interpolateRouteParams` (`void/pages-client`) は `node_modules/void/docs/` のどこにも載らない。`@void/react` の adapter が使う内部用で、`void/pages-client` の型 (`dist/pages/client.d.mts`) には出ている (2026-11-02、Void 1.4.0)。Void を上げたら確かめる。`getValidationErrors` と `isAbortError` が消えたら、`VoidActionError.body` を自前で読む形と `error.name === "AbortError"` の判定に戻す。`submitAction` が消えたら、`action()` に戻して `preserveScroll` を渡す口を探し直す。
 
 ### 制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない
 

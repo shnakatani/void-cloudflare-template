@@ -53,19 +53,22 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 
 ## Consequences
 
-- 保存のあとの redirect は履歴を積む。保存のあとブラウザの戻るを押すと、ダイアログがもう一度開く (2026-11-02 に dev で確認)。Void 1.4.0 の `action()` の options (`node_modules/void/dist/pages/client.d.mts` の `ActionOptions`) は `data`・`method`・`params` だけで、履歴を置き換える口が無い
+- 保存のあとの redirect は履歴を積む。保存のあとブラウザの戻るを押すと、ダイアログがもう一度開く (2026-11-02 に dev で確認)。`usePageAction` は `submitAction` に `replace` を渡していない (ADR-0016「制約: Action の中の送信は `_resolveOnShell` を付けて決着させる」)
+- 開くリンク、閉じる遷移、保存と削除の action は、どれも `preserveScroll` を渡して一覧の scroll の位置を保つ。Void は `preserveScroll` の無い遷移で先頭へ scroll し (Void docs「Scroll Restoration」)、一覧を下まで送ってから開閉・保存・削除すると、開いた元のリンクや次の行へ戻した focus が画面の外に出た (2026-11-02、dev、30 行、1280×720)。scroll の位置は Void の遷移が動かすので、偽の router で描くブラウザテスト (ADR-0048) では測れない。テストは visit と送信に `preserveScroll` が渡ることを見る
 - 開閉のたびに一覧も読み直す。loader が 1 つなので、ダイアログの値だけを読む経路は無い
 - 開くと、ページが読み上げる title と、focus がダイアログの中へ移ったときのダイアログの名前の 2 回を読む見込みである (推論。スクリーンリーダーでは確かめていない)
 - 一覧の中で開閉するあいだ、見出しへの focus は 0 回だった (2026-11-02、dev)。遷移の読み上げの部品は query だけの変化に反応しないので当たらない。別のページから `<一覧>?new` へ移る経路は path が変わるので、部品が見出しへ focus を移してからダイアログが focus を取る形になる見込みである (推論。測っていない)
 - path の遷移でダイアログを開くページを足すと、Base UI 1.9.0 の Popup が `aria-modal` を付けない間は、遷移の読み上げの部品が開いたダイアログを見落とし、開くときに見出しへ focus を移す (Context の実測)
 - 再評価条件
   - path の URL (`<一覧>/<id>/edit`) が要件になったら、(ii) を比べ直す
-  - Void の `action()` が履歴を置き換える口を持ったら、保存のあとの履歴の積み方を決め直す
+  - 保存のあとの履歴を置き換えるなら、`usePageAction` に `replace` を足して、保存のあとの履歴の積み方を決め直す
+  - Void の `action()` が `preserveScroll` を受けるようになったら、`usePageAction` を `action()` に戻せるかを確かめる
 
 ## 出典
 
 - Void docs「Layouts & Shared Data」: `node_modules/void/docs/guide/pages-routing/layouts.md`
 - Void docs「Pages API」: `node_modules/void/docs/reference/api/pages.md`
+- Void docs「Scroll Restoration」: `node_modules/void/docs/guide/pages-routing/overview.md`
 - Void docs「Actions & Forms」の Named Actions: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
 - Void 1.4.0 のソース: `packages/void/src/pages/scan.ts` (`scanPages`)、`packages/void/src/pages/action-key.ts`
 - voidzero-dev/void#648 (相対の redirect が要求の query を混ぜる)

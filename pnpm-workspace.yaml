@@ -101,7 +101,7 @@ patchedDependencies:
   # v2 の alpha は change と blur の両方で消すので、上げても直らないことがある。当たらなければ作り直し、作れなければ
   # 欄を離れてもエラーを残す仕組みを選び直す。逆向きが当たると静かに通る (「patch のキーをパッケージ名だけにする理由」)
   # 確かめ方: use-page-action.test.tsx の「入力を変えずに欄を離れても残る」と「入力を変えずにもう一度送れる」。
-  # action() を mock しても form-core は本物なので、vp run verify で捕まえる
+  # 送信 (submitAction) を mock しても form-core は本物なので、vp run verify で捕まえる
   "@tanstack/form-core": patches/@tanstack__form-core.patch
   "@void/react": patches/@void__react.patch
   void: patches/void.patch

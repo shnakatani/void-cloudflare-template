@@ -43,9 +43,10 @@ Void の React の adapter は、page の props を React の state で持ち、
 そのため Action の中で `await action()` すると、Action は `action()` を、`action()` は commit を、commit は Action の終わりを待ち、決着しない。
 patch を当てない 1.4.0 で、`ActionButton` の Action の `await run()` は 12 秒待っても resolve せず、props も入れ替わらなかった (2026-11-02 に dev で確認)。
 上流は voidzero-dev/void#643 を受けて main の commit 5fd23eb で直し、React の `action()` を shell の到着で resolve する形にした (`createActionClient({ _resolveOnShell: true })`)。
-テンプレートは同じ変更を `patches/void.patch` と `patches/@void__react.patch` で 1.4.0 の dist に当てている (`pnpm-workspace.yaml` の `patchedDependencies`)。
+`action()` は、受けた値に `_resolveOnShell` を足して `submitAction` (`void/pages-client`) に渡すだけである。`@void/react` 1.4.0 の `useForm` は、同じ値を `submitAction` に直に渡している (`packages/react/src/runtime/use-form.ts`)。
+`usePageAction` も `submitAction` に `_resolveOnShell: true` を直に渡す (ADR-0016「制約: Action の中の送信は `_resolveOnShell` を付けて決着させる」)。
 
-patch を当てた状態で、2 秒待つ action を `ActionButton` の Action から送ると、次の順に決着した (2026-11-02、dev、30 ms ごとの標本、react 19.3.1)。
+`_resolveOnShell` を付けて、2 秒待つ action を `ActionButton` の Action から送ると、次の順に決着した (2026-11-02、dev、30 ms ごとの標本、react 19.3.1。`action()` に 5fd23eb の変更を当てて測った)。
 
 | 時点 (送信の開始から) | 起きたこと                                       |
 | --------------------- | ------------------------------------------------ |
@@ -113,7 +114,7 @@ page の props の入れ替わりは Transition の中なので対象になり�
 - pending の源が Transition の `isPending` に一本化される。項目の busy は `useOptimistic` の値から描く
 - Transition 化で得るのは pending の自動管理、部品契約の統一、pending の切り替えと props の入れ替わりを `<ViewTransition>` で装飾できること (推論) の 3 つ。Action の実行順は Transition が保証しない (`useTransition` リファレンスの Troubleshooting「My state updates in Transitions are out of order」)。順序を保つのは `useActionState` と `<form>` の action である (同)
 - props が Transition の外で入れ替わる設定 (`navigationFallback`) を入れると、楽観値と新しい props が別の描画になりうる。入れるときはこの ADR を決め直す
-- Action の中で `await run()` が決着するのは patch に依っている。patch を外したら (5fd23eb を含む版に上げたとき)、`ActionButton` の Action で `run` を await し、pending が解けて props が入れ替わることを dev で確かめる。`src/hooks/use-page-action.test.tsx` は `action()` を mock するので、`vp run verify` はこの決着を確かめない
+- Action の中で `await run()` が決着するのは、`usePageAction` が渡す `_resolveOnShell` に依っている。`VisitOptions` の `@internal` の option なので、Void を上げたら、`ActionButton` の Action で `run` を await し、pending が解けて props が入れ替わることを dev で確かめる。名前が型から消えれば `vp check` が落ちるが、`src/hooks/use-page-action.test.tsx` は `submitAction` を mock するので、名前を保って意味が変わったときは `vp run verify` が捕まえない
 - 再評価条件: Void か React を上げて、`action()` が resolve する時点や、props を入れ替える Transition が Action の終わりを待つかが変わったら、楽観表示の reducer の前提と ADR-0017 の完了点を確かめ直す
 
 ## 出典
