@@ -6,7 +6,7 @@
 
 ## Context
 
-一覧のテーブルを、列見出しの配列と各行の `TableCell` に分けて書くと、見出しとセルの対応を型が結ばない。列を足すときに片方だけ書き忘れても検査で落ちない。保存中の楽観行 (ADR-0017) を確定行とは別に手書きの `TableRow` で描くと、同じ列構造を 2 箇所で維持することにもなる。
+一覧のテーブルを、列見出しの配列と各行の `TableCell` に分けて書くと、見出しとセルの対応を型が結ばない。列を足すときに片方だけ書き忘れても検査で落ちない。保存中の楽観行 (ADR-0015) を確定行とは別に手書きの `TableRow` で描くと、同じ列構造を 2 箇所で維持することにもなる。
 
 | 出典                                                                                 | 内容                                                                                                                                                                                                                                                                                                                               |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -14,22 +14,21 @@
 | TanStack Table v9 (9.2.4、2026-08-28 公開)                                           | `useReactTable` ではなく `tableFeatures({...})` + `useTable({ features, columns, data })`。row model は feature として明示登録する。`FlexRender` は table インスタンスのメソッドか standalone                                                                                                                                      |
 | 同梱の agent skill (`@tanstack/react-table` / `@tanstack/table-core`)                | `getting-started`、`table-state`、`core`、`table-features` 等が `node_modules/<package>/skills/` に入り、連携や型推論 (`with-tanstack-query`、`create-table-hook`、`typescript`) は各 skill の `references/` に入る (9.2.6)。devtools は `@tanstack/react-table-devtools#devtools`。`vp dlx @tanstack/intent@latest list` で見える |
 | docs「Helpers」と `core` skill の reference `typescript`                             | `createColumnHelper<typeof features, TData>()` と `helper.columns([...])` が accessor ごとの値の型を保つ。`ColumnDef[]` の注釈で広げない。meta は `metaHelper` で table 単位に型付けし、`declare module` で全体に merge しない                                                                                                     |
-| docs「React Compiler」                                                               | compiler があれば `useMemo` は不要。data と columns の参照が変わると row / column model を作り直すので、columns は module スコープに置き、data は query の参照をそのまま使う                                                                                                                                                       |
+| docs「React Compiler」                                                               | compiler があれば `useMemo` は不要。data と columns の参照が変わると row / column model を作り直すので、columns は module スコープに置き、data は loader の props の参照をそのまま使う                                                                                                                                             |
 | docs「Table and Column Meta」                                                        | cell に関数や状態を渡す経路は `table.options.meta` (editable の `updateData` が例)                                                                                                                                                                                                                                                 |
-| reference `with-tanstack-query`                                                      | query の結果を `data` に直接渡す。query の行を state に写すのは誤り (キャッシュに遅れる同期経路が増える)                                                                                                                                                                                                                           |
-| TanStack/table#5670 (2024-07)                                                        | 「削除後に UI が更新されない」への回答は「React Query の optimistic updates の例に従え」。楽観表示は Table ではなく Query 側の関心事                                                                                                                                                                                               |
+| reference `with-tanstack-query`                                                      | 取得した行を `data` に直接渡す。行を state に写すのは誤り (取得元に遅れる同期経路が増える)。このテンプレートの取得元は loader の props (ADR-0063)                                                                                                                                                                                  |
+| TanStack/table#5670 (2024-07)                                                        | 「削除後に UI が更新されない」への回答は「React Query の optimistic updates の例に従え」。楽観表示は Table ではなく、データを取得して組み立てる側の関心事                                                                                                                                                                          |
 | docs (auto reset)                                                                    | v9 は sorting を既定で保持し、`autoResetPageIndex` は data が変わるとページを戻す (無効化可)。選択状態は行が消えても自動では掃除されない                                                                                                                                                                                           |
-| TanStack DB                                                                          | Query の collection に楽観状態を overlay し、失敗で自動 rollback、`useLiveQuery` で読む層。楽観的更新を前提にした TanStack 側の答え                                                                                                                                                                                                |
 | vitest browser の locator (`@vitest/browser` 4.1.11) / WAI「Tables with one header」 | `<th>` は `scope="col"` があるときだけ `columnheader` に解決される (暗黙の role は見ない)。WAI のチュートリアルも見出しセルに `scope` を勧める                                                                                                                                                                                     |
 
 ## Decision
 
-**一覧テーブルは TanStack Table v9 の列定義 (`createColumnHelper`) を SSOT にし、shadcn「Data Table」と同じ構成の `DataTable` 部品 (`src/components/parts/data-table.tsx`) が registry の `Table` に `FlexRender` で描く。楽観表示の設計は ADR-0017 のままで、data 配列を組み立てる側に閉じる。**
+**一覧テーブルは TanStack Table v9 の列定義 (`createColumnHelper`) を SSOT にし、shadcn「Data Table」と同じ構成の `DataTable` 部品 (`src/components/parts/data-table.tsx`) が registry の `Table` に `FlexRender` で描く。楽観表示の設計は ADR-0015 のままで、data 配列を組み立てる側に閉じる。**
 
 | 対象             | 形                                                                                                                                                                                                                                                                                                                                                                   |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DataTable` 部品 | `src/components/parts/data-table.tsx` (registry ではない自作の共有部品の置き場)。`columns` / `data` / `tableKey` / `getRowId` / `rowProps` / `emptyText` を受け、`useTable` と `FlexRender`、見出しの `scope="col"`、dev だけの devtools 登録、空行を持つ。features は `src/components/parts/data-table-features.ts` (shadcn の `data-table-features.ts` と同じ役割) |
-| 楽観的更新       | Table は機構を持たない。variables 方式 (ADR-0017) は data の組み立てで、キャッシュ書き換え方式はキャッシュ配列で、どちらも Table 側は変わらない。楽観的更新を扱う画面が増えたら TanStack DB への寄せ替えを ADR-0017 の再評価で扱う                                                                                                                                   |
+| 楽観的更新       | Table は機構を持たない。loader の props を元に `useOptimistic` で組んだ配列 (ADR-0015) を `data` に渡すだけで、Table 側は変わらない                                                                                                                                                                                                                                  |
 
 列定義の置き場、型、行の型、data の組み立て、描画、features、cell への関数、devtools、skill の組み方は `docs/guides/lists-and-search.md`「一覧テーブルを組む」にある。
 
@@ -42,14 +41,14 @@
 | 現状維持 (見出し配列とセルを別々に書く)        | 列を足すときに片方だけ書き忘れても検査で落ちない。楽観行の列構造が 2 箇所                                                                                                                                                                                       | 却下     |
 | shadcn の `DataTable` 部品を持つ               | 描画の骨組み (`FlexRender`、`scope="col"`、devtools、空行) が 1 箇所に集まり、ページは列定義と data を渡すだけになる。置き場は registry ではない自作部品の `src/components/parts/` (ADR-0020 で `components/ui/` は registry 専用、ADR-0011 で `parts/` に分離) | **採用** |
 | `createTableHook` で app 共通の factory を作る | 同梱 skill `getting-started` の reference `create-table-hook` が「Keep one-off tables on `useTable`」と書く。2 つ目の table で共通の規約が要るようになったら再評価                                                                                              | 再評価   |
-| TanStack DB で楽観状態ごと置き換える           | 楽観的更新を扱う画面が 1 つのうちは ADR-0017 の variables 方式で足りる。Query の collection 化は画面横断の変更になる                                                                                                                                            | 再評価   |
+| TanStack DB で楽観状態ごと置き換える           | client にサーバの状態の写しを持つ層になる。ページのデータは loader の props だけで読む (ADR-0063)                                                                                                                                                               | 却下     |
 
 ## Consequences
 
 - 依存に `@tanstack/react-table` が入る (ADR-0005 の待機 3 日は経過)。`@tanstack/table-core` と `@tanstack/react-store` が同梱で入る
 - 開発の依存に `@tanstack/react-table-devtools` が入る。本番の build には入らない (`DataTable` の登録は dev だけで読み、panel は Vite の plugin が外す。ADR-0062) ので、TanStack Devtools の docs「Production」の dev だけで使う場合の置き場 (dev dependency) に従う
 - features に置くかの基準は `docs/guides/placement.md`「features か lib・hooks か」にある
-- 再評価条件: 2 つ目の一覧画面が出たとき (`createTableHook` の factory)、sorting / pagination を足すとき (`autoResetPageIndex`)、楽観的更新を扱う画面が増えたとき (TanStack DB)
+- 再評価条件: 2 つ目の一覧画面が出たとき (`createTableHook` の factory)、sorting / pagination を足すとき (`autoResetPageIndex`)
 
 ## 出典
 

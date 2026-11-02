@@ -1,15 +1,16 @@
-# 認証
+# 認証と認可
 
-ページを守る、`routes/` に書き込みの handler を足す、user を読む、Better Auth の client から送る、auth の設定を変える、preview に secret を渡す手順と、その形にしている理由を持つ。
+ページを守る、`routes/` に書き込みの handler を足す、user を読む、認可を足す、Better Auth の client から送る、auth の設定を変える、preview に secret を渡す手順と、その形にしている理由を持つ。
 
-| 決定                                                                                                                                | ADR      |
-| ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                      | ADR-0016 |
-| tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ            | ADR-0047 |
-| Void のページの context に依存する部品は、export された router・navigation・shared の context を通して story とブラウザテストで描く | ADR-0048 |
-| 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                                         | ADR-0053 |
-| ページの path は定数と URL を組む関数に 1 か所で持ち、Link・visit・redirect にはそれを渡す                                          | ADR-0059 |
-| 別の origin からの書き込みは Void の判定に任せ、routes/ の書き込みの handler は user を読んでから書く                               | ADR-0060 |
+| 決定                                                                                                                                                       | ADR      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                                             | ADR-0016 |
+| tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ                                   | ADR-0047 |
+| Void のページの context に依存する部品は、export された router・navigation・shared の context を通して story とブラウザテストで描く                        | ADR-0048 |
+| 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                                                                | ADR-0053 |
+| ページの path は定数と URL を組む関数に 1 か所で持ち、Link・visit・redirect にはそれを渡す                                                                 | ADR-0059 |
+| 別の origin からの書き込みは Void の判定に任せ、routes/ の書き込みの handler は user を読んでから書く                                                      | ADR-0060 |
+| 認可は、行の所有を query の関数の `userId` の条件で、それ以外の条件を loader・action と routes/ の handler の先頭で判定し、global の middleware に載せない | ADR-0065 |
 
 ## how-to
 
@@ -46,6 +47,26 @@
 - 画面に出す項目を足すときは、`src/features/auth/shared.ts` の `SharedUser` と、`middleware/01.auth.ts` の詰め替えの両方に足す。`Date` の項目はそのまま入れず、文字列か数値にする。page data の JSON を通ると browser で文字列になり、型と食い違う (voidzero-dev/void#606)
 - story とブラウザテストでは、`VoidRouterProvider` に `shared` を渡す。渡さないと `useShared()` が throw する (ADR-0048)
 - `shared` を入れるのは middleware だけで、middleware を通らずに描かれたページでは `pages/layout.tsx` が描画の先頭で throw し、受ける境界が無い (ADR-0053)。middleware の外で描かれるページ (prerender するページ) を足すときは、layout の読み方を先に直す
+
+### 認可を足す
+
+認可は、行の所有と、それ以外の条件 (ロール、user の状態) の 2 つの層で判定する (ADR-0065)。
+
+1. 所有は query の関数が判定する。query の関数は `db` と `userId` を引数で受け、読み出し・更新・削除の `where` を `userId` に絞る (`docs/guides/database.md`「query を書く」)。loader と action は `requireAuth(c).id` を渡す。別の user の行は見つからないものとして扱われ、loader は「見つからない」の値で返す (ADR-0057)
+2. ロールが要るなら、ルートの `auth.ts` の `defineAuth` に Better Auth の `admin()` plugin を足す ([Better Auth docs「Admin」][] の `defaultRole`・`adminRoles`)。auth の table が変わるので、`docs/guides/database.md`「auth の設定を変える」の手順で migration を生成する。`requireAuth(c)` が返す `AuthUser` に `role` が入る ([Void docs「Auth API」][] の `AuthUser`)
+3. ロールの判定は、`src/features/auth/` に user を受けて boolean を返す純粋関数で書き、単体テストを付ける。`role` はコンマ区切りの文字列なので、分割して比べる ([Better Auth docs「Admin」][])
+4. page の loader・action と `routes/` の handler の先頭で、`requireAuth(c)` で読んだ user をその関数に渡す。外れたときの返し方は次の表
+
+| 場所                 | 判定が外れたとき                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| page の loader       | 権限が無いことを表す値を返し、ページがその説明を描く。URL が指す対象の存在を隠すなら `return c.notFound()` (ADR-0050) |
+| page の action       | `throw new HTTPException(403, { message })`。`usePageAction` の `run` が toast に出す (ADR-0016)                      |
+| `routes/` の handler | `throw new HTTPException(403, { message })`                                                                           |
+
+- loader で `HTTPException(403)` を throw しない。応答が `text/plain` の 403 になり、ページも説明も描かれない (ADR-0055)
+- global の middleware にロールの判定を載せない。path のサブツリーをまるごと 1 つのロールに閉じるときだけ、`src/features/auth/access.ts` の区分を足して redirect し、それでも loader・action・handler の先頭の判定は外さない (ADR-0065)
+- 画面の出し分けに使うなら、`SharedUser` と `middleware/01.auth.ts` の詰め替えに `role` を足す (「全ページで user を読む」)。出し分けは見せ方であって判定ではない
+- 所有は query のテストで、別の user の `userId` を渡して行が返らないことを確かめる (「テストで D1 を使う」)。経路 (loader・action・handler が判定を呼ぶこと) は、build した成果物を preview で叩いて確かめる (ADR-0054)。loader で `userId` を渡し間違えても、型検査も lint も気付かない
 
 ### Better Auth の client から送る
 
@@ -140,9 +161,13 @@ Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か�
 - `Origin`・`Sec-Fetch-Site`・`Referer` のどれも無い要求は、どちらの判定もブラウザの外の client として通す
 - ブラウザが別の origin への要求に `Origin` を付けること、session の cookie の `SameSite` が止める範囲、2026-11-02 に `vp preview` で叩いた結果は、ADR-0060 の Context にある
 
+### 認可を global の middleware に載せない理由
+
+認証 (ログインしているか) は要否が path で決まるので、global の middleware が path の区分で判定する (ADR-0053)。認可 (その人に許すか) は要否が loader・action ごとに違う。一律に掛けると、権限が無いことを本人に説明するページまで止まり、path の一覧に足し忘れた経路は public のまま開く。loader・action・handler の先頭で判定すれば、loader は値を返して説明を描け、action と handler は 403 を返せる。比べた案は ADR-0065 にある。
+
 ### page の loader に middleware を渡さない理由
 
-Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.4.0 では loader が 500、action が空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は 2026-11-02 の時点で open)。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置く (ADR-0053)。
+Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.4.0 では loader が 500、action が空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は 2026-11-02 に merge された。2026-11-03 の時点で最新の v1.5.0 は、その merge より前に公開され、修正を含まない)。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置く (ADR-0053)。
 
 ### 遷移を待たずに Action を終える理由
 
@@ -161,4 +186,6 @@ Void の docs も、programmatic な遷移を `router.visit("/users");` と awai
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/overview.md
 [Void docs「Actions & Forms」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/actions-and-forms.md
 [Better Auth docs「Email & Password」]: https://www.better-auth.com/docs/authentication/email-password
+[Better Auth docs「Admin」]: https://www.better-auth.com/docs/plugins/admin
+[Void docs「Auth API」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/api/auth.md
 [React docs「useTransition」]: https://react.dev/reference/react/useTransition

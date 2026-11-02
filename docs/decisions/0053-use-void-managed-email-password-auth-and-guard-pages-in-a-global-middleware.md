@@ -18,14 +18,14 @@ Void 1.4.0 は Better Auth を管理して持つ。`void/auth` から import す
 | secret                | dev は `BETTER_AUTH_SECRET` が無ければ固定値に倒れる。dev 以外 (`vp preview` を含む) は要求ごとに `auth: Missing Better Auth secret` で throw する。deploy は無ければ作る (Void の docs「Authentication」の Behavior、Void 1.4.0 の `runtime/better-auth-shared.ts`)                                                                         |
 | rate limit            | deploy 先の Cloudflare では、Better Auth の既定で client の IP ごとに効く (サインインは 10 秒に 3 回など)。dev では効かない (Void の docs「Authentication」の Behavior)                                                                                                                                                                      |
 
-ページを守る場所の候補には、Void 1.4.0 で次の制約がある (2026-11-02 の時点)。
+ページを守る場所の候補には、Void 1.4.0 で次の制約がある。
 
-| 守る場所                                                                           | 1.4.0 での振る舞い                                                                                                                              |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| global の middleware (`middleware/NN.<name>.ts`)                                   | すべての要求に掛かり、auth の middleware の後、page の loader と action の前に走るので `getUser()` が読める (Void 1.4.0 の `router/compile.ts`) |
-| page の loader・action に middleware を渡す (`defineHandler(middleware, handler)`) | 壊れる。loader は 500、action は空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は open)           |
-| page の loader で `requireAuth(c)`                                                 | login へ送らず、素の text の 401 を返す                                                                                                         |
-| loader ごとに `getUser()` を見て redirect する                                     | 動くが、守るページの loader ごとに書くことになる                                                                                                |
+| 守る場所                                                                           | 1.4.0 での振る舞い                                                                                                                                                                                                                            |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| global の middleware (`middleware/NN.<name>.ts`)                                   | すべての要求に掛かり、auth の middleware の後、page の loader と action の前に走るので `getUser()` が読める (Void 1.4.0 の `router/compile.ts`)                                                                                               |
+| page の loader・action に middleware を渡す (`defineHandler(middleware, handler)`) | 壊れる。loader は 500、action は空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は 2026-11-02 に merge された。2026-11-03 の時点で最新の v1.5.0 は、その merge より前に公開され、修正を含まない) |
+| page の loader で `requireAuth(c)`                                                 | login へ送らず、素の text の 401 を返す                                                                                                                                                                                                       |
+| loader ごとに `getUser()` を見て redirect する                                     | 動くが、守るページの loader ごとに書くことになる                                                                                                                                                                                              |
 
 `c.redirect("/login")` のように相対の path を渡すと、要求の query が行き先に混ざる (voidzero-dev/void#648、open)。2026-11-02 に `vp preview` で、`/?q=x` から相対の path で送ると `location` が `/login?q=x` になった。絶対 URL を渡すと混ざらない。
 
@@ -77,4 +77,5 @@ Void 1.4.0 は Better Auth を管理して持つ。`void/auth` から import す
 - Void の docs「Edge Prerendering」: `node_modules/void/docs/guide/edge/prerendering.md`
 - Void 1.4.0 のソース: `packages/void/src/runtime/better-auth-shared.ts`、`router/compile.ts`、`prerender-render.ts`、`packages/react/src/runtime/pages-client.ts`
 - Better Auth の docs「Email & Password」(Require Email Verification、Email Enumeration Protection、Request Password Reset): https://www.better-auth.com/docs/authentication/email-password
-- voidzero-dev/void#564、voidzero-dev/void#606、voidzero-dev/void#624、voidzero-dev/void#648 (2026-11-02 の時点で open)
+- voidzero-dev/void#564 と、その修正の voidzero-dev/void#624 (2026-11-02 に merge。2026-11-03 の時点で最新の v1.5.0 に含まれない)
+- voidzero-dev/void#606、voidzero-dev/void#648 (2026-11-03 の時点で open)

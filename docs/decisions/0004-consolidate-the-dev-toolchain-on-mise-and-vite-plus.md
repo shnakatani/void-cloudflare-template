@@ -284,6 +284,7 @@ Vite+ の `docs/guide/local-cli.md`「Best Practices」は、`vp` を呼ぶ scri
 - 開発者の入口 (`check` / `test` / `dev`) は足さない。このリポジトリの開発者は README のセットアップで global の `vp` を入れ、`vp install` も `vp run` のタスクも `.mise.toml` のタスクの `run` もそれを前提にするので、上の利点が当てはまらない。足すと `vp <name>` を打つたびに stderr に note が出る (Consequences)
 - `dev` には別の理由もある。`"dev": "vp dev"` は `--strictPort` を持たず、使用中なら Vite が次の空き port へずらす (Vite docs の `server.port`: "if the port is already being used, Vite will automatically try the next available port")。`serve` のタスクは同じ既定の port で起動し、使用中なら止まる。`dev` を置くと、起動した順で port が変わる入口が 1 つ増える
 - `build` は、global の `vp` を入れない環境が `pnpm run build` で走らせる入口として残す。公式が勧める利点がそのまま当てはまる場面である。代償として、`vp build` を打つたびに note が出る (Consequences)
+- `start` は置かない。`vp build` の成果物は Cloudflare Workers の Worker (`dist/ssr/`) と静的な asset (`dist/client/`) で、`node` で起動する入口が無い。手元で成果物を動かすのは `vp preview`、本番へ出すのは `void deploy` である。`node` で動く成果物は、`void.config.ts` の `target` を Node.js・Bun・Deno にしたときだけ出る (Void の docs「Deployment」の Other runtimes)
 
 | 案                                                   | 評価                                                                                                                                                                                                                                                          | 採否     |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -311,6 +312,7 @@ Vite+ の `docs/guide/local-cli.md`「Best Practices」は、`vp` を呼ぶ scri
 
 ## 出典
 
+- Void の docs「Deployment」の Other runtimes (`node` で動く成果物は `target` を Node.js・Bun・Deno にしたときだけ): `node_modules/void/docs/guide/deployment.md`
 - Vite+ の runtime 解決順と `packageManager` による package manager shim、`vp env pin` の書き込み先: `node_modules/vite-plus/docs/guide/env.md`
 - `vp env pin` が範囲を exact の版に解決して書くこと: `node_modules/vite-plus/docs/guide/env.md`「Manage」の `vp env pin` の項と Examples (`vp env pin node@26  # Pin Node.js 26 to an exact version`)、Vite+ の `rfcs/dev-engines.md`「2.4 `vp env pin` write target」(https://github.com/voidzero-dev/vite-plus/blob/102fe8edad2c45690f24830feee30bfe242817ee/rfcs/dev-engines.md)、`resolve_version_for_pin` (https://github.com/voidzero-dev/vite-plus/blob/102fe8edad2c45690f24830feee30bfe242817ee/crates/vp_global_cli/src/commands/env/pin.rs)
 - pnpm に Node.js と pnpm の版を管理させない設定: Vite+ の `docs/guide/env.md`「Node.js Selection」の tip と「Package-Manager Selection」(https://github.com/voidzero-dev/vite-plus/blob/v1.4.0/docs/guide/env.md)

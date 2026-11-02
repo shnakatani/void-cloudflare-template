@@ -93,6 +93,14 @@ lint では見ないのでレビューで見る。
 - path の定数は URL を組む関数と別のモジュールに置き、そのモジュールは path の定数のほかを import しない。同じモジュールに置くと、リンクだけを描くページの client の chunk に検証のスキーマが入る (ADR-0059)
 - ページのファイルを動かしたら、その path の定数を直す。定数と `pages/` の対応は何も検査しない (ADR-0059)
 
+## ページのデータは loader の props で読む
+
+lint では見ないのでレビューで見る。
+
+- ページのデータは `pages/<path>.server.ts` の loader が返す props で読む。client にサーバの状態の取得やキャッシュの層 (TanStack Query など) を足さず、取り直しは action の応答、`router.refresh()`、遷移の loader の再実行に任せる (ADR-0063)
+- 遅い値も loader で await して返す。deferred props は使わない (ADR-0051)。遷移を待たせたくない値は、ページを分ける (ADR-0063)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらない (ADR-0063)
+
 ## ページの失敗は loader の値と区画の境界で受ける
 
 lint では見ないのでレビューで見る。
@@ -103,6 +111,8 @@ lint では見ないのでレビューで見る。
 - 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)
 - loader が失敗の値を返した区画の再試行は、`router.refresh()` を `Button` の `onClick` から呼ぶ。`SectionErrorBoundary` の再試行は loader を読み直さない (`docs/guides/data-loading.md`「失敗した画面から再試行する」)
 - 再試行の `router.refresh()` には `{ viewTransition: false }` を渡す。渡さないと、Void の既定で失敗の表示と読み直した画面がクロスフェードで重なる (ADR-0058)
+- `HTTPException` の `message`、`ValidationError` の文言、validator の message に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。production でもそのまま client に届く (ADR-0055)
+- server で調べたい失敗は、`HTTPException` を投げる前に `console.error` に残す。`HTTPException` は server のログに出ない (ADR-0055)
 
 ## 一覧の上のフォームのダイアログは一覧のページの query で開く
 
@@ -111,6 +121,7 @@ lint では見ないのでレビューで見る。
 - 追加と編集のダイアログは一覧のページの query (`<一覧>?new`、`<一覧>?edit=<id>`) で開き、Root は `QueryDialog` (`src/components/screens/query-dialog.tsx`) で描く。Dialog の Root を手で書かない。閉じる遷移、閉じ終わるまでの描画、中身の作り直し、開閉の読み上げ、読み込み中を書き写すことになる (ADR-0056)
 - `QueryDialog` の `blocksClose` には、そのダイアログ自身の保存の pending だけを渡し、キャンセルのボタンも同じ値で `disabled` にする。閉じる遷移が保存の送信を取り消す (ADR-0056)
 - `dialogKey` は種類と値の id から作る。id を含めないと、開いたまま別の値へ移ったとき form が前の値のまま残る (ADR-0056)
+- ダイアログを開くリンクに `prefetch` を渡さない。hover の時点の値でダイアログが開き、編集のフォームが古い値で始まる (ADR-0056)
 - `pending` には `useNavigation()` の行き先が開くダイアログを渡す。常に `null` を渡すと、読み込みが続いても戻る・進むで開いたダイアログには何も見えない (ADR-0056「読み込み中」)
 - 見つからない・読めない 1 件は `StatusDialogContent` で描く (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
 - `finalFocus` に `finalFocusToOpener(<開いた元の名前>)` (`src/lib/dialog-final-focus.ts`) を渡し、開くリンクには `dialogOpenerProps(<同じ名前>)` を spread する。閉じたら開いた元のリンクへ、無ければ見出しへ移し、別のダイアログに替わったら触れない。`finalFocus` からリンクを返すと、替わるときに focus がリンクを経由する (ADR-0056)
