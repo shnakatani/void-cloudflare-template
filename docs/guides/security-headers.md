@@ -8,14 +8,15 @@
 
 - `<script>` は `src` を持つ module の script にする。inline の `<script>` は本番で実行されない。dev は `script-src` に `'unsafe-inline'` が付くので止まらず、違反は本番の成果物でしか見えない (ADR-0051)
 - Void の deferred props は使わない。値が nonce の無い inline の script で届き、解決しない (ADR-0051)
-- 本番の HTML に CSP で止まる script が無いことは、`vp run verify:security-headers` が `/login` と 404 の HTML で見る。inline の `<script>`、別の origin の `src`、イベントハンドラの属性、`javascript:` の URL を落とす。判定は `scripts/lib/script-src-violations.ts`
-- ログインが要るページは 302 になり、検査に入らない。そのページに script を足したら、`vp run verify:build` のあとに `vp preview` で開き、ブラウザのコンソールに CSP の違反が無いことを見る
+- 本番の HTML に CSP で止まる script が無いことは、`vp run verify:security-headers` が `scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` の HTML で見る。inline の `<script>`、別の origin の `src`、イベントハンドラの属性、`javascript:` の URL を落とす。判定は `scripts/lib/script-src-violations.ts`
+- ログインが要るページは、検査のユーザーでログインして読む。ページを足したら、`CHECKED_RESPONSES` に `signedIn: true` で 1 行足す。足さないと、そのページの HTML は検査されず、何も落ちない
+- 検査のユーザー (`security-headers-check@example.invalid`) は、検査が初めて走ったときにローカルの D1 に作られ、dev の D1 にも残る。preview は dev と同じ D1 を使う。検査は走るたびに未適用の migration を当て、終わるとログアウトして session を消す
 
 ### ヘッダを足す・変える
 
 1. `void.config.ts` の `routing.headers` の `"/*"` の配列を書き換える。1 要素を `"Name: value"` の形で書く ([Void docs「Custom Headers」][])
 2. `scripts/checks/runtime/security-headers.ts` の `EXPECTED_HEADERS` を同じ値に揃える。CSP は production の値 (`NODE_ENV` が development 以外) を書く。定数を共有せず写しで持つ理由は、そのファイルの docstring にある
-3. `vp run verify:build` のあとに `vp run verify:security-headers` を走らせる。検査は `vp preview` を空きの port で起動し、`/login`、`public/` の `/robots.txt`、route の無い path の 404 の 3 つの応答に全件が乗ることを見る
+3. `vp run verify:build` のあとに `vp run verify:security-headers` を走らせる。検査は `vp preview` を空きの port で起動し、SSR のページ (ログインが要るページを含む)、`public/` の `/robots.txt`、route の無い path の 404 の応答に全件が乗ることを見る
 
 | 対象                                                    | 起きること                                                                                                                                                                                                                                                                                     | 対処                                            |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
