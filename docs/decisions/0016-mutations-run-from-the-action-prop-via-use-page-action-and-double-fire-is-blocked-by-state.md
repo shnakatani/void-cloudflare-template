@@ -67,7 +67,7 @@ Error Boundary は画面ごと差し替わる。`action()` の throw を Action 
 
 ## Decision
 
-**mutation は `src/components/action/` の部品の `action` prop から、`usePageAction` の `run` で呼ぶ。失敗は `run` が通知し、Action の reject にしない。決着前の二重発火は Transition の `isPending` だけで塞ぐ。**
+**mutation は `src/components/action/` の部品の `action` prop から、`usePageAction` の `run` で呼ぶ。失敗は `run` が通知し、Action の reject にしない。決着前の二重発火は state (Transition の `isPending` など) だけで塞ぐ。**
 
 ### Action 層 `src/components/action/`
 
