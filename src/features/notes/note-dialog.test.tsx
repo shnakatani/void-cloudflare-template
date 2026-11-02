@@ -43,7 +43,6 @@ vi.mock(import("@void/react"), async (importOriginal) => ({
 }));
 
 const CREATE_ACTION_URL = "/notes?create";
-const UPDATE_ACTION_URL = "/notes?update";
 
 beforeEach(() => {
   vi.mocked(action).mockResolvedValue({ ok: true, pageData: undefined });
@@ -51,8 +50,10 @@ beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
-function createdWith(data: Record<string, unknown>) {
-  return [CREATE_ACTION_URL, { data, method: undefined, params: undefined }];
+// action の URL はページの query を運ぶ。Void は検証の失敗をこの URL のページで描き直すので、
+// 運ばないとダイアログが閉じて q も落ちる
+function createdWith(url: string, data: Record<string, unknown>) {
+  return [url, { data, method: undefined, params: undefined }];
 }
 
 function createLink(screen: Awaited<ReturnType<typeof renderNotesPage>>["screen"]) {
@@ -111,7 +112,7 @@ describe("追加のダイアログ", () => {
     );
   });
 
-  it("入力して保存すると、前後空白を除いた値と一覧の q で create の action を呼ぶ", async () => {
+  it("入力して保存すると、前後空白を除いた値を、ページの query を載せた create の action へ送る", async () => {
     const { screen } = await renderNotesPage({ q: "x", dialog: { kind: "create" } });
     await titleTextbox(screen).fill("  買い物リスト  ");
     await bodyTextbox(screen).fill("牛乳とパン");
@@ -121,7 +122,11 @@ describe("追加のダイアログ", () => {
     await expect
       .poll(() => vi.mocked(action))
       .toHaveBeenCalledExactlyOnceWith(
-        ...createdWith({ title: "買い物リスト", body: "牛乳とパン", dueDate: null, q: "x" }),
+        ...createdWith("/notes?create&new&q=x", {
+          title: "買い物リスト",
+          body: "牛乳とパン",
+          dueDate: null,
+        }),
       );
   });
 
@@ -167,7 +172,11 @@ describe("追加のダイアログ", () => {
     await expect
       .poll(() => vi.mocked(action))
       .toHaveBeenCalledExactlyOnceWith(
-        ...createdWith({ title: "買い物リスト", body: "牛乳\nパン", dueDate: null, q: "" }),
+        ...createdWith("/notes?create&new", {
+          title: "買い物リスト",
+          body: "牛乳\nパン",
+          dueDate: null,
+        }),
       );
   });
 
@@ -202,7 +211,11 @@ describe("追加のダイアログ", () => {
     await expect
       .poll(() => vi.mocked(action))
       .toHaveBeenCalledExactlyOnceWith(
-        ...createdWith({ title: "買い物リスト", body: "", dueDate: expectedDueDate, q: "" }),
+        ...createdWith("/notes?create&new", {
+          title: "買い物リスト",
+          body: "",
+          dueDate: expectedDueDate,
+        }),
       );
   });
 
@@ -357,7 +370,7 @@ describe("編集のダイアログ", () => {
       );
   });
 
-  it("見出しを変えて保存すると、id と入力の全項目と一覧の q で update の action を呼ぶ", async () => {
+  it("見出しを変えて保存すると、id と入力の全項目を、ページの query を載せた update の action へ送る", async () => {
     const { screen } = await renderNotesPage({
       q: "x",
       dialog: { kind: "edit", note: NOTE_VIEW },
@@ -368,13 +381,12 @@ describe("編集のダイアログ", () => {
 
     await expect
       .poll(() => vi.mocked(action))
-      .toHaveBeenCalledExactlyOnceWith(UPDATE_ACTION_URL, {
+      .toHaveBeenCalledExactlyOnceWith(`/notes?update&edit=${String(NOTE_VIEW.id)}&q=x`, {
         data: {
           id: NOTE_VIEW.id,
           title: "変えた見出し",
           body: NOTE_VIEW.body,
           dueDate: NOTE_VIEW.dueDate,
-          q: "x",
         },
         method: undefined,
         params: undefined,
