@@ -33,8 +33,6 @@ packageExtensionsChecksum: sha256-ttdFC/5hpXZP+Ocsv+u7pWl9gzxONh3zAFJp9hbCbPE=
 
 patchedDependencies:
   '@tanstack/form-core': a7d59898a1c04a11065d76d83037902c4898dc295e4df32fe96c741ee608e0d4
-  '@void/react': 70b51de442d2a19f7aaab44e8e1fca065f00e3c1ed5a9bbaf8b697ad0e8166d1
-  void: 669da60ea1007f05700943fd47d445a7f7755e4cd2b7ea43491586a7f6691471
 
 importers:
 
@@ -148,7 +146,7 @@ importers:
         version: 5.0.5(vitest@5.0.5)
       '@void/react':
         specifier: 1.4.0
-        version: 1.4.0(patch_hash=70b51de442d2a19f7aaab44e8e1fca065f00e3c1ed5a9bbaf8b697ad0e8166d1)(@rolldown/plugin-babel@0.2.3(@babel/core@7.29.7(supports-color@10.2.2))(@babel/runtime@7.29.7)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(rolldown@1.2.13))(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(babel-plugin-react-compiler@1.0.0)(oxc-transform-react@0.152.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(void@1.4.0(patch_hash=669da60ea1007f05700943fd47d445a7f7755e4cd2b7ea43491586a7f6691471)(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7))
+        version: 1.4.0(@rolldown/plugin-babel@0.2.3(@babel/core@7.29.7(supports-color@10.2.2))(@babel/runtime@7.29.7)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(rolldown@1.2.13))(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(babel-plugin-react-compiler@1.0.0)(oxc-transform-react@0.152.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(void@1.4.0(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7))
       axe-core:
         specifier: ^4.14.0
         version: 4.14.0
@@ -187,7 +185,7 @@ importers:
         version: 2.3.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.0.5)
       void:
         specifier: 1.4.0
-        version: 1.4.0(patch_hash=669da60ea1007f05700943fd47d445a7f7755e4cd2b7ea43491586a7f6691471)(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7)
+        version: 1.4.0(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7)
 
 packages:
 
@@ -7839,13 +7837,13 @@ snapshots:
     dependencies:
       pathslash: 0.1.0
 
-  ? '@void/react@1.4.0(patch_hash=70b51de442d2a19f7aaab44e8e1fca065f00e3c1ed5a9bbaf8b697ad0e8166d1)(@rolldown/plugin-babel@0.2.3(@babel/core@7.29.7(supports-color@10.2.2))(@babel/runtime@7.29.7)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(rolldown@1.2.13))(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(babel-plugin-react-compiler@1.0.0)(oxc-transform-react@0.152.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(void@1.4.0(patch_hash=669da60ea1007f05700943fd47d445a7f7755e4cd2b7ea43491586a7f6691471)(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7))'
-  : dependencies:
+  '@void/react@1.4.0(@rolldown/plugin-babel@0.2.3(@babel/core@7.29.7(supports-color@10.2.2))(@babel/runtime@7.29.7)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(rolldown@1.2.13))(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(babel-plugin-react-compiler@1.0.0)(oxc-transform-react@0.152.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(void@1.4.0(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7))':
+    dependencies:
       '@vitejs/plugin-react': 6.1.2(@rolldown/plugin-babel@0.2.3(@babel/core@7.29.7(supports-color@10.2.2))(@babel/runtime@7.29.7)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(rolldown@1.2.13))(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(babel-plugin-react-compiler@1.0.0)(oxc-transform-react@0.152.0)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       vite: '@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)'
-      void: 1.4.0(patch_hash=669da60ea1007f05700943fd47d445a7f7755e4cd2b7ea43491586a7f6691471)(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7)
+      void: 1.4.0(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7)
     transitivePeerDependencies:
       - '@rolldown/plugin-babel'
       - babel-plugin-react-compiler
@@ -10193,7 +10191,7 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  void@1.4.0(patch_hash=669da60ea1007f05700943fd47d445a7f7755e4cd2b7ea43491586a7f6691471)(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7):
+  void@1.4.0(@types/node@24.19.2)(@voidzero-dev/vite-plus-core@1.4.0(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(arktype@2.2.9)(kysely@0.29.7)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(valibot@1.5.0(typescript@6.0.3))(vitest@5.0.5)(workerd@1.20261023.1)(wrangler@4.155.0(@cloudflare/workers-types@5.20261029.1)(@types/node@24.19.2))(zod@4.6.7):
     dependencies:
       '@cloudflare/build-output-utils': 0.9.6
       '@cloudflare/codemods': 0.5.1
