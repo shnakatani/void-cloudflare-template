@@ -48,6 +48,14 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 - 依存は `vp add` / `vp remove` で足し外す ([Vite+ docs「Package Management」][] の「Add and Remove」)。素の `pnpm` / `npm` / `yarn` で足し外さない。理由は「入口を `vp` にそろえる理由」にある
 - `vp` が中継しないサブコマンドだけは素の `pnpm` で打つ。`pnpm peers check` がこれに当たる (「peer の食い違いを数える」)
 
+### Void の skill を扱う
+
+`.agents/skills/void`・`.agents/skills/migrate-vite-cloudflare-to-void` と、`.claude/skills/` の同じ名前は、`node_modules/void/skills/` への symlink である。`void init` が張る (Void 1.4.0 の `cli/init.ts` の `linkSkillsForSpecificAgents`、`cli/skills.ts`)。
+
+- 2 つとも `void init` の出力のまま残す。移行の skill は、Void を上げたときに `void init` の出力と比べる手間を減らすために残しているもので、このリポジトリでは使わない
+- symlink なので、Void を上げると中身も上がる。`skills-lock.json` には載せない。`skills-lock.json` は GitHub から写した skill (`shadcn`・`valibot`) の hash を持つもので、symlink の skill は Void の版が中身を決める
+- symlink の先は `node_modules` の中なので、`vp install` の前は辿れない。辿れないことを壊れたと取らず、`vp install` のあとに見る
+
 ### 秘密を足す
 
 秘密は Void の形で渡す。ローカルの値はルートの `.env` に置き、本番の server 側の値は `void secret put` で渡す ([Void docs「Environment variables」][])。本番へ渡す前に要る手順は `docs/guides/deployment.md`「本番の秘密を足す」にある。

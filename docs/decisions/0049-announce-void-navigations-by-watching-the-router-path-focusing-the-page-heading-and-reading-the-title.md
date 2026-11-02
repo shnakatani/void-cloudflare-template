@@ -41,13 +41,20 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 
 ### 検討した案: 伝え方
 
-| 候補                                                                | スクリーンリーダー                                                                                                 | キーボード                              | 目で見る利用者 (拡大鏡を含む)                                                              | 採否     |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------ | -------- |
-| 見出しへ focus (枠なし) + 読み上げ                                  | 新しいページの見出しから読み始める                                                                                 | 次の Tab が新しいページの先頭から始まる | 次の Tab を押すまで focus の位置が見えない                                                 | **採用** |
-| 見出しへ focus、アプリ標準の枠をキーボードのときだけ出す + 読み上げ | 採用案と同じ                                                                                                       | 採用案と同じ                            | キーボードで遷移したときは位置が見える。操作できない見出しが、ボタンやリンクと同じ枠を持つ | 却下     |
-| 見出しへ focus、枠を常に出す + 読み上げ                             | 採用案と同じ                                                                                                       | 採用案と同じ                            | 位置が常に見える。ポインターで遷移しても、操作できない見出しに枠が出る                     | 却下     |
-| `<body>` へ戻す + 読み上げ                                          | ページの先頭から探し直す。Gatsby 2019 は "resetting focus to the top of the app would be very overwhelming" とする | 次の Tab がページの先頭から始まる       | focus の位置が見えない                                                                     | 却下     |
-| focus を移さず読み上げだけ                                          | 読み上げで届く                                                                                                     | 次の Tab が押したリンクから始まる       | 届かない (Gatsby 2019 の "quite useless")                                                  | 却下     |
+| 候補                                                                | スクリーンリーダー                                                                                                 | キーボード                                                | 目で見る利用者 (拡大鏡を含む)                                                              | 採否     |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ | -------- |
+| 見出しへ focus (枠なし) + 読み上げ                                  | 新しいページの見出しから読み始める                                                                                 | 次の Tab が新しいページの先頭から始まる                   | 次の Tab を押すまで focus の位置が見えない                                                 | **採用** |
+| 見出しへ focus、アプリ標準の枠をキーボードのときだけ出す + 読み上げ | 採用案と同じ                                                                                                       | 採用案と同じ                                              | キーボードで遷移したときは位置が見える。操作できない見出しが、ボタンやリンクと同じ枠を持つ | 却下     |
+| 見出しへ focus、枠を常に出す + 読み上げ                             | 採用案と同じ                                                                                                       | 採用案と同じ                                              | 位置が常に見える。ポインターで遷移しても、操作できない見出しに枠が出る                     | 却下     |
+| `<body>` へ戻す + 読み上げ                                          | ページの先頭から探し直す。Gatsby 2019 は "resetting focus to the top of the app would be very overwhelming" とする | 次の Tab がページの先頭から始まる                         | focus の位置が見えない                                                                     | 却下     |
+| focus を移さず読み上げだけ                                          | 読み上げで届く                                                                                                     | 次の Tab が押したリンクから始まる                         | 届かない (Gatsby 2019 の "quite useless")                                                  | 却下     |
+| 上に加えて skip link (繰り返すブロックを飛ばすリンク) を置く        | 採用案と同じ                                                                                                       | 繰り返すブロックが短く、飛ばす先が見出しへの focus と同じ | 使わないリンクが先頭に増える                                                               | 却下     |
+
+skip link を置かないのは、繰り返すブロックが layout の `<header>` (user の email とログアウトのボタン) だけで、`<header>` と `<main>` の landmark と、ページの `<h1>` で飛ばせるためである。WCAG 2.2 の 2.4.1 は、繰り返すブロックを飛ばす手段として、skip link のほかに landmark (ARIA11) と見出し (H69) を Sufficient Techniques に挙げる (WCAG Understanding 2.4.1)。client の遷移では focus が `<main>` の中の見出しへ移るので、2 ページ目からは繰り返すブロックを通らない。`<header>` に項目が増えて、landmark と見出しで飛ばすのに足りなくなったら比べ直す。
+
+### モーダルのダイアログが開いている遷移では見出しへ移さない
+
+モーダルのダイアログは focus を中に留め、外側を支援技術から隠す (WAI-ARIA APG の Dialog (Modal) Pattern)。その間に見出しへ focus を移すと、隠された要素が focus を持ち (axe の `aria-hidden-focus`)、スクリーンリーダーには読まれず、利用者はダイアログの中の位置を失う。ダイアログを開いたときの読み上げと focus はダイアログの側が持つ (ADR-0056)。Base UI 1.9.0 の Popup は `aria-modal` を付けないので、判定は `role="dialog"` の Popup の `data-open` で行う (ADR-0056 の Context)。
 
 ### 見出しに枠を出さない理由
 
@@ -146,6 +153,8 @@ idle に戻った effect で読み上げる形では、続けてブラウザの�
 - Void docs「Pages」の React Runtime: `node_modules/void/docs/reference/api/pages.md`
 - `voidzero-dev/void#140`: https://github.com/voidzero-dev/void/pull/140
 - react.dev「useLayoutEffect」の Caveats: https://react.dev/reference/react/useLayoutEffect
+- WCAG Understanding 2.4.1 (Sufficient Techniques に skip link、landmark (ARIA11)、見出し (H69) を並べる): https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html
+- WAI-ARIA APG「Dialog (Modal) Pattern」: https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/
 - WCAG Understanding 2.4.2: https://www.w3.org/WAI/WCAG22/Understanding/page-titled.html
 - WCAG Understanding 2.4.3: https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html
 - WCAG Understanding 2.4.7: https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html

@@ -21,6 +21,7 @@ story を書くとき、play を書くとき、Storybook の agent 向けツー�
 - `src/components/ui/` に置いた `*.stories.tsx` は、`*.test.tsx` と同じ「registry 由来でない付随ファイル」として baseline 検査の対象外になる (ADR-0020)
 - 1 つのファイルが複数の部品を export するときは、単独で描画できる部品ごとに story ファイルを分ける。親を要求する部品は親の story で扱う。CSF の meta は 1 ファイルに 1 つなので、まとめると別の部品の meta の配下に並ぶ
 - story だけが使うロジックは、story と同じディレクトリの `<名前>.story-helpers.ts` に置く。`src/lib/` に置くと出荷されうる
+- `Link`・`useRouter`・`useNavigation`・`useShared` を使う部品の story は、その story の meta の `decorators` で `VoidRouterProvider` (`src/test/app/void-router.tsx`) に包む (ADR-0048)。`.storybook/preview.tsx` の decorator には置かない。preview に置くと、router を使わない story まで偽の router の中で描かれ、router に依存しない部品だという前提が story から読めなくなる
 - トークンの story に、typography の階層のような class の規範を写さない。写すと片方だけが古くなり、突き合わせる検査も無い
 
 ### story を書く

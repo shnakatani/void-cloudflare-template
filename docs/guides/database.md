@@ -119,6 +119,16 @@ it("別のユーザーの行を返さない", async () => {
 | seed の中で `node:crypto` の `scrypt` で作る                | 却下 | `db/` は Workers の型の tsconfig (ADR-0047) に入り、`node:crypto` の型が無い                                                                |
 | 固定の salt で作った値を置く                                | 採用 | Void の hash の形 (`<salt>:<鍵>` の hex、scrypt の N 16384・r 16・p 1・鍵 64 byte) が変わると、見本のユーザーでログインできなくなって分かる |
 
+### seed に drizzle-seed を使わない理由
+
+[drizzle docs「Seed Overview」][] は、見本のデータを作るライブラリとして drizzle-seed を案内する。`defineSeed` が渡す `db` は drizzle の instance なので、組めなくはない。
+
+| 案                                             | 評価                                                                                                                                                                                | 採否     |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 固定の配列を `defineSeed` の中で `insert` する | 長いタイトルや空の本文のような、確かめたい値をそのまま書ける。どの値が入力のスキーマと CHECK を通るかを、配列の単体テストで確かめられる。見本のユーザーの固定の hash も同じ形で入る | **採用** |
+| drizzle-seed で生成する                        | 生成器の既定の値は確かめたい値にならず、確かめたい値を作るにはどのみち列ごとに値を渡すことになる。ログインに使う見本のユーザーの password の hash は生成器では作れない              | 却下     |
+| migration の `.sql` に INSERT を書く           | 見本が migration の経路に乗り、本番の DB にも入る (ADR-0052)                                                                                                                        | 却下     |
+
 ## 出典
 
 本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。SQLite docs の引用は 2026-11-02 に原文と照らした。
@@ -128,3 +138,4 @@ it("別のユーザーの行を返さない", async () => {
 [Void docs「void db reset」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md
 [SQLite docs「SQL Language Expressions」]: https://www.sqlite.org/lang_expr.html#like
 [Void docs「void db seed」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md
+[drizzle docs「Seed Overview」]: https://orm.drizzle.team/docs/seed-overview
