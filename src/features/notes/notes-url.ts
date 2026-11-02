@@ -1,9 +1,8 @@
 import * as v from "valibot";
 import type { NavigationState } from "void/pages-client";
 
+import { NOTES_PATH } from "./notes-path";
 import { noteIdSchema, noteListFilterSchema, type Note } from "./schema";
-
-export const NOTES_PATH = "/notes";
 
 /** 追加のダイアログを開く query の名前。値を持たない (`/notes?new`)。page の named action の名前と分ける */
 const CREATE_KEY = "new";
