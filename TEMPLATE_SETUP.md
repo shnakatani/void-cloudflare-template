@@ -47,7 +47,7 @@ grep -rn "void-cloudflare-template" --exclude-dir=node_modules --exclude-dir=.gi
 | `db/seed.ts`                                                                            | `note-seeds` の import と、`context.schema.notes` に入れる行を消す。ログインに使うユーザーの行は残す                                                                                      |
 | `db/migrations/`                                                                        | ディレクトリごと消し、`vp exec void db generate` で作り直す。auth の table だけの migration が 1 本できる。本番の D1 にはまだ当てていないので、消して作り直してよい                       |
 
-表に無いものは残す。部品の story とテストが例の値に使う `/notes`・「メモ」・「ノート」はどのページも指さず、`@tanstack/react-pacer` は検索欄の debounce の道具として ADR-0057 が選んでいる。
+表に無いものは残す。部品の story とテストが例の値に使う `/notes`・「メモ」・「ノート」はサンプルを import しない文字列で、`@tanstack/react-pacer` は検索欄の debounce の道具として ADR-0057 が選んでいる。
 
 済んだら、dev の D1 を作り直した migration で作り直し、format と lint を通して commit する。そのあと `vp run verify` を打つ。
 
