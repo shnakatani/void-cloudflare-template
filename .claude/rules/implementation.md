@@ -18,13 +18,13 @@ paths:
 lint (`react/set-state-in-effect`、`react/no-deriving-state-in-effects`) が止める。代替のうち lint が案内しないもの:
 
 - 外部ストアの値を読む購読は `useSyncExternalStore`。lint では検出できないのでレビューで見る (`docs/guides/react/effects.md`「effect に書くかを判定する」)
-- データ取得は TanStack Query で行う (`docs/guides/react/effects.md`「effect に書くかを判定する」)
+- データ取得は page の loader で行い、page の props で受ける。effect で fetch しない (`docs/guides/react/effects.md`「effect に書くかを判定する」)
 
 ## effect かイベントハンドラかを原因で決める
 
 lint では見ないのでレビューで見る。
 
-- 原因が特定の操作 (保存、送信、操作の開始と完了の通知、親への変化の通知) なら、effect ではなくイベントハンドラか mutation の callback に書く。effect に置くと、同じ表示に戻っただけで走る (`docs/guides/react/effects.md`「effect に書くかを判定する」)
+- 原因が特定の操作 (保存、送信、操作の開始と完了の通知、親への変化の通知) なら、effect ではなくイベントハンドラか、Action の中か `usePageAction` の `onSuccess` に書く。effect に置くと、同じ表示に戻っただけで走る (`docs/guides/react/effects.md`「effect に書くかを判定する」)
 - effect は、表示された結果を React の外の系 (DOM、ブラウザ API、外部 widget、イベントに応じて動く購読、announcer) に合わせるときだけ使う (`docs/guides/react/effects.md`「effect とイベントハンドラを分ける理由」)
 - 開発時の二重実行で見える結果が変わったら、まず後始末を書く。後始末を書いても変わるときは、操作ならイベントハンドラへ、アプリの読み込みならコンポーネントの外へ移す (`docs/guides/react/effects.md`「開発時の二重実行が示すもの」)
 - effect を 1 回しか走らせないための ref を書かない。1 回に抑えても、離れて戻ったときの後始末の欠けは残る。直前に反映した値を ref に持ち、同じなら何もしない形は、何度走っても同じ結果になるのでよい (`docs/guides/react/effects.md`「開発時の二重実行が示すもの」)
@@ -42,31 +42,28 @@ lint (`typescript/no-misused-promises`) が止める。直し方 (`docs/guides/r
 
 - ハンドラは同期関数として宣言し、非同期処理はその内側の関数へ閉じる。JSX の prop に `void` やインラインの `async` を書かない
 - 待たない判断は内側で 1 回だけ表明する。呼び先が失敗を自分で処理するなら `void`、呼び出し側で通知や後始末をするなら `.catch()`
-- 操作の失敗を Error Boundary へ届けない。通知は toast (`src/components/ui/toast.tsx`) か画面内表示で行う。Error Boundary は画面ごと差し替わる (ADR-0016)
+- 操作の失敗は Error Boundary へ届けない。通知は toast (`src/components/ui/toast.tsx`) か画面内表示で行う。Error Boundary は画面ごと差し替わり、送信中に Action の持ち主が unmount すると reject は何も出ずに消える (ADR-0016)
 - mutation を伴う操作は「ユーザー操作による更新は Transition の中で行う」に従う
 
 ## ユーザー操作による更新は Transition の中で行う
 
-lint では見ないのでレビューで見る (ADR-0015、Action 層と `useActionMutation` は ADR-0016、完了点とブロック範囲は ADR-0017)。
+lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-0016、完了点と後の送信による取り消しは ADR-0017)。
 
-| 更新の種類                        | 書き方                                                                                                                                            |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| mutation を伴う操作               | `src/components/action/` の部品に `action` を渡す。Action の中で `useActionMutation` の `runAction` を呼ぶ                                        |
-| mutation 成功後のダイアログ close | 閉じる時点は ADR-0017 の完了点の軸で選び、理由を実装近傍に書く。選択肢は ADR-0017                                                                 |
-| 制御コンポーネントの入力値        | 緊急更新のまま。Transition は割り込まれるので入力値の反映が遅れる                                                                                 |
-| 検索条件の変更                    | 打鍵中は debounce した値を `useDeferredValue` に通して `useSuspenseQuery` の key にする (`docs/guides/lists-and-search.md`「検索の入力欄を組む」) |
+| 更新の種類                        | 書き方                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| mutation を伴う操作               | `src/components/action/` の部品に `action` を渡す。Action の中で `usePageAction` の `run` を呼ぶ |
+| mutation 成功後のダイアログ close | 閉じる時点は ADR-0017 の完了点の軸で選び、理由を実装近傍に書く。選択肢は ADR-0017                |
+| 制御コンポーネントの入力値        | 緊急更新のまま。Transition は割り込まれるので入力値の反映が遅れる                                |
 
-- pending 表示は Action 層の `isPending` から取る。例外は項目の busy・楽観表示・close 阻止で、mutation の pending から取る (ADR-0017)
-- mutation は `src/hooks/use-action-mutation.ts` の `useActionMutation` を通す。`onError` は型で必須。`runAction` が reject を吸収するので、無いと失敗が無通知になる (`docs/guides/react/updates.md`「mutation の書き方」)
-- Action の reject は最寄りの Error Boundary へ届く。`runAction` を通さない Action は、失敗を Action の中で処理し切る (ADR-0016)
-- `onSuccess` は再取得の Promise を返す。再取得完了前に close するなら、対象の項目にその pending から busy 表現を付ける (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
-- 止めるのは対象の項目だけにする。並行操作が整合を壊すときだけ全体を止め、理由を実装近傍に書く (ADR-0017)
-- Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず query の再取得に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)
-- `useOptimistic` に query の `data` と派生値を渡さない。query 由来の楽観表示と項目の busy は mutation の pending から取る (`docs/guides/react/updates.md`「楽観表示を出す」)
-- mutation の pending は、1 件ずつなら `isPending && variables === id`、並行か別コンポーネントなら `mutationKey` + `useMutationState` で読む (`docs/guides/react/updates.md`「mutation の pending を読む」)
-- `useMutationState` と `isMutating` の `filters` に `exact: true` を付ける。`variables` は `parseEach` (`src/lib/parse-each.ts`) で絞る (`docs/guides/react/updates.md`「mutation の pending を読む」)
-- `useMutationState` の `select` の中で throw しない。描画中に走るので一覧ごと Error Boundary へ落ちる (`docs/guides/react/updates.md`「mutation の pending を読む」)
-- 操作の開始の announce は `onMutate`、完了は `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
+- pending 表示は Action 層の `isPending` から取る。項目の busy は `useOptimistic` の楽観値から取る (ADR-0015)
+- mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` は `action()` の `ok: false` を toast かフィールドのエラーに、throw (401・403・500 など) を toast に出し、reject しない。取り消し (`AbortError`) は何も出さない。呼び出し側が通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
+- TanStack Form から送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`docs/guides/react/updates.md`「mutation の書き方」)
+- `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
+- 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける。Action の中で閉じるのは `handle.close()` で行う。同期区間で React の state (`open`) を false にしても、ダイアログは Action の終わりまで残る (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
+- 送信中にほかの項目の起点を止める仕組みを足さない。後から始めた送信が前の送信を取り消し、取り消された `run` は何も出さずに `false` を返す。`useNavigation().state` は Action から始めた送信の間 `"submitting"` を描かないので、止める信号にならない。busy の表現は対象の項目だけに付ける (ADR-0017)
+- Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず action の応答で入れ替わる props に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)
+- 楽観表示は loader の props を元に `useOptimistic` で出し、reducer で書く。reducer は元の値に変更がすでに入っていても同じ結果を返す形にする。新しい props が Action の途中で commit されると、素直に足した reducer は同じ項目を 2 つ並べる (`docs/guides/react/updates.md`「楽観表示を出す」)
+- 操作の開始の announce は Action の中の `run` より前、完了は `usePageAction` の `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
 - 決着前の二重発火は Action 層の `isPending` (`aria-disabled`) が塞ぐ。閉包や ref のフラグを足さない (ADR-0016)
 
 ## 日付と日時の値は意味で分類して持つ

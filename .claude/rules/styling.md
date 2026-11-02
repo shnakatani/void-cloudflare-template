@@ -126,12 +126,13 @@ Why: token 経由なら dark mode 対応とデザイン変更が `styles.css` �
 - 列見出しと列の幅など skeleton と本体で合わせる値は、両方が参照する定数に置く。別々に持つと、読み込みが終わって本体へ置き換わるときにレイアウトがずれる (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
 - 表の skeleton の列見出しと幅は列の定数から採り、列定義からは採らない (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
 - ボタン内の送信中表示は `Spinner` (Skeleton にしない)。使う側は必ず `aria-hidden` を渡し、状態は `aria-disabled` で持つ (ADR-0026)
-- ボタンの children に `Spinner` を並べない。`PendingLabel` で label に重ねる (Action 層の部品が使う)。並べると pending の間だけボタンが広がる (ADR-0042)
+- ボタンの children に `Spinner` を並べない。`PendingLabel` で label に重ねる (Action 層の部品と `ButtonLink` の `isPending` が使う)。並べると pending の間だけボタンが広がる (ADR-0042)
 - データなしは `Empty` で組み、何が無いか (`EmptyTitle`) と次に取れる操作 (`EmptyContent` のボタンか、`EmptyDescription` で操作の場所を案内) をそろえる (`docs/guides/lists-and-search.md`「空状態を出す」)
 - 状態による見た目の分岐は、1 箇所なら `cn()` + 三項で書く。同型の分岐が 2 箇所以上に重なったら、ui 部品自身の見た目なら手段を「部品の見た目を変える」の表で選び、`ui/` の外の見た目なら部品に切り出す。`ui/` の外で `cva` の variant にしない (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
 
 ## 操作できる要素の組み方
 
+- ボタンの見た目のリンクは `ButtonLink` で組み、Base UI の `render` に `Link` を渡さない。無効なリンクは持たず、無効にしたい操作はボタンで表す (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
 - 段落に区切って書く長さの文字列 (本文、説明) は改行を許し、`FormTextareaField` (`form-fields.tsx`) で受け、表示では `whitespace-pre-wrap` で改行を保つ。`type="text"` の input は値から改行を取り除き、`whitespace-normal` は改行を空白にまとめる (`docs/guides/forms-and-inputs.md`「複数行の入力欄を組む」)
 - input の上に疑似要素や別の要素を重ねて hit 領域を広げない。重なった要素が pointer を受け、本体がクリックを受け取れなくなる (`docs/guides/forms-and-inputs.md`「入力欄の周りに要素を置く」)
 - checkbox 行を素の `<label>` や手書きの `role="group"` で組まない。複数選択の既定は `FieldSet` + `FieldLegend` の中の `FieldGroup data-slot="checkbox-group"` に `Field orientation="horizontal"` の行を並べる形。`FieldLegend` がまとまりの名前になり、行間は registry の間隔に寄る (`docs/guides/forms-and-inputs.md`「入力欄の周りに要素を置く」)
@@ -158,11 +159,11 @@ lint は custom `<Button>` の中身を見ない。テストが画面を見る�
 - 状態表示の例外は読み込み中の表示の `PendingContent` (ADR-0026)
 - live region は初期マークアップに置いて消さない。条件付きで mount した region は読まれないか挙動が揺れる (ADR-0026)
 - pending の検証は項目の状態 (行の静的テキスト、ボタンの `aria-disabled`) と announcer の通知で行う。`getByRole("status")` で項目を掴まない (`docs/guides/testing/waiting-and-assertions.md`「状態と通知を検証する」)
-- 取得結果の通知は、ページの effect が取得の決着で `announce()` し、直前と同じ条件なら出さない。取得中に出すと古い件数を読む (ADR-0027)
+- 取得結果の通知は、ページの effect が loader の props の条件の変化で `announce()` し、直前と同じ条件なら出さない。条件を入力欄の値から読むと、前の props の件数を読む (ADR-0027)
 - メニュー全体を包む単一の `DropdownMenuGroup` に、トリガーの名前を繰り返す `DropdownMenuLabel` を置かない。menu はトリガーを名前に持つので区別が増えない (`docs/guides/accessibility.md`「メニューの項目をグループに分ける」)
 - メニューのグループの見出し (`DropdownMenuLabel`) はグループごとに要否を決め、全グループには求めない。「迷ったら与える側に倒す」はグループの見出しには及ばない。見出しの無いグループも区切りで分かれる (`docs/guides/accessibility.md`「メニューの項目をグループに分ける」)
 - ナビゲーションは `<nav>` で包み、複数あるならそれぞれに区別できる名前を与える。同じリンクの組なら同じ名前にする (`docs/guides/accessibility.md`「ナビゲーションを組む」)
-- 1 つのまとまり (`<nav>` など) の中では、現在地の項目 1 つだけに `aria-current="page"` を付ける (`docs/guides/accessibility.md`「ナビゲーションを組む」)
+- 1 つのまとまり (`<nav>` など) の中では、現在地の項目 1 つだけに `aria-current="page"` を付ける。現在地の印は `NavLink` が `useRouter().path` と pathname を比べて付けるので、手で書くのは `NavLink` を使わないときだけ。query と hash は比べず、末尾の `/` も正規化しない (`docs/guides/accessibility.md`「ナビゲーションを組む」)
 
 ### accessible name の落とし穴
 

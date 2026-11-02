@@ -31,10 +31,10 @@ interface DeleteConfirmDialogProps<TId> {
   /** 既定文言を差し替える場合に指定する (連鎖して消えるものを併記したいとき等)。name は payload の name */
   description?: (name: string) => string;
   /**
-   * 確定時の Action。閉じる時点は ADR-0017 の完了点で選ぶ。確定操作の直後なら handler が `handle.close()`
-   * してから mutation を起動する。再取得完了なら `onSuccess` で再取得を await した後に、この部品に
+   * 確定時の Action。閉じる時点は ADR-0017 の完了点で選ぶ。確定操作の直後なら handler が楽観値を set し、
+   * `handle.close()` してから `run` を await する。action の決着なら `run` が `true` を返した後に、この部品に
    * 渡した `handle` と同じものを閉じる。
-   * 失敗時の扱いは完了点で変わる (確定操作の直後なら閉じた後に toast、再取得完了なら開いたままリトライ)。
+   * 失敗時の扱いは完了点で変わる (確定操作の直後なら閉じた後に toast、action の決着なら開いたままリトライ)。
    */
   onConfirm: (target: DeleteTarget<TId>) => Promise<void> | void;
   /**

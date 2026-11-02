@@ -56,7 +56,6 @@ story は部品が取りうる状態を並べるカタログで、振る舞い�
 
 ### story に要る構成を手で置く
 
-- Query を使う部品の story を書くようになったら、QueryClient を `.storybook/preview.tsx` の構成へ手で置く
 - server-only の依存を引く部品の story を書くようになったら、その依存を `__mocks__` で遮断する
 
 ### play を書く
@@ -128,7 +127,7 @@ play は Storybook の UI 上でも実行されるため CDP を使えない。s
 
 - 役割が違うため両方残す。待機・実イベント・animation 無効化の規律 (`docs/guides/testing/waiting-and-assertions.md`「待つ口を選ぶ」、`docs/guides/testing/user-interactions.md`「クリックを発火する」「animation を無効にして走らせる理由」) は既存のテストが持ち続ける
 - 移せないのはレイアウトと配色の実測、CDP 経由の実イベントの 2 つである。型契約 (`expectTypeOf`) は `*.test-d.ts` に置く (`docs/guides/testing/type-tests.md`「型テストを置く」)
-- 画面のテストは Action 層の guard を代替しない。`confirmDelete` は `close()` のあと `void runAction(...)` と同期に返るので Transition が即終了し、2 発目の時点で `isPending` は false になる。`disabled={isPending}` を外しても browser project は 1 件も落ちない (2026-09-20 実測)。経路が薄いラッパーを通ることは、その guard を通ることを意味しない
+- 画面のテストは Action 層の guard を代替しない。画面の Action が送信を待たずに返すと Transition がすぐ終わり、2 発目の時点で `isPending` は false になる。確認ダイアログを閉じてから送信を待たずに返す画面で、`disabled={isPending}` を外しても browser project は 1 件も落ちなかった (2026-09-20 実測)。経路が薄いラッパーを通ることは、その guard を通ることを意味しない
 - 検証が一部 CDP の実イベントから合成イベントへ移り、backdrop の遮りを含む pointer の忠実さは下がる。一方イベント間に描画が挟まる点は既存のブラウザテストと同じ性質になる
 
 | 案                                                                | 評価                                                                                                           | 採否     |

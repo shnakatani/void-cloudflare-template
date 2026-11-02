@@ -54,8 +54,6 @@ export const lintConfig = {
     { name: "testing-library", specifier: "eslint-plugin-testing-library" },
     // ブラウザテストの assert を見る自前ルール (ADR-0009)
     { name: "browser-test", specifier: "./scripts/lint/browser-test.ts" },
-    // TanStack Query の契約の検査 (ADR-0007、oxc-project/oxc#11648)
-    { name: "tanstack-query", specifier: "@tanstack/eslint-plugin-query" },
   ],
   settings: {
     shadcn: {
@@ -239,18 +237,6 @@ export const lintConfig = {
     // -- oxc: 上流に対応する設定がない。correctness と perf で拾う (ADR-0007) --
     // 公式の修正は元オブジェクトの破壊的更新。壊せない箇所では確保が減らない
     "oxc/no-map-spread": "off",
-
-    // -- tanstack-query: @tanstack/eslint-plugin-query の recommended と prefer-query-options (ADR-0007) --
-    "tanstack-query/exhaustive-deps": "error",
-    // 上流は warn。型情報を使うケースは JS plugin では見えない (ADR-0007)
-    "tanstack-query/no-rest-destructuring": "error",
-    "tanstack-query/stable-query-client": "error",
-    "tanstack-query/no-unstable-deps": "error",
-    "tanstack-query/infinite-query-property-order": "error",
-    "tanstack-query/mutation-property-order": "error",
-    // recommended-strict から足す (ADR-0007)
-    "tanstack-query/prefer-query-options": "error",
-    // no-void-query-fn は登録しない。型情報が要り、oxlint の JS plugin では常に無診断になる (ADR-0007)
 
     // -- vitest: @vitest/eslint-plugin の recommended (ADR-0007) --
     // 既定を置換する。expect* が既定の 2 つと helper を覆い、assert* には広げない

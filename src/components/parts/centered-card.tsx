@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 const centeredCardFrame = cva("flex items-center justify-center p-6", {
   variants: {
     fill: {
-      /** 画面全体を占める。遷移先を失った画面 (404 / 認証エラー / root の error boundary) 用 */
+      /** 画面全体を占める。遷移先を失った画面 (認証エラー / root の error boundary) 用 */
       screen: "min-h-svh bg-background",
       /** 画面の一部を占める。周りに他の要素が残る、ページの中の error boundary 用 */
       section: "min-h-[50vh]",
@@ -44,7 +44,7 @@ export function CenteredCard({ fill, children }: { fill?: CenteredCardFill; chil
 
 /**
  * 見出し・説明・操作を 1 セットだけ持つ全画面の通知。
- * 認証エラーや 404 のように、遷移先を失ったユーザーへ状況と次の一手だけを示す画面で使う。
+ * 認証エラーや root の error boundary のように、遷移先を失ったユーザーへ状況と次の一手だけを示す画面で使う。
  *
  * 見出しは `CardTitle` の中に h1 を入れて組む。shadcn は CardTitle を h3 から div へ変えて
  * 見出し階層を利用側の裁量にしており (shadcn-ui/ui#8440 / shadcn-ui/ui#10301 は 2026-08-07 時点で

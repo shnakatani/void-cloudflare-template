@@ -2,10 +2,10 @@
 
 コードを effect に書くかイベントハンドラに書くかを決めるときの手順と、その判定の理由を持つ。
 
-| 決定                                                                                                                              | ADR      |
-| --------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ                                 | ADR-0026 |
-| ページは URL の変化で作り直さず、取得結果の入れ替わりはページの effect が取得の決着で通知し、直前に通知した条件と同じなら出さない | ADR-0027 |
+| 決定                                                                                                                                                 | ADR      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ                                                    | ADR-0026 |
+| ページは URL の変化で作り直さず、取得結果の入れ替わりはページの effect が loader の props の入れ替わりで通知し、直前に通知した条件と同じなら出さない | ADR-0027 |
 
 ## explanation
 
@@ -13,15 +13,15 @@
 
 コードを effect に書くかイベントハンドラに書くかは、そのコードが走る原因で決まる。[React docs「Separating Events from Effects」][] は、迷ったら "consider _why_ the code needs to run" とする。
 
-| 原因                                            | 置き場                                                                                          | React docs の出典                                                                                                                |
-| ----------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 特定の操作 (押した、送った)                     | イベントハンドラ。mutation を伴うなら mutation の callback (`onMutate` / `onSuccess`、ADR-0026) | [React docs「Separating Events from Effects」][] の "Event handlers run in response to specific interactions."                   |
-| 表示されたこと (React の外の系を表示に合わせる) | effect                                                                                          | [React docs「Separating Events from Effects」][] の "Effects run whenever synchronization is needed."                            |
-| 他の props や state (外の系が無い)              | 描画中に計算する                                                                                | [React docs「You Might Not Need an Effect」][] の "If there is no external system involved (...), you shouldn't need an Effect." |
+| 原因                                            | 置き場                                                                                        | React docs の出典                                                                                                                |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 特定の操作 (押した、送った)                     | イベントハンドラ。mutation を伴うなら Action の中か `usePageAction` の `onSuccess` (ADR-0026) | [React docs「Separating Events from Effects」][] の "Event handlers run in response to specific interactions."                   |
+| 表示されたこと (React の外の系を表示に合わせる) | effect                                                                                        | [React docs「Separating Events from Effects」][] の "Effects run whenever synchronization is needed."                            |
+| 他の props や state (外の系が無い)              | 描画中に計算する                                                                              | [React docs「You Might Not Need an Effect」][] の "If there is no external system involved (...), you shouldn't need an Effect." |
 
 - 操作が原因のコードを effect に置くと、同じ表示に戻っただけで走る。[React docs「Synchronizing with Effects」][] の「Not an Effect: Buying a product」の例では、購入の POST を effect に置くと、別のページから戻ったときにも購入が走る ("Buying is not caused by rendering; it's caused by a specific interaction.")
 - React の外の系には、DOM とブラウザ API、外部 widget、イベントに応じて動く購読 (値を読む購読は `useSyncExternalStore`)、announcer の live region が入る。[React docs「Synchronizing with Effects」][] は例として、React でない widget の制御、サーバーへの接続、analytics の送信を挙げる
-- 取得結果の件数の通知 (ADR-0027) は、打鍵が契機に見えても原因は表示である。結果の入れ替わりは確定・戻る・進む・Link のどれでも起き、取得の決着は描画の側でしか分からない
+- 取得結果の件数の通知 (ADR-0027) は、打鍵が契機に見えても原因は表示である。結果の入れ替わりは確定・戻る・進む・Link のどれでも起き、新しい結果が届いたことは loader の props が入れ替わった描画でしか分からない
 
 ### 開発時の二重実行が示すもの
 
@@ -58,15 +58,15 @@ effect が読む値は、変わったら外の系に合わせ直す契機にな�
 
 | 順  | 当てはまるもの                                                          | 書き方                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | --- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 特定の操作が原因 (保存、送信、操作の開始と完了の通知、親への変化の通知) | イベントハンドラ (`docs/guides/react/updates.md`「イベントハンドラを書く」)。mutation の開始と完了の通知は `onMutate` / `onSuccess` に書く (ADR-0026)。親への変化の通知も、変化を起こしたハンドラの中で呼ぶ ([React docs「You Might Not Need an Effect」][] の「Notifying parent components about state changes」)                                                                                                                                                                                         |
+| 1   | 特定の操作が原因 (保存、送信、操作の開始と完了の通知、親への変化の通知) | イベントハンドラ (`docs/guides/react/updates.md`「イベントハンドラを書く」)。mutation の開始の通知は Action の中の `run` より前、完了の通知は `usePageAction` の `onSuccess` に書く (ADR-0026)。親への変化の通知も、変化を起こしたハンドラの中で呼ぶ ([React docs「You Might Not Need an Effect」][] の「Notifying parent components about state changes」)                                                                                                                                                |
 | 2   | 他の props や state から決まる値 (state の更新が連鎖するものを含む)     | 描画中に計算する。prop が変わったら state を揃えるなら、まず `key` で作り直すか描画中の計算で済むかを確かめ、済まないときだけ描画中に更新する。state の更新が連鎖するなら、計算できるものは描画中に、残りは起点のイベントハンドラでまとめて更新する。前の選択でネットワークから次の選択肢を取るような連鎖は「データ取得」の行に当たる ([React docs「You Might Not Need an Effect」][] の「Resetting all state when a prop changes」「Adjusting some state when a prop changes」「Chains of computations」) |
 | 3   | アプリの読み込みごとに 1 回だけ走る処理                                 | コンポーネントの外、アプリのエントリかルートのモジュールの最上位で走らせる。サーバーでも読まれるモジュールなら、ブラウザでだけ走らせる条件を付ける。effect の中に書くなら、モジュールの変数を見て読み込みごとに 1 回に抑える ([React docs「You Might Not Need an Effect」][] の「Initializing the application」)                                                                                                                                                                                           |
 | 4   | 外部ストアの値を読む                                                    | `useSyncExternalStore`。effect で購読して state へ写さない ([React docs「You Might Not Need an Effect」][] の「Subscribing to an external store」の "Although it's common to use Effects for this, React has a purpose-built Hook for subscribing to an external store that is preferred instead.")                                                                                                                                                                                                        |
-| 5   | データ取得                                                              | TanStack Query                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 5   | データ取得                                                              | page の loader (`.server.ts` の `loader`) で取り、page の props で受ける (`node_modules/void/docs/guide/pages-routing/loaders.md`)                                                                                                                                                                                                                                                                                                                                                                         |
 | 6   | 表示された結果を React の外の系に合わせる                               | effect。止めるか戻すものがあれば後始末を返す。購読を張り直さずに最新の props や state を読むなら `useEffectEvent` へ出す (「依存に置く値と Effect Event で読む値」)                                                                                                                                                                                                                                                                                                                                        |
 
 - 「表示された結果を React の外の系に合わせる」の行の effect は、開発時の二重実行で利用者に見える結果が変わらないことを確かめる。変わったときの読み方は「開発時の二重実行が示すもの」
-- その行に当たる例: `src/components/ui/calendar.tsx` の focus、`src/components/ui/sidebar.tsx` の keydown の購読、取得の決着後の件数の通知 (ADR-0027)
+- その行に当たる例: `src/components/ui/calendar.tsx` の focus、`src/components/ui/sidebar.tsx` の keydown の購読、loader の props が入れ替わったあとの件数の通知 (ADR-0027)
 
 ## 出典
 

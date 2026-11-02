@@ -1,0 +1,36 @@
+import type { ReactNode } from "react";
+import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
+import { spyOn } from "storybook/test";
+
+import { thrownValueMessage } from "@/lib/thrown-value-message";
+
+/**
+ * `CaughtHere` の fallback が出す接頭辞。story はこの文言で境界到達を検証するので、
+ * 描く側と検証する側で同じ定数を使う。
+ */
+export const CAUGHT_PREFIX = "境界で受けた: ";
+
+/**
+ * Error Boundary の中に描く。Action の reject が部品に握られず境界へ届くことを見る用途
+ * (`docs/guides/react/updates.md`「Action 層の部品が守る契約」の失敗行)。
+ */
+export function CaughtHere({ children }: { children: ReactNode }) {
+  return <ErrorBoundary FallbackComponent={CaughtFallback}>{children}</ErrorBoundary>;
+}
+
+function CaughtFallback({ error }: FallbackProps) {
+  return (
+    <p>
+      {CAUGHT_PREFIX}
+      {thrownValueMessage(error)}
+    </p>
+  );
+}
+
+/**
+ * React が境界へ渡す前に出す `console.error` を黙らせる (出力を汚さないため)。
+ * story ごとに Storybook が `restoreAllMocks` を走らせるので後始末は要らない。
+ */
+export function silenceConsoleError(): void {
+  spyOn(console, "error").mockImplementation(() => {});
+}

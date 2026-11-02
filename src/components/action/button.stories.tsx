@@ -4,6 +4,7 @@ import { expect, fn, screen, userEvent, waitFor } from "storybook/test";
 import { createSettlingAction } from "@/test/app/settling-action";
 
 import { ActionButton } from "./button";
+import { CAUGHT_PREFIX, CaughtHere, silenceConsoleError } from "./catch-boundary.story-helpers";
 
 /**
  * 決着しない Promise を story に置かない。React は進行中の Transition を root をまたいで
@@ -131,5 +132,22 @@ export const WithAriaLabel: Story = {
   args: { children: "削除", "aria-label": "メモを削除" },
   play: async () => {
     await expect(screen.getByRole("button", { name: "メモを削除" })).toBeInTheDocument();
+  },
+};
+
+/** action の reject は部品が握らず、最寄りの Error Boundary へ届く */
+export const RejectReachesErrorBoundary: Story = {
+  tags: ["!dev"],
+  args: { children: "実行", action: fn(() => Promise.reject(new Error("失敗"))) },
+  render: (args) => (
+    <CaughtHere>
+      <ActionButton {...args} />
+    </CaughtHere>
+  ),
+  play: async () => {
+    silenceConsoleError();
+    await userEvent.click(screen.getByRole("button", { name: "実行" }));
+
+    await expect(await screen.findByText(`${CAUGHT_PREFIX}失敗`)).toBeInTheDocument();
   },
 };

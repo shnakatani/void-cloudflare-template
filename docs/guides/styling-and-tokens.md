@@ -6,7 +6,7 @@
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | ドキュメントは rules・設計ガイド・決定・docstring・履歴の層に分け、ADR は構造・品質特性・戻しにくさに効く選択に限り、参照は rules の側から一方向に張る | ADR-0001 |
 | `src/components/` を役割で分け、design system の著作と消費の境界をディレクトリで表す                                                                   | ADR-0011 |
-| mutation は Action 層の `action` prop から `useActionMutation` で呼び、二重発火は state だけで塞ぐ                                                     | ADR-0016 |
+| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                                         | ADR-0016 |
 | registry との乖離は生成時 baseline との 3-way で判別し、許容リスト (registry コードと `src/styles.css`) の行に限る                                     | ADR-0020 |
 | design system の層から外へ class 文字列を配らず、共有する外見は部品・prop・variant で配る                                                              | ADR-0022 |
 | 色は `@theme` と `@shadcn/lint` の 2 層で semantic token に閉じ込める                                                                                  | ADR-0023 |
@@ -43,6 +43,7 @@
 | `ui/` の `cva` の variant として配り、`settings.shadcn.variantFunctions` へ宣言する | 同じ部品の見た目を分けるとき   |
 
 - `ui/` の内側での共有は対象外で、class 定数の export 自体は禁じない。`ui/` の外のファイルが import して部品へ渡せば規則が落とす
+- ボタンの見た目のリンクは `ButtonLink` (`src/components/parts/button-link.tsx`) で組む。Base UI の `render` に `Link` を渡さない。`Link` が prefetch の観測に使う内部の ref を、`render` が上書きすると推論している (確かめていない)。無効なリンクは持たない。`ButtonLink` は `disabled` と `aria-disabled` を型で外してあり、`Link` は無効の状態で遷移を止めない。無効にしたい操作はリンクではなくボタンで表す
 - 部品として配るとき、その部品をどの層が持つかは、層の役割 (ADR-0011) と、汎用の層が負う責務の範囲 (ADR-0016) で決める
 - variant 関数を消費側から呼ぶ形を採るたびに、`tooling/lint/config.ts` の `settings.shadcn.variantFunctions` へ足す。忘れると呼び出しが lint で落ちるので、気付けない失敗にはならない
 - 宣言するのは `ui/` の variant 関数だけにする。`ui/` の外の `cva` を宣言すると、定義の中の class が `no-restyle` に検査されずに部品へ通る (ADR-0023)

@@ -2,7 +2,9 @@
 export const THROWN_VALUE_UNPRINTABLE = "表示できない値が投げられました";
 
 /**
- * 投げられた値を画面に出す文言にする。React の error boundary が受ける error は Error とは限らないので、
+ * 投げられた値を、error boundary の fallback に出す文言にする。アプリのエラー表示 (`AppError`・`SectionErrorBoundary`) は
+ * 例外の文言を出さない (ADR-0050)。境界への到達を文言で確かめる story の `CaughtHere` が使う。
+ * React の error boundary が受ける error は Error とは限らないので、
  * unknown で受ける (React の docs「Component」の `static getDerivedStateFromError` の Parameters: "this is not
  * guaranteed because JavaScript allows to throw any value, including strings or even null")。
  * Error ならその message を、それ以外は値を文字列にする。

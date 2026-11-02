@@ -40,7 +40,7 @@ paths:
 
 | 配置先                   | 内容                                                                                                                                                                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/features/<domain>/` | 1 つのドメインに属し、複数の画面から使うものか、ドメインの形と同じ場所に居るべきもの (スキーマ / query options / mutation options / 共有 UI) (`docs/guides/placement.md`「features か lib・hooks か」)                                   |
+| `src/features/<domain>/` | 1 つのドメインに属し、複数の画面から使うものか、ドメインの形と同じ場所に居るべきもの (スキーマ / 共有 UI) (`docs/guides/placement.md`「features か lib・hooks か」)                                                                      |
 | `src/hooks/`             | どのドメインにも属さない React 依存のカスタム hook (`use-*`) と、複数のファイルから使う React 依存の context 定義。1 つの部品のファイルだけで使う context はそのファイルに置く (`docs/guides/placement.md`「features か lib・hooks か」) |
 | `src/lib/`               | ドメインに属さない汎用ロジック・型 (React 非依存) (`docs/guides/placement.md`「features か lib・hooks か」)                                                                                                                              |
 
@@ -61,7 +61,7 @@ paths:
 | `src/test/browser/`        | browser project の実行環境を組むもの。config と setup が読む定数もここに置く (`docs/guides/placement.md`「`src/test/` に helper を置く」) |
 | `src/test/assert/`         | テスト本文が呼ぶ assert と実測、その引数の型 (`docs/guides/placement.md`「`src/test/` に helper を置く」)                                 |
 | `src/test/a11y/`           | axe の実行と結果の整形 (`docs/guides/placement.md`「`src/test/` に helper を置く」)                                                       |
-| `src/test/app/`            | アプリの依存 (QueryClient・mock・action) をテスト用に作る足場 (`docs/guides/placement.md`「`src/test/` に helper を置く」)                |
+| `src/test/app/`            | アプリの依存 (router・mock・action) をテスト用に作る足場 (`docs/guides/placement.md`「`src/test/` に helper を置く」)                     |
 
 - `src/test/` の helper は上の表のディレクトリに置き、直下に置かない (`docs/guides/placement.md`「`src/test/` の helper を何を作るかで分ける理由」)
 - helper を持たず、全 project に効く実行環境が効いていることだけを確かめるテストは、`src/test/` の直下に置く (`test-time-zone.tz.test.ts`)。表の役割は helper が何を作るかで分けていて、テストだけのディレクトリは作らない (`docs/guides/placement.md`「`src/test/` に helper を置く」)

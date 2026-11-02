@@ -4,14 +4,11 @@
 // tsconfig.node.json が持つ。ここに入れると、テストが読む Worker のコードが Workers の型を
 // この program へ持ち込み、DOM の型とぶつかる (ADR-0047)
 {
-  "extends": ["./tsconfig.base.json", "./.void/tsconfig.json"],
+  "extends": ["./tsconfig.base.json", "./.void/tsconfig.json", "./tsconfig.paths.json"],
   "compilerOptions": {
     "lib": ["ES2024", "ESNext.Error", "DOM", "DOM.Iterable"],
     // vite-plus/test/browser-playwright は、playwright の provider が vitest/browser の cdp() に足す型を読む
-    "types": ["vite-plus/client", "vite-plus/test/browser-playwright", "node"],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "types": ["vite-plus/client", "vite-plus/test/browser-playwright", "node"]
   },
   "include": [
     "**/*.test.ts",

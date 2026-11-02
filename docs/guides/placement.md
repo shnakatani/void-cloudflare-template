@@ -12,13 +12,12 @@
 
 置き場所は消費者で決める。
 
-| 条件                                                 | 置き場所                                                                                                                         |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 複数の画面から使う                                   | `src/features/<domain>/`                                                                                                         |
-| ドメインの形 (schema、mutation) と同じ場所に居るべき | `src/features/<domain>/`                                                                                                         |
-| どのドメインにも属さない                             | React に依存しない汎用ロジックと型は `src/lib/`、React の hook と、複数のファイルから使う React の context の定義は `src/hooks/` |
+| 条件                                       | 置き場所                                                                                                                         |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| 複数の画面から使う                         | `src/features/<domain>/`                                                                                                         |
+| ドメインの形 (schema) と同じ場所に居るべき | `src/features/<domain>/`                                                                                                         |
+| どのドメインにも属さない                   | React に依存しない汎用ロジックと型は `src/lib/`、React の hook と、複数のファイルから使う React の context の定義は `src/hooks/` |
 
-mutation の variables を絞る parser は `src/features/<domain>/` になる。
 1 つの部品のファイルの中だけで使う context は、`src/hooks/` へ出さずにそのファイルに置く (`src/components/action/form.tsx`)。
 `src/features/<domain>/` の中の import も相対パスで書き、ディレクトリごと移せる形を保つ。
 
@@ -30,12 +29,12 @@ registry 由来でない付随ファイル (テスト・story とその helper) 
 
 ドメインを跨ぐテストの helper は、そのファイルが何を作るかで `src/test/` の下のディレクトリを選ぶ。誰が呼ぶかと、ファイル名の prefix (`a11y-*`、`viewport-*`) では選ばない。理由は「`src/test/` の helper を何を作るかで分ける理由」。
 
-| 何を作るか                                                    | ディレクトリ        | 例                                                        |
-| ------------------------------------------------------------- | ------------------- | --------------------------------------------------------- |
-| browser project の実行環境 (setup、config が読む定数)         | `src/test/browser/` | `browser-setup.tsx`、`park-mouse.ts`、`viewport-sizes.ts` |
-| テスト本文が呼ぶ assert と実測、その引数の型                  | `src/test/assert/`  | `absent.ts`、`viewport.ts`、`screen-assertions.ts`        |
-| axe の実行と結果の整形                                        | `src/test/a11y/`    | `a11y.ts`、`a11y-message.ts`                              |
-| アプリの依存 (QueryClient・mock・action) をテスト用に作る足場 | `src/test/app/`     | `query-client.ts`、`settling-action.ts`                   |
+| 何を作るか                                               | ディレクトリ        | 例                                                        |
+| -------------------------------------------------------- | ------------------- | --------------------------------------------------------- |
+| browser project の実行環境 (setup、config が読む定数)    | `src/test/browser/` | `browser-setup.tsx`、`park-mouse.ts`、`viewport-sizes.ts` |
+| テスト本文が呼ぶ assert と実測、その引数の型             | `src/test/assert/`  | `absent.ts`、`viewport.ts`、`screen-assertions.ts`        |
+| axe の実行と結果の整形                                   | `src/test/a11y/`    | `a11y.ts`、`a11y-message.ts`                              |
+| アプリの依存 (router・mock・action) をテスト用に作る足場 | `src/test/app/`     | `void-router.tsx`、`settling-action.ts`                   |
 
 - config が読む定数は、テスト本文が使うものでも `browser/` に置く。assert の helper と同じファイルにすると、config が browser mode の import (`vite-plus/test/browser`) を引いて落ちる (`viewport-sizes.ts` の docstring)
 - 1 つのファイルに役割が 2 つ混ざったら、ファイルを分けてそれぞれのディレクトリへ置く。混ざったファイルが残ると、次の helper を置くときの手本が 2 通りになる

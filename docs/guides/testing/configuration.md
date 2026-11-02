@@ -16,7 +16,7 @@
 
 壊れる原因が違うテストを同じ project に混ぜない。project が分かれていると、落ちた project の名前から、直す対象がアプリのコードか、スクリプトか、設定と文書かが分かる。
 
-表の `<アプリ>` は、`src/` と Void の規約のディレクトリ (`scripts/lib/void-source-dirs.ts`) のどれかを指す。
+表の `<アプリ>` は、`src/` と、Void の規約のディレクトリでテストを置けるもの (`scripts/lib/void-source-dirs.ts` の `VOID_TEST_DIRS`) のどれかを指す。
 
 | 種別                   | 壊れる原因                   | 置き場所                                            | 実行                                                                                                         |
 | ---------------------- | ---------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -28,7 +28,19 @@
 | 整合検査               | 設定・ドキュメントの更新漏れ | `scripts/checks/integrity/`                         | `vp test run --project checks-integrity`                                                                     |
 | 成果物の検査           | ビルド結果に現れる挙動の欠落 | `scripts/checks/runtime/`                           | `vp build` の後に `vp run verify:<name>` (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)    |
 
-- `src/` と Void の規約のディレクトリのテストは、接尾辞で project が決まる。DOM が要るテストは `*.test.tsx` にして browser project で、DOM が要らないテストは `*.test.ts` にして unit project (Node) で走らせる。テストの helper のテストも同じに分ける。集める範囲は、`tooling/test/config.ts` の `unit` の `include` と、`scripts/lib/companion-files.ts` の `BROWSER_TEST_GLOBS` が持つ
+- `<アプリ>` のテストは、接尾辞で project が決まる。DOM が要るテストは `*.test.tsx` にして browser project で、DOM が要らないテストは `*.test.ts` にして unit project (Node) で走らせる。テストの helper のテストも同じに分ける。集める範囲は、`tooling/test/config.ts` の `unit` の `include` と、`scripts/lib/companion-files.ts` の `BROWSER_TEST_GLOBS` が持つ
+- Void の規約のディレクトリのテストと、テストの helper は、ファイル名を `_` で始めてディレクトリの直下に置く (`pages/_layout.test.tsx`)。`_` が無いと、`pages/layout.test.tsx` が `/layout.test` のページとして build に入り、chunk が出る (2026-11-01、Void 1.4.0 で実測)。ディレクトリごとの扱いは次の表のとおり (出典は Void 1.4.0 の `packages/void/src/` 以下)
+- テストを置けないディレクトリのコードは、テストできる部分を `src/` に切り出し、そこでテストする。ディレクトリのファイルは `src/` を呼ぶだけにする。置くと、`durable-objects/x.test.ts` と `durable-objects/_x.test.ts` はどちらも `vp build` が `"default" is not exported by "durable-objects/_x.test.ts"` で落ちる (2026-11-01、Void 1.4.0 で実測)。単体・ブラウザテストの `include` と coverage は、置けるディレクトリ (`VOID_TEST_DIRS`) だけを集める
+
+| ディレクトリ                   | テスト       | 走査と `_` の扱い (出典)                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pages/`                       | `_` で置ける | `pages/scan.ts` の `scanPages` が、パスのどの部分でも `_` で始まるものを外す。`_layouts/` だけは named layout として読むので、その中には置かない。Void の docs の `pages/` の節に記述は無い                                                                                                                                                                     |
+| `routes/`・`crons/`・`queues/` | `_` で置ける | `shared/convention-files.ts` の `isConventionPath` が、`_` で始まる部分を外す (docs の `guide/server-routing.md`・`guide/jobs.md`・`guide/queues.md` にも記述あり)                                                                                                                                                                                              |
+| `middleware/`                  | `_` で置ける | `router/scan.ts` の `parseMiddlewareDefinitions` が、相対パスの先頭が `_` のものだけを外す。`middleware/sub/_x.test.ts` は外れないので、直下に置く                                                                                                                                                                                                              |
+| `email/`                       | `_` で置ける | `router/email.ts` の `parseEmailFiles` が、`/` を含むパス (サブディレクトリ) を読まず、`_` で始まるファイル名 (`_default` を除く) を外す                                                                                                                                                                                                                        |
+| `durable-objects/`             | 置けない     | `durable/scan.ts` の `scanDurableObjectModules` が、`.d.ts` 以外の直下の `.ts` をすべて durable object のモジュールとして読む。`_` を見ない                                                                                                                                                                                                                     |
+| `db/`                          | 置けない     | `cli/db.ts` の `collectSchemaModuleFiles` が `db/schema/` の `.ts` をすべて import し、`drizzle/discover.ts` の `schemaSpecifier` が `./db/schema/*.ts` を Drizzle Kit に渡す。`_` を見ない。`db/` の直下の他のファイルと `db/migrations/` は走査の対象が `schema.ts`・`seed.*`・`*.sql` なので、テストが拾われるかは確かめていない。ディレクトリ単位で置かない |
+
 - 種別を足すときは、置き場所と project を対で作る (「project を足す」)
 
 ### テストの API を import する
