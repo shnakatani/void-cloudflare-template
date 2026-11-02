@@ -28,6 +28,7 @@ lint では見ないのでレビューで見る。
 - effect は、表示された結果を React の外の系 (DOM、ブラウザ API、外部 widget、イベントに応じて動く購読、announcer) に合わせるときだけ使う (`docs/guides/react/effects.md`「effect とイベントハンドラを分ける理由」)
 - 開発時の二重実行で見える結果が変わったら、まず後始末を書く。後始末を書いても変わるときは、操作ならイベントハンドラへ、アプリの読み込みならコンポーネントの外へ移す (`docs/guides/react/effects.md`「開発時の二重実行が示すもの」)
 - effect を 1 回しか走らせないための ref を書かない。1 回に抑えても、離れて戻ったときの後始末の欠けは残る。直前に反映した値を ref に持ち、同じなら何もしない形は、何度走っても同じ結果になるのでよい (`docs/guides/react/effects.md`「開発時の二重実行が示すもの」)
+- 遷移を契機に外の系へ伝える処理 (analytics、外部のキャッシュの消去) は、DOM を描かない部品の effect で `useRouter().path` (query も契機なら `useRouter().url.href`) を依存にして書き、`pages/layout.tsx` の `AppErrorBoundary` の外に置く。ページの effect に置くと、別のページと失敗の表示の間は走らない。Void に遷移を購読する API は無い (`docs/guides/react/effects.md`「遷移を契機に外の系へ伝える」)
 
 ## Effect が読む最新値は useEffectEvent へ切り出す
 
