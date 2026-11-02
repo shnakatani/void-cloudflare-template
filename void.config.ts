@@ -22,7 +22,8 @@ export default defineConfig({
   // titleTemplate は使わない。この title にも掛かり、ホームが「アプリ名 — アプリ名」になる。ページ名は
   // ページの head() が pageTitle (src/lib/page-title.ts) で付ける (ADR-0049)
   // ホームの title がアプリ名になることを確かめる単体テストは持たない。この値は Void が応答の <head> へ
-  // 合成する設定で、設定を写すテストは設定が効いていることを示さない。動かして見る (vp preview でログインして / を開く)
+  // 合成する設定で、設定を写すテストは設定が効いていることを示さない。実応答を読む検査も足さない (退行の
+  // 記録が無い)。Void を上げたら、vp preview でログインして / を開いて見る。外れたら verify:security-headers に足す
   head: {
     title: APP_NAME,
     htmlAttrs: { lang: "ja" },
