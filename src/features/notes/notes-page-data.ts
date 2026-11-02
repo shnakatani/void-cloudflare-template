@@ -1,4 +1,4 @@
-import { pageTitle } from "@/lib/page-title";
+import { errorPageTitle, pageTitle } from "@/lib/page-title";
 
 import {
   NOTE_CREATE_DIALOG_TITLE,
@@ -81,7 +81,14 @@ export function noteDialogTitle(dialog: NoteDialogState): string {
   }
 }
 
-/** `<title>`。`head` と、ダイアログの開閉の読み上げが同じ値を使う */
-export function notesDocumentTitle(dialog: NoteDialogState): string {
-  return pageTitle(noteDialogTitle(dialog));
+/**
+ * `<title>`。`head` と、ダイアログの開閉の読み上げが同じ値を使う。一覧を読めなかったら、閉じているときだけ
+ * 「エラー: 」を付ける。開いたダイアログの title はダイアログの中身を名指すので付けない
+ */
+export function notesDocumentTitle({
+  notes,
+  dialog,
+}: Pick<NotesPageData, "notes" | "dialog">): string {
+  const title = pageTitle(noteDialogTitle(dialog));
+  return notes === null && dialog.kind === "closed" ? errorPageTitle(title) : title;
 }

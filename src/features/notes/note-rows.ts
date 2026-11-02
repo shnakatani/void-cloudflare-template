@@ -3,12 +3,17 @@ import { noteEditUrl } from "./notes-url";
 import type { Note } from "./schema";
 
 /**
- * 一覧の 1 行。`isDeleting` は削除の Action の楽観値 (useOptimistic) から、`editHref` は一覧の q から、
- * `isEditPending` は読み込み中の遷移 (`pendingNoteEditId`) から決まる
+ * 一覧の 1 行。`isDeleting` と `isDeleteBlocked` は削除の Action の楽観値 (useOptimistic) から、`editHref` は
+ * 一覧の q から、`isEditPending` は読み込み中の遷移 (`pendingNoteEditId`) から決まる
  */
 export type NoteRow = {
   readonly note: NoteView;
   readonly isDeleting: boolean;
+  /**
+   * どれかの行の削除が進んでいる。続けて確定すると、後の送信が前の送信を取り消し、前の要求がサーバーへ届く前なら
+   * 前の削除は知らされずに起きない (ADR-0017)。進んでいる間は、どの行の削除も始めさせない
+   */
+  readonly isDeleteBlocked: boolean;
   readonly editHref: string;
   readonly isEditPending: boolean;
 };
@@ -27,6 +32,7 @@ export function toNoteRows({
   return notes.map((note) => ({
     note,
     isDeleting: deletingIds.includes(note.id),
+    isDeleteBlocked: deletingIds.length > 0,
     editHref: noteEditUrl(note.id, q),
     isEditPending: note.id === pendingEditId,
   }));

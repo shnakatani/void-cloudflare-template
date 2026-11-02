@@ -1,19 +1,18 @@
 import { useRouter } from "@void/react";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 
-import { ActionButton } from "@/components/action/button";
+import { ActionButtonShell } from "@/components/action/button";
 import { FullScreenNotice } from "@/components/parts/centered-card";
 import { focusPageHeading } from "@/lib/focus-page-heading";
+import { errorPageTitle } from "@/lib/page-title";
 
 /**
  * 本文に出す固定の文言。原因ではなく次に取れる行動だけを伝える
  * (`lib/mutation-error.ts` の `MUTATION_ERROR_FALLBACK_MESSAGE` と対になる意匠)
  */
 export const APP_ERROR_MESSAGE = "ページを表示できませんでした。時間をおいて再試行してください。";
-
-const ERROR_TITLE_PREFIX = "エラー: ";
 
 /**
  * 全画面のエラー表示 (ADR-0050)。例外の文言は出さない。production の Void は server の例外の中身を client へ渡さず、
@@ -25,22 +24,31 @@ const ERROR_TITLE_PREFIX = "エラー: ";
  *
  * 出た時点で focus が無ければ見出しへ移す。遷移を伴わない失敗 (操作による再描画の throw) では、
  * 失敗で消えた要素に乗っていた focus が body に落ちて、キーボードの利用者の位置が失われる。
- * 再試行は決着するまで押せない (`ActionButton`)。
+ * 再試行は決着するまで押せない。`ActionButton` の Action には載せず、決着までを部品の state に持って `ActionButtonShell` に渡す。
+ * 再試行は `router.refresh()` の commit を待ち、その commit は Void が Transition で予約する。Action の中で待つと、Action が
+ * commit を待ち、commit が Action の終わりを待って、読み直しの応答が返っても表示が替わらない (ADR-0050)
  */
-export function AppError({
-  error,
-  onRetry,
-}: {
-  error: unknown;
-  onRetry: () => Promise<void> | void;
-}) {
+export function AppError({ error, onRetry }: { error: unknown; onRetry: () => Promise<void> }) {
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  function handleRetry() {
+    setIsRetrying(true);
+    void onRetry()
+      .catch((retryError: unknown) => {
+        console.error("[AppError] 再試行が失敗した", { error: retryError });
+      })
+      .finally(() => {
+        setIsRetrying(false);
+      });
+  }
+
   useEffect(() => {
     focusPageHeading(true);
   }, []);
 
   useEffect(() => {
     const pageTitle = document.title;
-    const errorTitle = `${ERROR_TITLE_PREFIX}${pageTitle}`;
+    const errorTitle = errorPageTitle(pageTitle);
     document.title = errorTitle;
     return () => {
       if (document.title === errorTitle) {
@@ -51,9 +59,14 @@ export function AppError({
 
   return (
     <FullScreenNotice title="エラーが発生しました" description={APP_ERROR_MESSAGE}>
-      <ActionButton action={onRetry} className="w-full">
+      <ActionButtonShell
+        type="button"
+        className="w-full"
+        isPending={isRetrying}
+        onClick={handleRetry}
+      >
         再試行
-      </ActionButton>
+      </ActionButtonShell>
     </FullScreenNotice>
   );
 }

@@ -6,8 +6,7 @@ import { CheckFailure, startPreview } from "../../lib/preview-server.ts";
  * middleware が要求の経路に載っていること、redirect が絶対 URL で query を混ぜないこと (voidzero-dev/void#648) は
  * 動かさないと分からない。
  *
- * ログインした要求は確かめない。preview の D1 は dev の D1 (`.void/v3/d1`) と同じで、sign up すると開発者の
- * dev のデータにテストのユーザーが溜まる (2026-11-02 の spike)。ログインした経路は dev で確かめる
+ * ログインした要求の振り分け (ログイン済みで guest-only の path を開いたときの redirect) は確かめない。dev で確かめる
  */
 
 const REQUEST_TIMEOUT_MS = 2000;

@@ -42,7 +42,10 @@ async function renderBoundary(router = createFakeRouter("/")) {
 describe("AppError", () => {
   it("失敗の見出しを h1 に描き、例外の文言を出さずに次の一手だけを示す", async () => {
     const screen = await render(
-      <AppError error={new Error("削除対象のノートが見つかりません: id=42")} onRetry={() => {}} />,
+      <AppError
+        error={new Error("削除対象のノートが見つかりません: id=42")}
+        onRetry={() => Promise.resolve()}
+      />,
     );
 
     await expect
@@ -56,7 +59,12 @@ describe("AppError", () => {
     const router = createFakeRouter("/");
     const screen = await render(
       <VoidRouterProvider router={router}>
-        <AppError error={new Error("x")} onRetry={() => void router.refresh()} />
+        <AppError
+          error={new Error("x")}
+          onRetry={async () => {
+            await router.refresh();
+          }}
+        />
       </VoidRouterProvider>,
     );
     await screen.getByRole("button", { name: "再試行" }).click();
@@ -69,7 +77,9 @@ describe("AppError", () => {
       document.title = previous;
     });
     document.title = "ノート — アプリ";
-    const screen = await render(<AppError error={new Error("x")} onRetry={() => {}} />);
+    const screen = await render(
+      <AppError error={new Error("x")} onRetry={() => Promise.resolve()} />,
+    );
     await expect.poll(() => document.title).toBe("エラー: ノート — アプリ");
 
     await screen.unmount();
@@ -83,25 +93,29 @@ describe("AppError", () => {
       document.title = previous;
     });
     document.title = "ノート — アプリ";
-    const screen = await render(<AppError error={new Error("a")} onRetry={() => {}} />);
+    const screen = await render(
+      <AppError error={new Error("a")} onRetry={() => Promise.resolve()} />,
+    );
     await expect.poll(() => document.title).toBe("エラー: ノート — アプリ");
 
     // 遷移の先でも失敗すると、Void が title を書き換えてからこの部品が次の error を受ける
     document.title = "設定 — アプリ";
-    await screen.rerender(<AppError error={new Error("b")} onRetry={() => {}} />);
+    await screen.rerender(<AppError error={new Error("b")} onRetry={() => Promise.resolve()} />);
 
     await expect.poll(() => document.title).toBe("エラー: 設定 — アプリ");
   });
 
   it("出た時点で focus が無ければ、見出しへ移す", async () => {
-    const screen = await render(<AppError error={new Error("x")} onRetry={() => {}} />);
+    const screen = await render(
+      <AppError error={new Error("x")} onRetry={() => Promise.resolve()} />,
+    );
 
     await expect
       .element(screen.getByRole("heading", { name: "エラーが発生しました", level: 1 }))
       .toHaveFocus();
   });
 
-  it("再試行が決着するまで押せず、再クリックでは onRetry を呼ばない", async () => {
+  it("再試行が決着するまで押せず、再クリックでは onRetry を呼ばない。決着したら押せる", async () => {
     const pending = Promise.withResolvers<undefined>();
     const onRetry = vi.fn(() => pending.promise);
     const screen = await render(<AppError error={new Error("x")} onRetry={onRetry} />);
@@ -114,6 +128,7 @@ describe("AppError", () => {
 
     expect(onRetry).toHaveBeenCalledOnce();
     pending.resolve(undefined);
+    await expect.element(button).toBeEnabled();
   });
 });
 
@@ -153,7 +168,7 @@ describe("AppErrorBoundary", () => {
     await expect.element(screen.getByRole("heading", { name: "ページの中身" })).toHaveFocus();
   });
 
-  it("再試行のあとも失敗したら、失敗の見出しへ focus を移す", async () => {
+  it("再試行のあとも失敗したら、失敗の見出しへ focus を移し、再試行をまた押せる", async () => {
     const { screen } = await renderBoundary();
 
     await screen.getByRole("button", { name: "再試行" }).click();
@@ -161,6 +176,7 @@ describe("AppErrorBoundary", () => {
     await expect
       .element(screen.getByRole("heading", { name: "エラーが発生しました", level: 1 }))
       .toHaveFocus();
+    await expect.element(screen.getByRole("button", { name: "再試行" })).toBeEnabled();
   });
 
   it("再読み込みが失敗しても子を描き直し、失敗を warn に残す", async () => {

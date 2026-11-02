@@ -1,6 +1,6 @@
 # DB
 
-D1 の schema・migration・query を変える手順と、テストで D1 を使う手順と、その形にしている理由を持つ。
+D1 の schema・migration・query を変える手順と、見本のデータを入れる手順と、テストで D1 を使う手順と、その形にしている理由を持つ。
 
 | 決定                                                                                                                                | ADR      |
 | ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -39,6 +39,18 @@ D1 の schema・migration・query を変える手順と、テストで D1 を使
 - dev の起動ログに `Local database already has application tables but no Void migration history` が出たら打つ。migration を入れる前に dev を起動し、dev が auth の table を作った D1 で出る。dev は ready になるが、migration の適用はこの error で止まる (2026-11-02、Void 1.4.0)
 - reset は dev で登録したユーザーも消す
 - dev と `vp preview` は同じ D1 (`.void/v3/d1`) を読む。reset は preview の D1 も作り直す
+
+### 見本のデータを入れる
+
+`vp exec void db seed --yes` は、ローカルの D1 を reset と同じに作り直し、`db/seed.ts` を実行する ([Void docs「void db seed」][])。打ったあと dev server を起動し直す。
+
+- 打つたびに、dev の画面から作った行と登録したユーザーが消える (「dev の D1 を作り直す」)
+- ログインに使うユーザーは `db/seed.ts` が作る。email と password は `db/seed.ts` の docstring にある
+- `db/seed.ts` は `void/seed` の `defineSeed` で包んで default export にする ([Void docs「Database」][] の Seeding)。渡る `db` は better-sqlite3 の drizzle なので、書き込みは `.run()` で同期に打つ
+- 渡る `schema` は `db/schema.ts` の export だけで、auth の table を持たない。auth の table の行は ``db.run(sql`…`)`` で入れ、列は Better Auth の email の sign-up が入れる行に合わせる (`account` の `providerId` は `credential`、`accountId` は user の id)
+- `db/seed.ts` と、そこから実行時に読むファイルは `@/` で import しない。`void db seed` は jiti で読み、tsconfig の `paths` を渡さない (Void 1.4.0 の `cli/db.ts` の `importLocalModule`)。`import type` は実行時に消えるので、`@/` を使うファイルから型だけ引いてよい (2026-11-02 に実測)
+- 見本の行の id と作成日時・更新日時は固定の値で書く。既定値に任せると、打つたびに実行時刻が入り、一覧の並びが変わる
+- 見本の配列は `src/features/<domain>/` に置き、ドメインの読み出しの型を付ける。各行が読み出しのスキーマを通ることを、同じディレクトリの unit のテストで確かめる。`db/` にはテストを置けない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)
 
 ### query を書く
 
@@ -84,6 +96,18 @@ it("別のユーザーの行を返さない", async () => {
 
 `meta/` の JSON は drizzle-kit の生成物で、`vp check` の format に通すと落ちる (2026-11-02)。format し直すと、生成のたびに手で整える手順が要り、commit したものが drizzle-kit の出力のままかどうかを見分けにくくなる。deploy は `meta/` の snapshot を schema と比べるので ([Void docs「Database」][] の Hand-written migrations)、`vite.config.ts` の `fmt.ignorePatterns` で外し、生成したままの形で持つ。
 
+### 見本のユーザーの password を固定の hash で持つ理由
+
+見本のユーザーには、ログインできる password の hash が要る。作り方の候補は次のとおりで、固定の値を選んだ (Void 1.4.0、2026-11-02 にソースを読んだもの)。
+
+| 候補                                                        | 採否 | 理由                                                                                                                                        |
+| ----------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Better Auth の sign-up の API を seed から呼ぶ              | 却下 | Void は Worker の外で Better Auth を組む口を公開しない。`auth/drizzle.ts` が組む options は auth の schema を作るためだけのもの             |
+| Void の hash 関数を呼ぶ                                     | 却下 | `voidAuthPassword` (`runtime/better-auth-shared.ts`) は export されていない                                                                 |
+| Better Auth の `hashPassword` (`better-auth/crypto`) を呼ぶ | 却下 | Void と同じ形を作るが、`better-auth` は `void` の依存で、直接の依存に足すと版を `void` と揃え続けることになる                               |
+| seed の中で `node:crypto` の `scrypt` で作る                | 却下 | `db/` は Workers の型の tsconfig (ADR-0047) に入り、`node:crypto` の型が無い                                                                |
+| 固定の salt で作った値を置く                                | 採用 | Void の hash の形 (`<salt>:<鍵>` の hex、scrypt の N 16384・r 16・p 1・鍵 64 byte) が変わると、見本のユーザーでログインできなくなって分かる |
+
 ## 出典
 
 本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。
@@ -91,3 +115,4 @@ it("別のユーザーの行を返さない", async () => {
 [Void docs「Database」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/database.md
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
 [Void docs「void db reset」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md
+[Void docs「void db seed」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md

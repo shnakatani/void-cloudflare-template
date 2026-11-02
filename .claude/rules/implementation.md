@@ -61,13 +61,47 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 - ページの URL が query (ダイアログを開く key、絞り込みの語) を持つときは、`usePageAction` / `usePageActionForm` の `pageQuery` に `?` を除いて渡す。載せないと、server の検証の失敗 (422) でページが query の無い URL で描き直され、ダイアログと絞り込みが消えてエラーも出ない。その action の redirect は絶対 URL で返す (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から Better Auth の client (`void/client` の `auth`) で送るときは、`requestAuth` で呼び、`ActionForm` の `submitAction` に `submitClearingServerFieldErrors(form)` を渡す。理由は上の行と同じ (`docs/guides/auth.md`「Better Auth の client から送る」)
 - Action の中から遷移するときは `startVisit(router, path)` で始め、`router.visit` を await しない。Action と遷移の commit が互いを待ち、ボタンが pending のまま止まる (`docs/guides/auth.md`「Better Auth の client から送る」)
+- `router.refresh()` の決着を待つ処理 (全画面のエラー表示の再試行など) は、Action の外のハンドラで走らせ、`ActionButton` の `action` に渡さない。理由は上の行と同じで、読み直しの応答が返っても表示が替わらない。決着までの pending は部品の state に持ち、`ActionButtonShell` の `isPending` に渡す (ADR-0050)
 - `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
 - 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける。Action の中で閉じるのは `handle.close()` で行う。同期区間で React の state (`open`) を false にしても、ダイアログは Action の終わりまで残る (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
-- 送信中にほかの項目の起点を止める仕組みを足さない。後から始めた送信が前の送信を取り消し、取り消された `run` は何も出さずに `false` を返す。`useNavigation().state` は Action から始めた送信の間 `"submitting"` を描かないので、止める信号にならない。busy の表現は対象の項目だけに付ける (ADR-0017)
+- 確定操作の直後に閉じる操作は、その Action の間、同じ種類の操作のほかの項目の起点を、対象の項目と同じ楽観値から `aria-disabled` で止める。止めないと、後の送信が前の送信を取り消し、届く前なら前の操作は知らされずに起きない。native の `disabled` は、確定のあと移した focus を `<body>` へ落とす (ADR-0017)
+- それ以外の起点 (遷移、別の種類の操作) を送信中に止める仕組みを足さない。`useNavigation().state` は Action から始めた送信の間 `"submitting"` を描かないので、止める信号にならない。busy の表現は対象の項目だけに付ける (ADR-0017)
 - Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず action の応答で入れ替わる props に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)
 - 楽観表示は loader の props を元に `useOptimistic` で出し、reducer で書く。reducer は元の値に変更がすでに入っていても同じ結果を返す形にする。新しい props が Action の途中で commit されると、素直に足した reducer は同じ項目を 2 つ並べる (`docs/guides/react/updates.md`「楽観表示を出す」)
 - 操作の開始の announce は Action の中の `run` より前、完了は `usePageAction` の `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
 - 決着前の二重発火は Action 層の `isPending` (`aria-disabled`) が塞ぐ。閉包や ref のフラグを足さない (ADR-0016)
+
+## ページは title と見出しを持つ
+
+lint では見ないのでレビューで見る。
+
+- ホーム以外のページを足したら、`pages/<path>.server.ts` で `defineHead` の `head` を export し、`{ title: pageTitle(<ページ名>) }` (`src/lib/page-title.ts`) を返す。書き忘れると title がアプリ名だけになり、遷移の読み上げでホームと区別できず、何も落ちない (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+- title を文字列で直接書かず `pageTitle` を通す。`void.config.ts` の `head.titleTemplate` は使わない (ADR-0049)
+- ページの本文に `<h1>` を 1 つ描き、title のページ名と同じ文字列にする。見出しの行を持つページは `PageHeader` の `title` に渡す (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+- 読み込んだデータで名前が決まるページは、`head()` の 2 つ目の引数 (loader の props) から title を組む (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+- layout に `<h1>` を置かない。遷移のたびに focus が layout の `<h1>` へ移る (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+
+## ページの失敗は loader の値と区画の境界で受ける
+
+lint では見ないのでレビューで見る。
+
+- ページの対象そのものが無いときは、loader で `return c.notFound()` を返す。`throw new HTTPException(404)` は本文が text だけの 404 になる (ADR-0050)
+- ページは在り、その中の区画のデータや開く 1 件を読めない・無いときは、loader で throw せず失敗の値で返し、ページが区画に失敗を描く。throw するとページごと静的な 500 になり、検索欄のような周りも消える (ADR-0057)
+- 失敗の値を返したら、server の `console.error` に残す。応答は 200 で届き、ほかに気付く手掛かりが無い (ADR-0057)
+- 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)
+- loader が失敗の値を返した区画の再試行は、`router.refresh()` を `Button` の `onClick` から呼ぶ。`SectionErrorBoundary` の再試行は loader を読み直さない (`docs/guides/data-loading.md`「失敗した画面から再試行する」)
+
+## 一覧の上のフォームのダイアログは一覧のページの query で開く
+
+lint では見ないのでレビューで見る。
+
+- 追加と編集のダイアログは一覧のページの query (`<一覧>?new`、`<一覧>?edit=<id>`) で開き、Dialog の Root は開閉をまたいで描いたまま `open` を props から導く (ADR-0056)
+- 保存の Action の間は、Root の `onOpenChange` で `eventDetails.cancel()` を呼び、キャンセルのボタンも `disabled` にする。止める条件はそのダイアログ自身の保存の pending だけにする。閉じる遷移が保存の送信を取り消す (ADR-0056)
+- ダイアログの中身に、ダイアログの種類と値の id から作った `key` を渡す。渡さないと、開いたまま別の値へ移ったとき form が前の値のまま残る (ADR-0056)
+- `finalFocus` に `finalFocusToOpener(<開いた元のリンクを data 属性で探す関数>)` (`src/lib/dialog-final-focus.ts`) を渡す。閉じたら開いた元のリンクへ、無ければ見出しへ移し、別のダイアログに替わったら触れない。`finalFocus` からリンクを返すと、替わるときに focus がリンクを経由する (ADR-0056)
+- 操作中の行の開くリンクは `Button` の `focusableWhenDisabled` と `disabled` に描き替える。native の `disabled` は tab 順から外れ、focus が `<body>` へ落ちる (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
+- ダイアログを足したら、閉じたときの focus をページのテストで確かめる。開いた元のリンクの探し方を誤っても、型検査も Base UI も気付かない (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
+- 替わったときに開いた元のリンクが focus を受けないことは、`recordFocusins` (`src/test/assert/focusin.ts`) の記録で確かめる。`toHaveFocus` の retry では捉えられない (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
 
 ## 日付と日時の値は意味で分類して持つ
 

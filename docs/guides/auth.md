@@ -15,9 +15,10 @@
 
 1. `src/features/auth/access.ts` の `PROTECTED_PATHS` に path を足す。下位の path (`/x/1`) も守られる。`/` だけは `/` そのものに限る
 2. `scripts/checks/runtime/auth-redirect.ts` の `EXPECTATIONS` に、その path が未ログインで `/login` へ送られる行を足す
-3. `vp build` のあと `vp run verify:auth-redirect` で確かめる
+3. その path がページなら、`scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` に `signedIn: true` の行を足す。足さないと、そのページの HTML に CSP で止まる script があっても落ちない (`docs/guides/security-headers.md`「CSP の下で script を足す」)
+4. `vp build` のあと `vp run verify:auth-redirect` と `vp run verify:security-headers` で確かめる
 
-- どちらの一覧にも無い path は、未ログインでも開く。足し忘れても何も落ちないので、2 の行で守る (ADR-0053)
+- どちらの一覧にも無い path は、未ログインでも開く。足し忘れても何も落ちないので、`auth-redirect.ts` の `EXPECTATIONS` の行で守る (ADR-0053)
 - 守るページは prerender しない。`.md` のページと loader の無い island のページは自動で prerender されるので、守る path の下に置かない (ADR-0053)
 - ログイン済みなら開く意味の無い path (ログインと登録の画面) は `GUEST_ONLY_PATHS` に足す。ログイン済みの要求は `/` へ送られる
 - redirect の行き先は `new URL(<path>, c.req.url).href` の絶対 URL で渡す。相対の path を渡すと、要求の query が行き先に混ざる (「redirect を絶対 URL で書く理由」)

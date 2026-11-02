@@ -1,14 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { useRouter } from "@void/react";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
+import { render } from "vitest-browser-react";
 import { submitAction } from "void/pages-client";
 
 import {
   confirmDeleteButton,
   deleteConfirmDescription,
 } from "@/components/parts/delete-confirm-dialog.test-helpers";
+import { RouteAnnouncer } from "@/components/route-announcer";
 import { MUTATION_ERROR_FALLBACK_MESSAGE } from "@/lib/mutation-error";
+import { pageTitle } from "@/lib/page-title";
 import { expectNoA11yViolations } from "@/test/a11y/a11y";
 import { deferMock } from "@/test/app/defer-mock";
+import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 import { expectAbsent, expectRemoved } from "@/test/assert/absent";
 import { expectAnnouncements, readAnnouncements } from "@/test/assert/live-announcer";
 import { expectText, type Screen } from "@/test/assert/screen-assertions";
@@ -16,10 +21,15 @@ import { enableAnimations } from "@/test/browser/animations";
 import { parkMouse } from "@/test/browser/park-mouse";
 
 import { noteRow, rowDeleteButton } from "./note-cells.test-helpers";
-import { NOTES_RESULTS_ERROR_ANNOUNCEMENT, noteSearchResultMessage } from "./note-search";
+import {
+  NOTES_RESULTS_ERROR_ANNOUNCEMENT,
+  NOTES_RESULTS_ERROR_MESSAGE,
+  noteSearchResultMessage,
+} from "./note-search";
 import { noteSearchbox } from "./note-search-field.test-helpers";
+import { NotesPage } from "./notes-page";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
-import type { NoteView } from "./notes-page-data";
+import { notesDocumentTitle, type NotesPageData, type NoteView } from "./notes-page-data";
 import { NOTE_VIEW, OTHER_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
 import { noteEditUrl } from "./notes-url";
@@ -79,6 +89,52 @@ describe("NotesPage の一覧", () => {
     await expect.poll(() => router.refreshCount).toBe(1);
   });
 
+  it("一覧を読めなかったら、ページ名の h1 を残して失敗の見出しを h2 で描く", async () => {
+    const { screen } = await renderNotesPage({ notes: null });
+    await expect
+      .element(screen.getByRole("heading", { level: 2, name: NOTES_RESULTS_ERROR_MESSAGE }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("heading", { level: 1, name: NOTES_PAGE_TITLE }))
+      .toBeVisible();
+    await expect.element(screen.getByRole("heading", { level: 1 })).toHaveLength(1);
+  });
+
+  // 遷移の後の focus は、ページ名の h1 ではなく失敗の見出しへ移る (ADR-0049 の focusPageHeading)。
+  // 遷移の伝え方は root の layout の RouteAnnouncer が持つので、同じ組み合わせで描く
+  it("別のページから一覧へ移って一覧を読めなかったら、失敗の見出しへ focus を移し、「エラー: 」を付けた title を読み上げる", async () => {
+    const router = createFakeRouter("/");
+    const failed: NotesPageData = { q: "", notes: null, dialog: { kind: "closed" } };
+    function Harness() {
+      const { path } = useRouter();
+      return (
+        <>
+          {path === "/notes" ? <NotesPage {...failed} /> : <h1>ホーム</h1>}
+          <RouteAnnouncer />
+        </>
+      );
+    }
+    const screen = await render(
+      <VoidRouterProvider router={router}>
+        <Harness />
+      </VoidRouterProvider>,
+    );
+    await expect.element(screen.getByRole("heading", { name: "ホーム" })).toBeInTheDocument();
+    // Void は遷移の commit で head() の title を document.title に書く。偽の router は書かないので、遷移の前に置く
+    const previousTitle = document.title;
+    document.title = notesDocumentTitle(failed);
+    onTestFinished(() => {
+      document.title = previousTitle;
+    });
+
+    router.navigate("/notes");
+
+    await expect
+      .element(screen.getByRole("heading", { level: 2, name: NOTES_RESULTS_ERROR_MESSAGE }))
+      .toHaveFocus();
+    await expectAnnouncements([`エラー: ${pageTitle(NOTES_PAGE_TITLE)}`]);
+  });
+
   it("押した行の編集のダイアログを読み込む間、その行の編集のリンクにだけ Spinner を出す", async () => {
     const { screen } = await renderNotesPage(
       { q: "x", notes: [NOTE_VIEW, OTHER_NOTE_VIEW] },
@@ -97,6 +153,14 @@ describe("NotesPage の一覧", () => {
     await expectAbsent(
       screen.getByRole("link", { name: `${OTHER_NOTE_VIEW.title}を編集` }).getBySlot("spinner"),
     );
+  });
+
+  it("空状態の描画に a11y 違反が無い", { tags: ["a11y", "axe"] }, async (context) => {
+    const { screen } = await renderNotesPage({ notes: [] });
+    await expect
+      .element(screen.getByText(`${NOTE_ENTITY_LABEL}が登録されていません`))
+      .toBeInTheDocument();
+    await expectNoA11yViolations(document.body, context);
   });
 
   it("一覧の描画に a11y 違反が無い", { tags: ["a11y", "axe"] }, async (context) => {
@@ -294,8 +358,8 @@ describe("NotesPage の削除", () => {
 
     await expect.element(noteRow(screen, NOTE_VIEW)).toHaveStyle("opacity: 0.6");
     await expect.element(noteRow(screen, OTHER_NOTE_VIEW)).toHaveStyle("opacity: 1");
-    // 止めるのは削除中の行だけ (ADR-0017「ブロック範囲」)。他の行のトリガーは有効のまま
-    await expect.element(rowDeleteButton(screen, OTHER_NOTE_VIEW)).toBeEnabled();
+    // 削除が進んでいる間は、どの行の削除トリガーも止める (ADR-0017)
+    await expect.element(rowDeleteButton(screen, OTHER_NOTE_VIEW)).toBeDisabled();
     await expect.element(rowDeleteButton(screen, NOTE_VIEW)).toBeDisabled();
     // 行は静的テキスト (sr-only) で状態を持つ (ADR-0026)
     await expect.element(noteRow(screen, NOTE_VIEW).getByText("削除中")).toBeInTheDocument();
@@ -308,14 +372,27 @@ describe("NotesPage の削除", () => {
     await expectAnnouncements(["削除しています", `『${NOTE_VIEW.title}』を削除しました`]);
   });
 
-  it("削除中でも他の行を削除でき、後の送信が前を取り消しても、両方の行が後の Action の終わりまで busy のまま", async () => {
+  // 続けて確定すると、後の送信が前の送信を取り消し、前の要求がサーバーへ届く前なら前の削除は黙って起きない (ADR-0017)
+  it("削除が進んでいる間は、focus を移した次の行の削除も止め、終わると確定できる", async () => {
     const first = deferMock(submitAction);
     const { screen, rerender } = await renderNotesPage({ notes: [NOTE_VIEW, OTHER_NOTE_VIEW] });
     await openDeleteConfirm(screen, NOTE_VIEW);
     await confirmDeleteButton(screen).click();
     await expectDeleteConfirmClosed(screen);
 
-    const second = deferMock(submitAction);
+    const next = rowDeleteButton(screen, OTHER_NOTE_VIEW);
+    await expect.element(next).toHaveFocus();
+    await expect.element(next).toBeDisabled();
+    await userEvent.keyboard("{Enter}");
+    await expect.element(next).toHaveFocus();
+    await expectAbsent(
+      screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title), { exact: false }),
+    );
+    expect(submitAction).toHaveBeenCalledOnce();
+
+    first.resolve({ ok: true, pageData: undefined });
+    await rerender({ notes: [OTHER_NOTE_VIEW] });
+    await expect.element(next).toBeEnabled();
     await openDeleteConfirm(screen, OTHER_NOTE_VIEW);
     await confirmDeleteButton(screen).click();
 
@@ -325,20 +402,9 @@ describe("NotesPage の削除", () => {
         deletedWith("/notes?delete", NOTE_VIEW.id),
         deletedWith("/notes?delete", OTHER_NOTE_VIEW.id),
       ]);
-    // Void は新しい visit のたびに前の visit を abort し、前の action() は AbortError で reject する (ADR-0017)
-    first.reject(new DOMException("Navigation aborted", "AbortError"));
-
-    await expectAnnouncements(["削除しています", "削除しています"]);
-    await expect.element(noteRow(screen, NOTE_VIEW)).toHaveStyle("opacity: 0.6");
-    await expect.element(noteRow(screen, OTHER_NOTE_VIEW)).toHaveStyle("opacity: 0.6");
-
-    second.resolve({ ok: true, pageData: undefined });
-    await rerender({ notes: [] });
-
-    await expectText(screen, `${NOTE_ENTITY_LABEL}が登録されていません`);
-    // 取り消された run は false で決着するので、前の削除の完了は読み上げない (ADR-0017 の Consequences)
     await expectAnnouncements([
       "削除しています",
+      `『${NOTE_VIEW.title}』を削除しました`,
       "削除しています",
       `『${OTHER_NOTE_VIEW.title}』を削除しました`,
     ]);

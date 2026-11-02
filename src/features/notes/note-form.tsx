@@ -1,4 +1,5 @@
 import { revalidateLogic } from "@tanstack/react-form";
+import type { ComponentProps } from "react";
 import * as v from "valibot";
 
 import { ActionDialogContent } from "@/components/action/dialog";
@@ -60,7 +61,7 @@ export function NoteFormContent({
   submit: () => Promise<void>;
   /** 保存の Action の間 true。キャンセルを止める。ページの `Dialog` の `onOpenChange` も同じ値で止める */
   blocksClose: boolean;
-  finalFocus: () => HTMLElement | false;
+  finalFocus: ComponentProps<typeof ActionDialogContent>["finalFocus"];
 }) {
   return (
     // 検証に失敗すると handleSubmit は onSubmit を呼ばずに resolve し、Transition もすぐ終わる

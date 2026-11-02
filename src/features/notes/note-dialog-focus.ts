@@ -1,7 +1,5 @@
 import type { RefObject } from "react";
 
-import { moveFocusToPageHeading } from "@/lib/focus-page-heading";
-
 import type { Note } from "./schema";
 
 /** 行の編集リンクに付ける属性。編集ダイアログを閉じたときに、その行のリンクを探す */
@@ -35,19 +33,3 @@ export const noteCreateLinkRef: RefObject<HTMLElement | null> = {
     return findNoteCreateLink();
   },
 };
-
-/**
- * ダイアログを閉じたときの focus の移し先 (`DialogContent` の `finalFocus`)。開いた元のリンクを探して返す。
- * 開いた元のリンクが無いとき (一覧を読めなかった、行が消えた) は見出しへ移す。Base UI に要素を返すと枠を出さない
- * 指定を渡せないので、見出しへは自分で移して false を返す
- */
-export function noteDialogFinalFocus(find: () => HTMLElement | null): () => HTMLElement | false {
-  return () => {
-    const target = find();
-    if (target !== null) {
-      return target;
-    }
-    moveFocusToPageHeading();
-    return false;
-  };
-}

@@ -32,7 +32,7 @@ import {
   NOTE_NOT_FOUND_DIALOG_TITLE,
   NOTES_PAGE_TITLE,
 } from "./notes-page-constants";
-import { NOTE_VIEW } from "./notes-page-data.test-helpers";
+import { NOTE_VIEW, OTHER_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
 import { NOTE_BODY_MAX_LENGTH, NOTE_FIELD_LABELS, NOTE_TITLE_MAX_LENGTH } from "./schema";
 
@@ -364,6 +364,22 @@ describe("追加のダイアログ", () => {
     await expect.element(createLink(screen)).toHaveFocus();
     expect(focusins.filter((target) => target.tagName === "H1")).toEqual([]);
   });
+
+  it("開いたまま編集へ props が替わると、追加のリンクを経ずに編集の入力欄へ focus を移す", async () => {
+    // 消える側のダイアログが追加のリンクへ戻すと、替わる側が入力欄へ移すまでの間だけリンクが focus を受ける
+    const { screen, rerender } = await renderNotesPage({ notes: [NOTE_VIEW] });
+    // 追加のリンクはダイアログの背後で aria-hidden になり locator で引けないので、可視の文字で見分ける
+    const createLinkText = createLink(screen).element().textContent;
+    await rerender({ dialog: { kind: "create" } });
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    const focusins = recordFocusins();
+
+    await rerender({ dialog: { kind: "edit", note: NOTE_VIEW } });
+
+    await expect.element(titleTextbox(screen)).toHaveValue(NOTE_VIEW.title);
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    expect(focusins.map((target) => target.textContent)).not.toContain(createLinkText);
+  });
 });
 
 describe("編集のダイアログ", () => {
@@ -461,6 +477,42 @@ describe("編集のダイアログ", () => {
     });
 
     await expect.element(titleTextbox(screen)).toHaveValue("別のメモ");
+  });
+
+  it("開いたまま別のメモの編集へ props が替わると、前の行のリンクを経ずに替わった先の入力欄へ focus を移す", async () => {
+    // 消える側のダイアログが前の行のリンクへ戻すと、替わる側が入力欄へ移すまでの間だけリンクが focus を受ける
+    const { screen, rerender } = await renderNotesPage({
+      notes: [NOTE_VIEW, OTHER_NOTE_VIEW],
+      dialog: { kind: "edit", note: NOTE_VIEW },
+    });
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    const focusins = recordFocusins();
+
+    await rerender({ dialog: { kind: "edit", note: OTHER_NOTE_VIEW } });
+
+    await expect.element(titleTextbox(screen)).toHaveValue(OTHER_NOTE_VIEW.title);
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    // 行のリンクはダイアログの背後で aria-hidden になり locator で引けないので、aria-label で見分ける
+    expect(focusins.map((target) => target.getAttribute("aria-label"))).not.toContain(
+      `${NOTE_VIEW.title}を編集`,
+    );
+  });
+
+  it("開いたまま追加へ props が替わると、行のリンクを経ずに追加の入力欄へ focus を移す", async () => {
+    const { screen, rerender } = await renderNotesPage({
+      notes: [NOTE_VIEW],
+      dialog: { kind: "edit", note: NOTE_VIEW },
+    });
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    const focusins = recordFocusins();
+
+    await rerender({ dialog: { kind: "create" } });
+
+    await expect.element(titleTextbox(screen)).toHaveValue("");
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    expect(focusins.map((target) => target.getAttribute("aria-label"))).not.toContain(
+      `${NOTE_VIEW.title}を編集`,
+    );
   });
 
   it("閉じるとその行の編集リンクへ focus が戻る", async () => {

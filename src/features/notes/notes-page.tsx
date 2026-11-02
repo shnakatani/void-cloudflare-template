@@ -192,7 +192,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
   const dialogKey = noteDialogKey(dialog);
   const announcedDialogKey = useRef(dialogKey);
   const announceDialogTitle = useEffectEvent(() => {
-    announce(notesDocumentTitle(dialog));
+    announce(notesDocumentTitle({ notes, dialog }));
   });
   useEffect(() => {
     if (announcedDialogKey.current === dialogKey) {

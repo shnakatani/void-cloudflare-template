@@ -79,6 +79,16 @@ async function renderCells(options: CellsOptions = {}) {
   return { screen, update: (next: CellsOptions) => screen.rerender(ui(next)) };
 }
 
+/**
+ * 無効で、focus は受けられること。確定のあと focus は次の行の削除トリガーへ移る。native の disabled は focus を
+ * 受けず body へ落とすので、aria-disabled で無効にしていることを属性で見る
+ */
+const expectFocusableWhenDisabled = vi.defineHelper(async (trigger: Locator) => {
+  await expect.element(trigger).toBeDisabled();
+  await expect.element(trigger).toHaveAttribute("aria-disabled", "true");
+  await expect.poll(() => trigger.element().hasAttribute("disabled")).toBe(false);
+});
+
 /** 行を開くボタン (`NoteExpandCell`)。開閉の状態で絞る */
 function expandTrigger(screen: Screen, note: Pick<NoteView, "title">, expanded: boolean) {
   return screen.getByRole("button", { name: noteExpandTriggerName(note), expanded });
@@ -258,14 +268,35 @@ describe("NoteActionsCell", () => {
     await expectAbsent(noteRow(screen, NOTE_VIEW).getByText("削除中", { exact: false }));
   });
 
-  it("削除中の行だけトリガーを無効にし、読み上げ用の「削除中」を足す", async () => {
+  it("削除中の行に読み上げ用の「削除中」を足し、削除が進んでいる間はどの行の削除トリガーも focus できる無効のボタンにする", async () => {
     const { screen } = await renderCells({ deletingIds: [NOTE_VIEW.id] });
 
-    await expect.element(rowDeleteButton(screen, NOTE_VIEW)).toBeDisabled();
     await expect.element(noteRow(screen, NOTE_VIEW).getByText("削除中")).toBeInTheDocument();
-    // 止めるのは削除中の行だけ (ADR-0017「ブロック範囲」)
-    await expect.element(rowDeleteButton(screen, OTHER_NOTE_VIEW)).toBeEnabled();
     await expectAbsent(noteRow(screen, OTHER_NOTE_VIEW).getByText("削除中", { exact: false }));
+    // ほかの行も止める。続けて確定すると、後の送信が前の送信を取り消し、届く前なら前の削除は起きない (ADR-0017)
+    await expectFocusableWhenDisabled(rowDeleteButton(screen, NOTE_VIEW));
+    await expectFocusableWhenDisabled(rowDeleteButton(screen, OTHER_NOTE_VIEW));
+  });
+
+  it("削除が進んでいる間は、ほかの行の削除トリガーを押しても確認ダイアログを開かず、終わると開く", async () => {
+    const { screen, update } = await renderCells({ deletingIds: [NOTE_VIEW.id] });
+    const trigger = rowDeleteButton(screen, OTHER_NOTE_VIEW);
+    trigger.element().focus();
+    await expect.element(trigger).toHaveFocus();
+
+    // pointer の click は data-disabled の pointer-events: none で届かないので、キーボードで押す
+    await userEvent.keyboard("{Enter}");
+
+    await expect.element(trigger).toHaveFocus();
+    await expectAbsent(
+      screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title), { exact: false }),
+    );
+
+    await update({ deletingIds: [] });
+    await userEvent.keyboard("{Enter}");
+    await expect
+      .element(screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title)))
+      .toBeInTheDocument();
   });
 
   it("削除中の行は編集を、focus できる無効のボタンに描き替える", async () => {

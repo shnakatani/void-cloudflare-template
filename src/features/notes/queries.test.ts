@@ -205,6 +205,31 @@ describe("notes の query", () => {
 
       expect((await list(NO_FILTER))[0]!.dueDate).toBeNull();
     });
+
+    // 入力スキーマの検証は、それを通らない書き込み (手書きの SQL など) に効かない。DB の CHECK が受ける
+    // (docs/guides/dates-and-time-zones.md「日付の入力を扱う」)。drizzle を迂回して直接入れる
+    it("DB は暦にある 0000〜9999 年の YYYY-MM-DD か NULL だけを受け入れる", async () => {
+      // it の中で testD1.d1 から直に呼んで返すと、vp test list の静的な収集がこの呼び出しを 1 件のテストに数えた
+      // (2026-11-02 に確認)
+      const { d1 } = testD1;
+      const insert = (dueDate: string | null) =>
+        d1
+          .prepare("insert into notes (user_id, title, body, due_date) values (?, '見出し', '', ?)")
+          .bind(USER_A, dueDate)
+          .run();
+
+      await Promise.all(
+        ["2026-08-07", "2024-02-29", null].map((accepted) =>
+          expect(insert(accepted), String(accepted)).resolves.toBeDefined(),
+        ),
+      );
+      await Promise.all(
+        ["2023-02-29", "2023-06-31", "2026-8-7", "2026-08-07T00:00", "-0001-01-01", ""].map(
+          (rejected) =>
+            expect(insert(rejected), rejected).rejects.toThrow(/CHECK constraint failed/),
+        ),
+      );
+    });
   });
 
   describe("get", () => {

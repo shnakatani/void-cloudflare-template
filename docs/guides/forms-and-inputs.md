@@ -1,13 +1,15 @@
 # フォームと入力部品
 
-入力スキーマ、フォームの部品、Select と数値と複数行の入力欄、高さのあるダイアログ、placeholder を書くときの手順と落とし穴を持つ。
+入力スキーマ、フォームの部品、Select と数値と複数行の入力欄、高さのあるダイアログ、一覧の上のフォームのダイアログ、placeholder を書くときの手順と落とし穴を持つ。
 
-| 決定                                                                                     | ADR      |
-| ---------------------------------------------------------------------------------------- | -------- |
-| ドメイン型は valibot スキーマから導出する                                                | ADR-0013 |
-| 数値入力に `type="number"` を使わず Base UI の NumberField に寄せる                      | ADR-0021 |
-| placeholder には例示だけを置き、色を専用トークンへ切る                                   | ADR-0025 |
-| フロントで使うスキーマはテーブル定義から作らず、テーブル定義の型と型テストで突き合わせる | ADR-0034 |
+| 決定                                                                                                                                                 | ADR      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| ドメイン型は valibot スキーマから導出する                                                                                                            | ADR-0013 |
+| 数値入力に `type="number"` を使わず Base UI の NumberField に寄せる                                                                                  | ADR-0021 |
+| placeholder には例示だけを置き、色を専用トークンへ切る                                                                                               | ADR-0025 |
+| フロントで使うスキーマはテーブル定義から作らず、テーブル定義の型と型テストで突き合わせる                                                             | ADR-0034 |
+| ページは URL の変化で作り直さず、取得結果の入れ替わりはページの effect が loader の props の入れ替わりで通知し、直前に通知した条件と同じなら出さない | ADR-0027 |
+| 一覧の上に重ねるダイアログは、一覧のページの query で開き、保存と削除は一覧の絶対 URL へ redirect して条件を保つ                                     | ADR-0056 |
 
 ## how-to
 
@@ -101,6 +103,31 @@ expectTypeOf<Item["done"]>().toEqualTypeOf<boolean>();
 
 - `DialogContent` の padding を変えたら、`DialogScrollBody` の `-mx-6` / `px-6` も変える
 - 組み忘れても、registry の Dialog が持つ backstop (`popupOverflowBackstop`) で Popup ごと流れるので、内容は読める。ただし見出しと X ボタンも流れる
+
+### 一覧の上にフォームのダイアログを組む
+
+ADR-0056 に沿って、一覧のページの query で開く追加と編集のダイアログを組む手順。
+
+| 書く場所                                                       | 配線                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 開くリンク                                                     | `ButtonLink` の `href` に、一覧の条件を保ったダイアログの URL (`<一覧>?new`、`<一覧>?edit=<id>`) を渡し、`preserveScroll` を付ける。閉じたときに探せるよう、リンクに data 属性 (`data-<名前>-link="<id>"`) を付ける                                  |
+| loader                                                         | 一覧と、開くダイアログの値を返す。開く 1 件が無い・読めないときは値で返す (`docs/guides/data-loading.md`「loader で読めなかったものを返す」)                                                                                                         |
+| Dialog の Root                                                 | 開閉をまたいで描いたまま残し、`open` を props のダイアログの値から導く。`onOpenChange` で閉じる操作を受け、保存中なら `eventDetails.cancel()` を呼んで止め、そうでなければ `startVisit(router, <一覧の URL>, { preserveScroll: true })` で一覧へ戻る |
+| ダイアログの中身                                               | Root の子に置き、ダイアログの種類と値の id から作った `key` を渡す                                                                                                                                                                                   |
+| キャンセルの `DialogClose`                                     | 保存中は `disabled` を渡す                                                                                                                                                                                                                           |
+| `ActionDialogContent` (フォームを持たないなら `DialogContent`) | `finalFocus` に `finalFocusToOpener` (`src/lib/dialog-final-focus.ts`) の関数を渡す。引数には、開いた元のリンクを data 属性で `document.querySelector` して返す関数を渡す                                                                            |
+| 保存と削除の action                                            | `usePageAction` / `usePageActionForm` に `pageQuery` を渡し、一覧の条件を保った絶対 URL へ redirect する (`docs/guides/react/updates.md`「mutation の書き方」)                                                                                       |
+| 操作中 (削除中など) の行の開くリンク                           | `Button` の `focusableWhenDisabled` と `disabled` に描き替え、tab 順に残す。`ButtonLink` は無効の状態を持たない                                                                                                                                      |
+
+- 保存中に close を止める条件は、そのダイアログ自身の保存の pending だけにする。止めずに閉じると、閉じる遷移が保存の送信を取り消し、入力も消える (ADR-0056)
+- `key` を渡さないと、開いたまま別の値の URL へ移ったとき、打ち始めた form が前の値のまま残る。ページは URL の変化で作り直されない (ADR-0027)
+- 操作中の開くリンクを native の `disabled` のボタンにしない。tab 順から外れ、focus を持っていた利用者の位置が `<body>` へ落ちる
+- `finalFocus` の探し方を誤っても、型検査も Base UI も気付かない。ダイアログを足したら、ページのテストで次の 3 つを確かめる
+  - 閉じる操作で閉じたら、開いた元のリンクへ focus が戻る (無ければページの見出しへ)
+  - 保存したら、開いた元のリンクへ focus が戻る
+  - 別のダイアログに替わったとき (別の値の URL へ、追加と編集の行き来)、開いた元のリンクが focus を受けない
+- `finalFocus` からリンクを返さない。Base UI は `finalFocus` を、閉じたのか別のダイアログに替わったのかが分かる前に呼ぶ。返したリンクは替わるときにも focus を受ける。`finalFocusToOpener` は Base UI に `false` を返し、commit の後に開いているダイアログが無いときだけ移す (ADR-0056)
+- 替わったときに開いた元のリンクが受ける focus は、すぐに替わる側の入力欄へ移るので、`toHaveFocus` の retry では捉えられない。替わる前に `recordFocusins` (`src/test/assert/focusin.ts`) で記録を始め、替わる側の入力欄の `toHaveFocus` を待ってから、記録に開いた元のリンクが無いことを見る。ダイアログが開いている間は背後の要素が `aria-hidden` になり、`getByRole` は既定で引かないので、記録の要素は可視の文字か `aria-label` で見分ける
 
 ### 入力欄の周りに要素を置く
 
@@ -261,6 +288,7 @@ Base UI の `Select` は、候補が変わって現在値が候補から消え�
 [shadcn の `field-choice-card.tsx`]: https://github.com/shadcn-ui/ui/blob/shadcn@4.21.0/apps/v4/examples/base/field-choice-card.tsx
 [shadcn の `dialog-example.tsx`]: https://github.com/shadcn-ui/ui/blob/shadcn@4.21.0/apps/v4/registry/bases/base/examples/dialog-example.tsx
 [Base UI docs「Select」]: https://base-ui.com/react/components/select
+[Base UI docs「Dialog」]: https://base-ui.com/react/components/dialog
 [accname 1.2]: https://www.w3.org/TR/2026/WD-accname-1.2-20261002/
 [APG「Providing Accessible Names and Descriptions」]: https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/
 [Base UI docs「Forms」]: https://base-ui.com/react/handbook/forms

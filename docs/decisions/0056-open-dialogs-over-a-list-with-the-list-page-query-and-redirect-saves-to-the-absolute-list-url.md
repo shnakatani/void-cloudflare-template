@@ -41,15 +41,39 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 - ダイアログを開く query の key と、named action の名前を分ける (`?new` と `?create`)。Void は action の URL の最初の key を action の名前として読む (`packages/void/src/pages/action-key.ts`) ので、同じ名前だとページの URL へ送った POST がその action を呼ぶ (推論)
 - ページの `head` は、props のダイアログの値で title を変える。直に開いたタブの名前がダイアログに合う
 - ダイアログの開閉の title は、ページが props の変化で読み上げる。query だけの遷移は遷移の読み上げの部品 (ADR-0049) が読まないので、ADR-0027 と同じ形 (直前に読んだ値を ref に持ち、初期表示では読まない) で読む
+- 保存の Action の間は、利用者の close (キャンセル、Escape、外側の押下、X) を止める。止める条件は、そのダイアログ自身の保存の pending だけにする。閉じる操作は一覧の URL への visit なので、保存の送信を取り消す (ADR-0017)。要求がサーバーへ届く前なら保存は起きず、入力もダイアログと一緒に消える
+- ダイアログの中身は、ダイアログの種類と値の id が替わったら作り直す。ページは URL の変化で作り直されない (ADR-0027) ので、作り直さないと、開いたまま別の値の URL へ移ったときに、打ち始めた form が前の値のまま残る
+- 閉じたときの focus は、下の「閉じたときの focus」の表に従い、`finalFocus` に関数を渡して分ける
+
+### 閉じたときの focus
+
+| 閉じ方                                                                   | 開いた元のリンクがある                                                                              | 開いた元のリンクが無い (絞り込みで外れた、削除された、一覧を読めない) |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 一覧へ戻った (閉じる操作、保存と削除の redirect、ブラウザの戻る)         | そのリンクへ戻す                                                                                    | ページの見出しへ、枠を出さずに移す (ADR-0049 と同じ移し方)            |
+| 開いたまま別のダイアログに替わった (別の値の URL へ、追加と編集の行き来) | focus に触れない (`finalFocusToOpener` が移さない)。替わる側のダイアログが、自分の中へ focus を移す | 同左                                                                  |
+
+- 開いた元のリンクへ戻すのは、APG のダイアログの形である。リンクへ戻さないと、focus はダイアログと一緒に外れ、利用者は一覧の中の位置を失う
+- 移し方は `finalFocusToOpener` (`src/lib/dialog-final-focus.ts`) が持つ。`finalFocus` から Base UI に常に `false` ("Do not move focus") を返し、commit が終わってから、開いているダイアログが無いときだけ自分で移す
+- 開いた元のリンクは、開き方 (リンクの押下、共有、再読み込み) によらず DOM から探す。Base UI の既定の戻し先 (trigger か、開く前に focus していた要素。`@base-ui/react` 1.9.0 の `DialogPopup` の `finalFocus` の型の docstring) には頼らない。URL を直接開くと、既定の戻し先が無い
+- 開いた元のリンクへは、Base UI が要素を返されたときと同じく、キーボードで閉じたときだけ枠を出して移す。見出しへは枠を出さずに移す
+
+閉じたのか替わったのかの分け方は、次の 4 つを比べた (2026-11-02、dev、Void 1.4.0、@base-ui/react 1.9.0)。Base UI 1.9.0 は `finalFocus` を Popup の layout effect の後始末で同期に呼ぶ (`FloatingFocusManager`)。その時点では替わる側の Popup はまだ DOM に無い。
+
+| 分け方                                                                                              | 評価                                                                                                                                                                                                                                                                                                                                                        | 採否     |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Base UI には `false` を返し、commit の後に開いているダイアログの Popup (`data-open`) の有無で決める | 替わる側の Popup は commit で DOM に入り、Base UI の docs が `data-open` を "Present when the dialog is open." と書く。dev で、編集から別の編集、追加から編集、編集から追加のどれも、`focusin` は替わる側の入力欄だけになった。Popover の Popup も `role="dialog"` と `data-open` を持つので、Dialog・AlertDialog・Sheet の Popup だけを `data-slot` で探す | **採用** |
+| 一覧へ戻ったときと同じく、`finalFocus` から開いた元のリンクを返す                                   | 替わるときも focus がリンクを経てから替わる側の入力欄へ移る。dev で、編集のダイアログを開いたまま別の値の編集の URL へ移ると、`focusin` が前の行の編集リンク、入力欄の順に起きた。スクリーンリーダーは経由したリンクを読む                                                                                                                                  | 却下     |
+| `finalFocus` が呼ばれた時点の `window.location` の query で決める                                   | `finalFocus` の中で読むと、3 つの替わり方と Escape のどれでも前の URL だった。Void は history を、新しいページの commit の後に書く (`packages/react/src/runtime/pages-client.ts` の `finishNavigation` が layout effect から呼ぶ `resource.commit()`)                                                                                                       | 却下     |
+| ページが描画のたびに今のダイアログを ref に書き、それを読む                                         | 描画中に ref へ書くことになる。React の docs「useRef」は、描画中に `ref.current` を読み書きしないよう求める                                                                                                                                                                                                                                                 | 却下     |
 
 ### 検討した選択肢
 
-| 案                                                     | 評価                                                                                                                                                                                                                                                                            | 採否         |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| (i) 一覧のページの query で開く                        | 一覧は同じページなので作り直されない。focus は Base UI の既定で APG のダイアログの形 (開くと中へ、閉じると開いた元へ) になる。loader は 1 つ                                                                                                                                    | **採用**     |
-| (ii) 3 つのページのファイルが同じ部品を re-export する | 一覧は作り直されなかったが、それは React が部品の型の一致で作り直さないことに頼る。Void の docs は React のページの同一性を約束せず、Vue と Solid は作り直すと書く。開閉のたびに遷移の読み上げが focus を見出しへ移し、閉じたあとを開いた元へ戻すには `finalFocus` の配線が要る | 却下         |
-| (iii) URL に載せず、部品の handle で開く               | 共有と再読み込みで同じダイアログを開けず、戻るで閉じられない                                                                                                                                                                                                                    | 却下         |
-| 子のページを一覧の layout の `<Outlet />` に描く       | Void の layout は loader を持てず、`<Outlet />` に当たる仕組みも無い (Context の表)                                                                                                                                                                                             | 成り立たない |
+| 案                                                     | 評価                                                                                                                                                                                                                                   | 採否         |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| (i) 一覧のページの query で開く                        | 一覧は同じページなので作り直されない。focus は APG のダイアログの形になる。開くと Base UI の既定で中へ移り、閉じると `finalFocusToOpener` が開いた元へ移す (「閉じたときの focus」)。loader は 1 つ                                    | **採用**     |
+| (ii) 3 つのページのファイルが同じ部品を re-export する | 一覧は作り直されなかったが、それは React が部品の型の一致で作り直さないことに頼る。Void の docs は React のページの同一性を約束せず、Vue と Solid は作り直すと書く。開閉のたびに遷移の読み上げが focus を見出しへ移す (Context の実測) | 却下         |
+| (iii) URL に載せず、部品の handle で開く               | 共有と再読み込みで同じダイアログを開けず、戻るで閉じられない                                                                                                                                                                           | 却下         |
+| 子のページを一覧の layout の `<Outlet />` に描く       | Void の layout は loader を持てず、`<Outlet />` に当たる仕組みも無い (Context の表)                                                                                                                                                    | 成り立たない |
 
 ## Consequences
 
@@ -58,6 +82,8 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 - 開閉のたびに一覧も読み直す。loader が 1 つなので、ダイアログの値だけを読む経路は無い
 - 開くと、ページが title を 1 回 announce し、focus はダイアログの中の入力欄へ移る。ダイアログの名前 (`aria-labelledby` の見出し) は、focus が中へ移ったときに支援技術が読む。2026-11-02 に dev (Void 1.4.0、headed の playwright-cli) で announce と `focusin` を記録して確かめた。スクリーンリーダーが読む回数は数えていない
 - 一覧の中で開閉するあいだ、見出しへの focus は 0 回だった。遷移の読み上げの部品は query だけの変化に反応しない。別のページから `<一覧>?new` へ移ると、path が変わるので、focus は押したリンク、一覧の見出し (1 回)、約 10ms 後にダイアログの入力欄の順に移り、title の announce は 1 回だった。クリックでも Enter でも同じだった (どちらも 2026-11-02、dev、Void 1.4.0、headed の playwright-cli)
+- close の停止は、ブラウザの戻る・進むを止めない。保存の送信中に戻ると、送信は取り消される (ADR-0017)
+- 開いた元のリンクの探し方を誤っても、型検査は気付かない。閉じたときの focus はページのテストで確かめる。`finalFocus` は Base UI に `false` を返すので、探し方を誤ると、リンクを押して開いたときも focus は見出しへ移り、テストが落ちる
 - path の遷移でダイアログを開くページを足すと、Base UI 1.9.0 の Popup が `aria-modal` を付けない間は、遷移の読み上げの部品が開いたダイアログを見落とし、開くときに見出しへ focus を移す (Context の実測)
 - 再評価条件
   - path の URL (`<一覧>/<id>/edit`) が要件になったら、(ii) を比べ直す
@@ -70,6 +96,9 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 - Void docs「Pages API」: `node_modules/void/docs/reference/api/pages.md`
 - Void docs「Scroll Restoration」: `node_modules/void/docs/guide/pages-routing/overview.md`
 - Void docs「Actions & Forms」の Named Actions: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
-- Void 1.4.0 のソース: `packages/void/src/pages/scan.ts` (`scanPages`)、`packages/void/src/pages/action-key.ts`
+- Void 1.4.0 のソース: `packages/void/src/pages/scan.ts` (`scanPages`)、`packages/void/src/pages/action-key.ts`、`packages/react/src/runtime/pages-client.ts` (`finishNavigation`)、`packages/void/src/pages/navigation-engine.ts` (`makeCommit`)
+- Base UI docs「Dialog」の Popup の Data Attributes (`data-open`): `node_modules/@base-ui/react/docs/react/components/dialog.md`
+- `@base-ui/react` 1.9.0 のソース: `floating-ui-react/components/FloatingFocusManager.mjs` (return focus の後始末)、`popover/popup/PopoverPopup.mjs` (Popover の Popup の `role: 'dialog'`)
+- React docs「useRef」(描画中に `ref.current` を読み書きしない): https://react.dev/reference/react/useRef
 - voidzero-dev/void#648 (相対の redirect が要求の query を混ぜる)
 - WAI-ARIA APG「Dialog (Modal) Pattern」: https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/

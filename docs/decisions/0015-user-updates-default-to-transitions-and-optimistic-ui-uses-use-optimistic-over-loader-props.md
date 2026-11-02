@@ -111,7 +111,7 @@ page の props の入れ替わりは Transition の中なので対象になり�
 
 ## Consequences
 
-- pending の源が Transition の `isPending` に一本化される。項目の busy は `useOptimistic` の値から描く
+- mutation の pending の源が Transition の `isPending` に一本化される。項目の busy は `useOptimistic` の値から描く
 - Transition 化で得るのは pending の自動管理、部品契約の統一、pending の切り替えと props の入れ替わりを `<ViewTransition>` で装飾できること (推論) の 3 つ。Action の実行順は Transition が保証しない (`useTransition` リファレンスの Troubleshooting「My state updates in Transitions are out of order」)。順序を保つのは `useActionState` と `<form>` の action である (同)
 - props が Transition の外で入れ替わる設定 (`navigationFallback`) を入れると、楽観値と新しい props が別の描画になりうる。入れるときはこの ADR を決め直す
 - Action の中で `await run()` が決着するのは、`usePageAction` が渡す `_resolveOnShell` に依っている。`VisitOptions` の `@internal` の option なので、Void を上げたら、`ActionButton` の Action で `run` を await し、pending が解けて props が入れ替わることを dev で確かめる。名前が型から消えれば `vp check` が落ちるが、`src/hooks/use-page-action.test.tsx` は `submitAction` を mock するので、名前を保って意味が変わったときは `vp run verify` が捕まえない

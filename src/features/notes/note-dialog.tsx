@@ -10,10 +10,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePageActionForm } from "@/hooks/use-page-action";
+import { finalFocusToOpener } from "@/lib/dialog-final-focus";
 import { announce } from "@/lib/live-announcer";
 import { toastMutationError } from "@/lib/mutation-error";
 
-import { findNoteCreateLink, findNoteEditLink, noteDialogFinalFocus } from "./note-dialog-focus";
+import { findNoteCreateLink, findNoteEditLink } from "./note-dialog-focus";
 import { NoteFormContent, useNoteForm } from "./note-form";
 import {
   NOTE_CREATE_DIALOG_TITLE,
@@ -87,7 +88,7 @@ function NoteCreateDialogContent({ q, saving, onSaveStart }: NoteFormDialogProps
       heading={NOTE_CREATE_DIALOG_TITLE}
       form={form}
       blocksClose={saving}
-      finalFocus={noteDialogFinalFocus(findNoteCreateLink)}
+      finalFocus={finalFocusToOpener(findNoteCreateLink)}
       submit={() => {
         onSaveStart();
         return submit();
@@ -122,7 +123,7 @@ function NoteEditDialogContent({
       heading={NOTE_EDIT_DIALOG_TITLE}
       form={form}
       blocksClose={saving}
-      finalFocus={noteDialogFinalFocus(() => findNoteEditLink(note.id))}
+      finalFocus={finalFocusToOpener(() => findNoteEditLink(note.id))}
       submit={() => {
         onSaveStart();
         return submit();
@@ -138,7 +139,7 @@ function findEditLinkOf(id: Note["id"] | null): () => HTMLElement | null {
 /** 編集の URL の id の行が無い (別の user の行も同じ)。一覧は背後に残る */
 function NoteNotFoundDialogContent({ id }: { id: Note["id"] | null }) {
   return (
-    <DialogContent finalFocus={noteDialogFinalFocus(findEditLinkOf(id))}>
+    <DialogContent finalFocus={finalFocusToOpener(findEditLinkOf(id))}>
       <DialogHeader>
         <DialogTitle>{NOTE_NOT_FOUND_DIALOG_TITLE}</DialogTitle>
         <DialogDescription>削除されたか、URL が誤っています。</DialogDescription>
@@ -154,7 +155,7 @@ function NoteNotFoundDialogContent({ id }: { id: Note["id"] | null }) {
 function NoteLoadFailedDialogContent({ id }: { id: Note["id"] }) {
   const router = useRouter();
   return (
-    <DialogContent finalFocus={noteDialogFinalFocus(findEditLinkOf(id))}>
+    <DialogContent finalFocus={finalFocusToOpener(findEditLinkOf(id))}>
       <DialogHeader>
         <DialogTitle>{NOTE_LOAD_FAILED_DIALOG_TITLE}</DialogTitle>
         <DialogDescription>時間をおいて再試行してください。</DialogDescription>
