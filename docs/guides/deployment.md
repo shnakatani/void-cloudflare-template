@@ -11,7 +11,13 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 
 ### 本番へ初めて出す
 
-1. 手元で `vp exec void deploy --platform cloudflare` を打つ。ブラウザで Cloudflare にログインし、出すアカウントを選ぶ ([Void docs「Deployment」][] の Deploy to Cloudflare)。D1 を作り、`db/migrations/` を当て、`BETTER_AUTH_SECRET` が無ければ作る ([Void docs「Cloudflare」][] の Databases and secrets)
+1. 手元で次を打つ。connect はブラウザで Cloudflare にログインさせ、出すアカウントを選ばせ、この clone の向き先を Cloudflare にする ([Void docs「Deployment」][] の Deploy to Cloudflare)。deploy は D1 を作り、`db/migrations/` を当て、`BETTER_AUTH_SECRET` が無ければ作る ([Void docs「Cloudflare」][] の Databases and secrets)
+
+   ```bash
+   vp exec void connect --platform cloudflare
+   vp exec void deploy --platform cloudflare
+   ```
+
 2. Cloudflare の API token を作り、repository の secret に置く。権限は Workers Scripts の Edit と、Void が作る資源の Edit にする ([Void docs「Cloudflare」][] の Deploying from CI)。このアプリが作る資源は D1 である
 
    ```bash
@@ -40,6 +46,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 ### 本番の秘密を足す
 
 - 本番の server 側の値は `vp exec void secret put <NAME>` で渡す。`.env` は deploy されない ([Void docs「Environment variables」][]、[Void docs「Cloudflare」][] の Databases and secrets)。ローカルの値の置き方は `docs/guides/dependencies-and-toolchain.md`「秘密を足す」にある
+- clone し直した作業ツリーや別の machine では、`void secret` の前に `vp exec void connect --platform cloudflare` を打つ。`void secret` は `--platform` を受けず、connect が保存する向き先だけを読む ([Void CLI reference「Secrets and Environment」][])。打たないと ``Not logged in. Run `void account login` first.`` で止まる (Void 1.4.0 の `cli/secret.ts`。理由は「向き先を clone ごとに connect で保存する理由」)
 - ブラウザへ出す `VITE_*` の値は build のときに要るので、workflow の Deploy の step の `env` に渡す ([Void docs「Deployment」][] の Environment variables)
 
 ### schema を変えて出す
@@ -64,6 +71,12 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 - [Void docs「Cloudflare」][] の What happens during deploy は、最初の deploy を 1 台から行い、lock を commit してから別の machine や CI から出すよう案内する。build や検証で失敗した deploy でも、作った資源はアカウントに残る
 - 選んだアカウントの ID と作った資源の ID は、Void が生成する Cloudflare の設定 (ignore 済みの `.void-wrangler.jsonc`) に入り、その設定は `void.lock.json` に写される。deploy はこの lock から設定を作り直す (Void 1.4.0 の `cloudflare-config.ts` の `persistCloudflareConfig` と `materializeCloudflareConfig`)。`void.config.ts` は `cloudflare.account_id` を持たないので、CI のまっさらな checkout にアカウントを伝えるのは lock である
 
+### 向き先を clone ごとに connect で保存する理由
+
+- `void secret` と、`--platform` を付けない `void deploy` と `void db` の remote の操作は、`.void/project.json` の向き先を読む ([Void CLI reference「Secrets and Environment」][]、[Void CLI reference「Deployment」][]、[Void CLI reference「Database」][])。このファイルは `void init` と `void connect` だけが書き、`void deploy --platform cloudflare` は書かない (Void 1.4.0 の `cli/project.ts` の `writeDeploymentPlatform` を呼ぶのは `init.ts`・`connect.ts`・`cloudflare-link.ts`)
+- `.void/` は commit しない。Void の docs は `.void/` を生成物とローカルの状態の置き場として ignore する ([Void docs「Project Structure」][] の `.void/`)。`.void/project.json` だけを commit する形は、Void platform の CI が project を選ぶためのもので ([Void docs「First Deployment」][])、Cloudflare へ出す workflow は `--platform cloudflare` を渡すので要らない。テンプレートの `.gitignore` も `void init` の出力どおり `.void` を ignore する
+- clone ごとに connect を打つことになるが、アカウントは commit した `void.lock.json` から読まれ、選び直しにはならない (Void 1.4.0 の `cli/cloudflare-connect.ts` は設定にあるアカウントを優先する)
+
 ## 出典
 
 本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。
@@ -71,4 +84,9 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 [Void docs「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/deployment.md
 [Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/integrations/cloudflare.md
 [Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
+[Void CLI reference「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/deploy.md
+[Void CLI reference「Database」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md
+[Void CLI reference「Secrets and Environment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/secrets.md
+[Void docs「Project Structure」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/structure.md
+[Void docs「First Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/platform/installation/first-deployment.md
 [GitHub Docs「Disabling and enabling a workflow」]: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows
