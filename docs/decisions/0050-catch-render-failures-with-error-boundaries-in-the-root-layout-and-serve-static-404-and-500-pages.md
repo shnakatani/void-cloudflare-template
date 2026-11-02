@@ -120,7 +120,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 | Action の外のハンドラで、境界を戻してから読み直し、見出しへ移す | `<ページ名> — <アプリ名>`         | 増えない          | `<h1>エラーが発生しました</h1>`                      | 全画面のエラー表示のまま |
 
 - どの形でも、再試行で出た要求は `GET` の 1 本で、status 200 と `X-VoidPages` を返した
-- 1 行目の形で pending を部品の state に持ち `ActionButtonShell` に渡しても、値は 1 行目と同じだった。描画が 2 回続けて throw するページでは、1 回目の再試行のあと全画面のエラー表示に戻り、再試行のボタンは `aria-disabled="false"`、focus は `<h1>エラーが発生しました</h1>` になり、2 回目の再試行でページに戻った
+- 「Action の外のハンドラで、読み直してから境界を戻し、見出しへ移す」形で pending を部品の state に持ち `ActionButtonShell` に渡しても、値はその形の行と同じだった。描画が 2 回続けて throw するページでは、1 回目の再試行のあと全画面のエラー表示に戻り、再試行のボタンは `aria-disabled="false"`、focus は `<h1>エラーが発生しました</h1>` になり、2 回目の再試行でページに戻った
 - preview で当たらない URL は status 404 と `public/404.html`、loader が throw するページは status 500 と `public/500.html` を返した。どちらの応答にも `routing.headers` の 6 つのヘッダが付いた。body の背景色と文字色は `error-page.css` の値 (`oklch(1 0 0)`、`oklch(0.148 0.004 228.8)`) になった
 - dev の 500 は `public/500.html` の後ろに Void の error overlay の `<style>` と要素が付いた
 
