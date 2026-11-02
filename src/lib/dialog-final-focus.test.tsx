@@ -2,8 +2,10 @@ import { describe, expect, it } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
+import { AlertDialog, AlertDialogContent, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTitle } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { recordFocusins } from "@/test/assert/focusin";
 
 import { finalFocusToOpener } from "./dialog-final-focus";
@@ -83,19 +85,48 @@ describe("finalFocusToOpener", () => {
     await expect.element(screen.getByRole("link", { name: "開いた元" })).toHaveFocus();
   });
 
-  it("閉じたあとに別のダイアログが開いていれば、focus に触れない", async () => {
-    const screen = await render(
-      <>
-        <h1>ページ</h1>
-        <a href="/x" data-opener="">
-          開いた元
-        </a>
+  it.each([
+    {
+      kind: "Dialog",
+      popup: (
         <Dialog open>
           <DialogContent>
             <DialogTitle>替わった側</DialogTitle>
             <input aria-label="入力" />
           </DialogContent>
         </Dialog>
+      ),
+    },
+    {
+      kind: "AlertDialog",
+      popup: (
+        <AlertDialog open>
+          <AlertDialogContent>
+            <AlertDialogTitle>替わった側</AlertDialogTitle>
+            <input aria-label="入力" />
+          </AlertDialogContent>
+        </AlertDialog>
+      ),
+    },
+    {
+      kind: "Sheet",
+      popup: (
+        <Sheet open>
+          <SheetContent>
+            <SheetTitle>替わった側</SheetTitle>
+            <input aria-label="入力" />
+          </SheetContent>
+        </Sheet>
+      ),
+    },
+  ])("閉じたあとに別の $kind が開いていれば、focus に触れない", async ({ popup }) => {
+    const screen = await render(
+      <>
+        <h1>ページ</h1>
+        <a href="/x" data-opener="">
+          開いた元
+        </a>
+        {popup}
       </>,
     );
     const input = screen.getByRole("textbox", { name: "入力" });

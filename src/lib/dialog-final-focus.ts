@@ -37,13 +37,14 @@ export function finalFocusToOpener(findOpener: () => HTMLElement | null): FinalF
 }
 
 /**
- * `src/components/ui/` の Dialog と AlertDialog の Popup が開いているか。Popup は開いている間 `data-open` を持つ。
- * Popover の Popup も `role="dialog"` と `data-open` を持つので、role ではなく Popup の `data-slot` で探す
+ * `src/components/ui/` の Dialog・AlertDialog・Sheet の Popup が開いているか。Popup は開いている間 `data-open` を持つ。
+ * Popover の Popup も `role="dialog"` と `data-open` を持ち、Base UI は両者を見分ける属性を付けないので、Popup の `data-slot` で探す。
+ * `data-slot` を上書きする Popup (`Sidebar` の mobile の `SheetContent`) は当たらない
  */
 function hasOpenDialog(): boolean {
-  return (
-    document.querySelector(
-      '[data-slot="dialog-content"][data-open], [data-slot="alert-dialog-content"][data-open]',
-    ) !== null
-  );
+  return document.querySelector(OPEN_DIALOG_POPUP_SELECTOR) !== null;
 }
+
+const OPEN_DIALOG_POPUP_SELECTOR = ["dialog-content", "alert-dialog-content", "sheet-content"]
+  .map((slot) => `[data-slot="${slot}"][data-open]`)
+  .join(", ");
