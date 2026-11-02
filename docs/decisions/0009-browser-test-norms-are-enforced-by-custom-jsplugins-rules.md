@@ -36,7 +36,7 @@
 - 実行経路は増やさない。`vp lint` と `vp check` で走り、`@shadcn/lint` と `eslint-plugin-testing-library` が既に同じ経路に載っている (ADR-0023、`docs/guides/lint/configuration.md`「testing-library を当てる範囲」)
 - severity は `error` にする。`vp check` は warn で exit 1 にならないため、新規コードへの強制力を失う
 - 適用先はブラウザテスト本文と、そこへ locator を配る helper (`src/test/**` と `*.test-helpers.*`) にする。テスト本文だけに当てると、helper へ切り出した同期読みがルールから外れる。glob は `scripts/lib/companion-files.ts` から引く
-- `src/test/**/*.test.ts` は外す。unit project は locator を持たず、drizzle の `db.select().from(x).all()` が同じメソッド名で誤検出になる (2026-09-22 実測。`src/**` へ広げると `src/server/db/index.test.ts` の 2 件が出る)
+- `src/test/**/*.test.ts` は外す。unit project は locator を持たず、drizzle の `db.select().from(x).all()` が同じメソッド名で誤検出になる (2026-09-22 実測。`src/**` へ広げると DB の接続のテストの 2 件が出た)
 - ルールは「locator かどうか」をメソッド名と引数ゼロだけで判定し、適用先の glob がその補いになる。oxlint の JS plugin は型情報を持たない (公式の JS plugin ガイドの「Not supported yet」に「Lint rules that rely on TypeScript type-awareness」)
 - 未移行のファイルを `lint.overrides` で列挙して段階的に当てる形は取らない。列挙が対象より大きくなり、一覧を消す作業が別に要る
 - ルールの書き方と、2 通りに壊して効いていることを確かめる手順は `docs/guides/lint/custom-rules.md`「自前のルールを書く」「検査を作ったら 2 通りに壊して確かめる」にある

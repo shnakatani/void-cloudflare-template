@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FileTextIcon, HomeIcon, NotebookIcon, SettingsIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { expect, userEvent } from "storybook/test";

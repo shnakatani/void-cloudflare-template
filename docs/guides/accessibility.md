@@ -1,6 +1,6 @@
 # アクセシビリティ
 
-axe の検査の置き場所と読み方、抑制の書き方、読み上げの通知の書き方、クライアント遷移の伝え方と、accessible name・色以外の手がかり・ナビゲーション・ダイアログの閉じる手段の組み方を持つ。
+axe の検査の置き場所と読み方、抑制の書き方、読み上げの通知の書き方と、accessible name・色以外の手がかり・ナビゲーション・ダイアログの閉じる手段の組み方を持つ。
 
 | 決定                                                                                                                              | ADR      |
 | --------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -9,8 +9,6 @@ axe の検査の置き場所と読み方、抑制の書き方、読み上げの�
 | 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ                                 | ADR-0026 |
 | ページは URL の変化で作り直さず、取得結果の入れ替わりはページの effect が取得の決着で通知し、直前に通知した条件と同じなら出さない | ADR-0027 |
 | a11y の自動検査は story を `error` でテーマごとに走らせ、`incomplete` はどちらの層でも合否に入れない                              | ADR-0028 |
-| ページのデータは Query から読み、欠かせない query だけを loader で待ち、副次的な query は待たずに Suspense の中で読む             | ADR-0033 |
-| クライアント遷移は、新しいページの見出しへの focus と title の読み上げで伝える                                                    | ADR-0035 |
 
 ## explanation
 
@@ -18,18 +16,18 @@ axe の検査の置き場所と読み方、抑制の書き方、読み上げの�
 
 同じ axe を回す層が複数あるのは重複ではない。見る対象と、落ちたときに直す場所が違う。
 
-| 層                      | 見るもの                                                                                       | 落ちたら直す場所 |
-| ----------------------- | ---------------------------------------------------------------------------------------------- | ---------------- |
-| `jsx-a11y` (静的 lint)  | JSX の字面。custom 部品 (`<Button>` など) の中身は見ない                                       | その JSX         |
-| devtools の a11y パネル | 触った画面。自動では実行しない                                                                 | 気付いた人が起票 |
-| story の axe            | 部品が取りうる状態。操作の後も `play` で見る                                                   | 部品か story     |
-| ブラウザテストの axe    | story を置けないページと文書全体 (`src/routes/`)。ランドマーク構造など、部品へ分解できないもの | そのケースの実装 |
+| 層                      | 見るもの                                                                       | 落ちたら直す場所 |
+| ----------------------- | ------------------------------------------------------------------------------ | ---------------- |
+| `jsx-a11y` (静的 lint)  | JSX の字面。custom 部品 (`<Button>` など) の中身は見ない                       | その JSX         |
+| devtools の a11y パネル | 触った画面。自動では実行しない                                                 | 気付いた人が起票 |
+| story の axe            | 部品が取りうる状態。操作の後も `play` で見る                                   | 部品か story     |
+| ブラウザテストの axe    | story を置けないページと文書全体。ランドマーク構造など、部品へ分解できないもの | そのケースの実装 |
 
-境界は「操作の前か後か」ではない。story も `play` で操作の後の状態を見る (`docs/guides/storybook.md`「カタログと play の範囲」)。分かれるのは置ける場所である。`.storybook/main.ts` の `stories` は `src/components/**` しか見ないので、ページと文書全体は story にできない。`root-document.test.ts` が見ているランドマーク構造は部品へ分解できず、ブラウザテストでしか押さえられない。両方要る。
+境界は「操作の前か後か」ではない。story も `play` で操作の後の状態を見る (`docs/guides/storybook.md`「カタログと play の範囲」)。分かれるのは置ける場所である。`.storybook/main.ts` の `stories` は `src/components/**` しか見ないので、ページと文書全体は story にできない。ランドマーク構造は部品へ分解できず、ブラウザテストでしか押さえられない。両方要る。
 
 ブラウザテストの axe が画面を見るのは、`expectNoA11yViolations` を書いたケースだけである。書いていない画面は、devtools の a11y パネルで触りながら確かめる。
 
-部品の registry 乖離のガードで規則を 1 つだけ測るときは、`axe.run` の `runOnly` を直接呼び、その規則で合格した要素が狙った要素と一致することまで求める (`src/components/ui/calendar.test.tsx`)。対象の要素が決まった部品のガードで、`src/routes/` の画面を見る層ではないので、`expectNoA11yViolations` と ADR-0028 の層の対象外である。`incomplete` は、狙った要素が合格に入らないことで捕まえる。
+部品の registry 乖離のガードで規則を 1 つだけ測るときは、`axe.run` の `runOnly` を直接呼び、その規則で合格した要素が狙った要素と一致することまで求める (`src/components/ui/calendar.test.tsx`)。対象の要素が決まった部品のガードで、画面を見る層ではないので、`expectNoA11yViolations` と ADR-0028 の層の対象外である。`incomplete` は、狙った要素が合格に入らないことで捕まえる。
 
 ### axe の緑が意味しないこと
 
@@ -95,46 +93,9 @@ a11y の検査は、ブラウザテストの中に 2 種類が混ざっている
 - 専用のテストファイルへ分けない。テストの置き場所は壊れる原因で分けており、a11y の検査は挙動テストと同じ原因で壊れる
 - 何もしない形も採らない。どれが a11y の問いかが読めず、a11y だけを単独で走らせられない
 
-### クライアント遷移を伝える仕組み
-
-クライアント遷移では文書が読み込み直されず、スクリーンリーダーは新しいページを読み始めない。`src/components/route-announcer.tsx` の `RouteAnnouncer` が router の遷移を購読し、次の 2 つを行う (ADR-0035)。
-
-| 行うこと                                      | 利用者に起きること                                                                    |
-| --------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 新しいページの見出しへ focus を移す           | スクリーンリーダーは見出しを読み、キーボードの次の Tab は新しいページの先頭から始まる |
-| `document.title` を `announce()` で読み上げる | focus の届かない場面の補いになる                                                      |
-
-`RouteAnnouncer` は DOM を描かず購読だけを持つ部品で、`createRouter` の `InnerWrap` に渡す `RouterInnerWrap` (`src/components/router-inner-wrap.tsx`) の中に置く。root route の error boundary の外にあるので、root のエラー画面に置き換わっても購読が続く (`docs/guides/react/effects.md`「router との間の副作用の置き場所」)。
-
-伝える遷移と伝えない遷移は次のとおり。判定は `src/lib/route-announcement.ts` の `shouldAnnounceNavigation` が持つ。
-
-| 遷移                                  | 伝えるか | 理由                                                                                                                                                                                                                                                               |
-| ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| path の変化                           | 伝える   | ページが変わった                                                                                                                                                                                                                                                   |
-| 検索条件だけの変化                    | 伝えない | focus を動かすと検索の入力欄から外れる。結果の件数は ADR-0027 の通知が伝える                                                                                                                                                                                       |
-| 最初のページ                          | 伝えない | ブラウザとスクリーンリーダーが読む                                                                                                                                                                                                                                 |
-| 戻る・進む                            | 伝える   | path の変化として通常の遷移と同じに扱う                                                                                                                                                                                                                            |
-| ルートのエラー画面、root のエラー画面 | 伝える   | ページの位置で受けたエラーの画面ではページ名の `<h1>` の下の失敗の見出し (`<h2>`) へ、root のエラーの画面では失敗の `<h1>` へ移る。読み上げは失敗したルートの title で、route の読み込み (loader・beforeLoad・component の chunk) の失敗では前に `エラー: ` が付く |
-
-focus は奪わない。遷移中に利用者かアプリが focus を動かしていたら、見出しへ移さない。`RouteAnnouncer` は遷移の直前 (`onBeforeNavigate`) から描画の後 (`onRendered`) までに、直前に `focusin` を受けた要素 (始めは遷移の直前に focus していた要素) と違う要素が受けた `focusin` を記録し、`src/lib/focus-page-heading.ts` の `focusPageHeading` は、その間に focus が移ったかと描画の後の focus で移すかを決める。移った先が遷移の直前と同じ要素でも、移ったとみなす (ADR-0035)。
-
-| 描画の後の focus                          | 移すか   | 起きる場面                                                                                                                                                                                                                                                                                                                                                                                          |
-| ----------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<body>`                                  | 移す     | 押したリンクが新しいページで消えた                                                                                                                                                                                                                                                                                                                                                                  |
-| 無い (`document.activeElement` が `null`) | 移す     | focus を失った状態。`focusPageHeading` は `<body>` と同じに扱う                                                                                                                                                                                                                                                                                                                                     |
-| 遷移中に移らなかった要素                  | 移す     | 押したリンクが残るレイアウトにある、戻る・進む                                                                                                                                                                                                                                                                                                                                                      |
-| 遷移中に移った要素                        | 移さない | 遷移中にアプリか利用者が focus を動かした。動かした先が遷移の直前と同じ要素でも当たる (ルートのダイアログを開いた直後に戻り、ダイアログが閉じる前に初期 focus が入力欄に当たると、入力欄を経て開いたリンクへ戻る)。メニューの項目から遷移すると、閉じたメニューが trigger へ focus を戻すので見出しへ移らず、title の読み上げだけになる (Base UI の Menu の `finalFocus` の既定、2026-09-28 に実測) |
-
-- 上の表で移す場面でも、遷移の後にモーダルのダイアログが開いていれば移さず、title の読み上げだけを行う。移し先の見出しの祖先か自身が `aria-hidden="true"` か `inert` のとき (Base UI のモーダルは外側を `aria-hidden` で隠す) と、`role="dialog"` か `role="alertdialog"` を属性で持つ `aria-modal="true"` のダイアログが表示されているときに当たる。`showModal()` で開いたネイティブの `<dialog>` には当たらない。モーダルのダイアログは focus を自分の中へ移す (ADR-0035)
-- 移し先は、失敗の見出しの印 (`data-status-heading`。`src/components/parts/status-heading.tsx` の `StatusHeading` が付ける) を持つ要素、無ければ文書順で最初の `<h1>` である。レイアウトに `<h1>` を置くと、遷移のたびにそちらへ移る (ADR-0035)
-- 印の要素も `<h1>` も無いと focus は `<body>` に落ち、`console.warn` が出る
-- 見出しに focus の枠は出さない (`focusVisible: false`)。理由は ADR-0035 にある
-
-not found の画面の title は `src/lib/page-title.ts` の `pageTitle` が決める。全 route の `head` が `pageTitle` を通していれば (ページとダイアログの route は `pageRouteOptions` か `dialogRouteOptions` の `head` で)、どの route が not found を受け持っても同じ title になる。route の読み込み (loader・beforeLoad・component の chunk) の失敗では、title の前に `エラー: ` が付く。判定の仕方と、扱わない URL は ADR-0035 にある。
-
 ### 読み込み中の表示の見せ方を選んだ理由
 
-route の pending 表示 (ページ全体を置き換える skeleton と `PendingContent`) を支援技術にどう見せるかは、W3C に推奨の形が無い。[APG「Patterns」][] に読み込み中のパターンは無く、skeleton 専用の role の提案は、ARIA WG のメンバーが「`aria-live` / `aria-busy` と visually hidden text で足りる」として閉じた ([w3c/aria#1317][])。そこで次の 3 種の情報から形を決めた (2026-09-28 に調査)。
+読み込み中の表示 (ページ全体を置き換える skeleton と `PendingContent`) を支援技術にどう見せるかは、W3C に推奨の形が無い。[APG「Patterns」][] に読み込み中のパターンは無く、skeleton 専用の role の提案は、ARIA WG のメンバーが「`aria-live` / `aria-busy` と visually hidden text で足りる」として閉じた ([w3c/aria#1317][])。そこで次の 3 種の情報から形を決めた (2026-09-28 に調査)。
 
 | 情報                   | 分かったこと                                                                                                                                                                                                                                          | 出典                                                                               |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -179,7 +140,7 @@ route の pending 表示 (ページ全体を置き換える skeleton と `Pendin
 
 ### 読み込み中の表示を組む
 
-対象は route の pending 表示 (ページ全体を置き換える skeleton と `PendingContent`) である。理由と却下した案は「読み込み中の表示の見せ方を選んだ理由」にある。
+対象は 読み込み中の表示 (ページ全体を置き換える skeleton と `PendingContent`) である。理由と却下した案は「読み込み中の表示の見せ方を選んだ理由」にある。
 
 | 対象                    | 組み方                                                                                                                    |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -255,23 +216,6 @@ route の pending 表示 (ページ全体を置き換える skeleton と `Pendin
 - 取得結果の文言は、0 件も件数の形で書き、条件が空なら絞り込みの解除を伝える文言にする
 - 取得結果の文言を、空状態の見出しと同じ文字列にしない。テストの `getByText` が live region と見出しの 2 要素に解決する
 
-### ページを足すときに title と見出しを持たせる
-
-遷移の読み上げは title を、遷移の後の focus は `<h1>` (ページの位置で受けた失敗の画面では、その下の失敗の見出し) を使う (「クライアント遷移を伝える仕組み」)。ページ名は route の `staticData.pageName` に 1 回だけ書き、title と見出しの行をそこから作る。ページの route (自分の component が `RoutePageHeader` で `<h1>` を描く route) を足したら次の 2 つを持たせる。
-
-1. `pageRouteOptions(<ページ名>)` (`src/lib/page-title.ts`) を route の外で const に受け、route の options の先頭に spread する。`staticData.pageName` と、そこから title を組む `head` が 1 組で入る。ページ名は他のページと区別できる名前にする。ページの上に重ねるダイアログの route は、ダイアログの名前で `dialogRouteOptions` を spread する
-2. ページの component の先頭で `RoutePageHeader` (`src/components/screens/route-page-header.tsx`) を描く。名前は route の `pageName` から取るので渡さず、操作だけを `actions` に渡す。route の `pendingComponent` を書くなら、その中でも描く。読み込んだデータで名前が決まる route は、`RoutePageHeader` の代わりに `PageHeader` に名前を渡す (この節の `PageHeader` の項目)
-
-- title を文字列で直接書かない。not found の判定を通らず、not found の画面でもそのページの名前が title になる
-- `pageRouteOptions` を使わずに `staticData` を手で書かない。書いて `head` を省くと親の route の title になり、同じ親の下のページと遷移の読み上げで区別できない
-- `...pageRouteOptions(<ページ名>)` のように呼び出しを options の中で直接 spread しない。`tanstack-router/create-route-property-order` が Identifier でない spread で throw し、lint ごと止まる (TanStack/router#8673)
-- ページの route の `pageName` を省かない。省くと `RoutePageHeader` が throw し、ページはエラーの画面になる
-- ページの位置で読み込みの失敗と描画中の例外を受けるなら、route の `errorComponent` に `PageRouteError` を置く。ページ名の `<h1>` の行が残り、失敗の見出しは `<h2>` になる (`docs/guides/data-loading.md`「読み込みの失敗を受ける部品を置く」)
-- 名前の付いたページの route の子に、ダイアログでない名前の付いたページの route を置かない。親のページの `<h1>` の下の `<Outlet />` に子のページの `<h1>` が描かれ、表示中は `<h1>` が 2 つ並ぶ
-- `PageHeader` (`src/components/parts/page-header.tsx`) の `title` に名前を渡すのは、読み込んだデータで名前が決まる route だけにする。その route は `head()` が返す `meta` の title を `pageTitle(ctx, <名前>)` にし、同じ名前を `PageHeader` に渡す (ADR-0033)。名前が静的な route で渡すと `pageName` と二重になり、title と見出しがずれても気付けない
-- ページの見出しを含む本体は、loader が待った query で描く。本体が loader の後に suspend すると、focus は本体ではなく pending 表示かレイアウトの `<h1>` (無ければ `<body>`) へ移る (ADR-0033、ADR-0035)
-- ページを足したら、または見出しか title を変えたら、VoiceOver で見出しの focus と title の読み上げの聞こえ方を確かめる。自動テストでは聞こえ方を見られない (ADR-0035)
-
 ### accessible name を与える
 
 名前が要るかと与え方は、[WCAG 2.2 SC 4.1.2][] と、[APG「Providing Accessible Names and Descriptions」][] の Accessible Name Guidance by Role に従う。APG は規格を満たす作り方を示す informative な資料で、要件ではない ([APG「Introduction」][] の APG is Not a Normative Standard)。迷ったら与える側に倒し、与えない判断をしたら理由を実装の近くに残す。この節には、このリポジトリの部品で踏みやすい落とし穴だけを書く。
@@ -322,8 +266,6 @@ route の pending 表示 (ページ全体を置き換える skeleton と `Pendin
 - サイトやページの中を移動するリンクのまとまりは `<nav>` で包む ([APG「Landmark Regions」][] の Navigation)。`role="navigation"` は `jsx-a11y/prefer-tag-over-role` が止める (2026-10-05、oxlint 1.85.0)
 - 1 ページに `<nav>` が複数あるときは、それぞれに区別できる名前を与える。見出しがあれば `aria-labelledby` で指し、無ければ `aria-label` を渡す。名前に「ナビゲーション」を含めない。ロールと重ねて読まれる。同じリンクの組を 2 か所に置くときは同じ名前にする ([APG「Landmark Regions」][] の Step 3: Label areas と Navigation)
 - 現在のページを指す項目に `aria-current="page"` を付ける。1 つのまとまりの中で current にするのは 1 つだけにする ([WAI-ARIA 1.2][] の `aria-current`)
-- TanStack Router の `Link` は、active のときに `aria-current="page"` を自分で付ける ([TanStack Router の `link.tsx`][])。手で書くのは、`Link` を使わずに現在地を示すときだけにする
-- `Link` の active の判定は、既定では path の前方一致である ([TanStack Router docs「Navigation」][] の Active Options)。同じ `<nav>` に親と子の path へのリンクが並ぶと、子のページで両方が current になるので、親へのリンクに `activeOptions={{ exact: true }}` を渡す
 
 ### ダイアログの閉じる手段を残す
 
@@ -332,7 +274,7 @@ route の pending 表示 (ページ全体を置き換える skeleton と `Pendin
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vitest は 5.0.1、TanStack Router は `@tanstack/react-router` 1.170.39 に固定した版を指す。WAI-ARIA 1.2、WCAG 2.2、APG の引用は 2026-10-05 に、APG「Providing Accessible Names and Descriptions」と「Introduction」と combobox の 2 つの例、accname 1.2 の引用は 2026-10-06 に、Storybook docs「Accessibility testing」の引用は 2026-10-08 に原文と照らした。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vitest は 5.0.1 に固定した版を指す。WAI-ARIA 1.2、WCAG 2.2、APG の引用は 2026-10-05 に、APG「Providing Accessible Names and Descriptions」と「Introduction」と combobox の 2 つの例、accname 1.2 の引用は 2026-10-06 に、Storybook docs「Accessibility testing」の引用は 2026-10-08 に原文と照らした。
 
 [shadcn docs「Item」]: https://ui.shadcn.com/docs/components/base/item
 [shadcn-ui/ui#11532]: https://github.com/shadcn-ui/ui/issues/11532
@@ -365,8 +307,6 @@ route の pending 表示 (ページ全体を置き換える skeleton と `Pendin
 [APG「Landmark Regions」]: https://www.w3.org/WAI/ARIA/apg/practices/landmark-regions/
 [WCAG 2.2 SC 1.1.1]: https://www.w3.org/TR/WCAG22/#non-text-content
 [WCAG 2.2 SC 1.4.1]: https://www.w3.org/TR/WCAG22/#use-of-color
-[TanStack Router の `link.tsx`]: https://github.com/TanStack/router/blob/b1e54dee82e8ed5850daa7f6efd04a56c1aeeae6/packages/react-router/src/link.tsx#L569
-[TanStack Router docs「Navigation」]: https://github.com/TanStack/router/blob/@tanstack/react-router@1.170.39/docs/router/guide/navigation.md
 [APG「Providing Accessible Names and Descriptions」]: https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/
 [accname 1.2]: https://www.w3.org/TR/accname-1.2/
 [w3c/accname#225]: https://github.com/w3c/accname/issues/225

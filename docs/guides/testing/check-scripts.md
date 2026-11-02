@@ -24,7 +24,7 @@
 | 1 (判断が要る検査)     | `scripts/checks/integrity/lint-config.test.ts` の緩和の適用先とルールの検査 (広げたのが意図なら期待値へ足し、誤りなら設定を直す)、`scripts/checks/integrity/registry-baseline.test.ts` の 3-way の判別 |
 | 5 (判定と適用を分ける) | 実行側の `scripts/checks/runtime/security-headers.ts` と、判定の `scripts/lib/response-headers.ts`                                                                                                     |
 
-- 固定の port で成果物を起動する検査は、起動の前に、その origin が応答しないことを確かめる。前回の残骸が答えると、こちらの起動が失敗しても古い成果物を検査して緑になる (`scripts/checks/runtime/security-headers.ts`)
+- 成果物をサーバとして起動する検査は、OS に選ばせた空きの port で、使用中なら別の port へずらさない形 (`--strictPort`) で起動する。固定の port だと、前回の残骸や別の worktree の検査が同じ port で答え、こちらの起動が失敗しても古い成果物を検査して緑になる (`scripts/checks/runtime/security-headers.ts`)
 
 ## explanation
 

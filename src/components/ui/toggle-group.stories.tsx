@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AlignCenterIcon, AlignLeftIcon, AlignRightIcon } from "lucide-react";
 import { expect, userEvent } from "storybook/test";
 

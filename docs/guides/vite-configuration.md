@@ -13,13 +13,13 @@
 
 Vite+ が読む設定は、ツールごとの設定ファイルに分けず `vite.config.ts` に集める (「1 つの `vite.config.ts` に集める理由」、ADR-0004)。block を切り出すときは `tooling/<block>/` に置き、`vite.config.ts` はそれを import して組み立てる (「別のファイルから組み立てる理由」)。
 
-| block                                                 | 置き場所                                                                                                                                                                                                                           |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `test`                                                | `tooling/test/config.ts` の `testConfig` (ADR-0037)。project の組み方は `docs/guides/testing/configuration.md`                                                                                                                     |
-| `lint`                                                | `tooling/lint/config.ts` の `lintConfig`。ルールとプラグインの足し方は `docs/guides/lint/configuration.md`                                                                                                                         |
-| `fmt`、`staged`、`resolve`、`envDir`、`plugins`       | `vite.config.ts`                                                                                                                                                                                                                   |
-| `run`                                                 | `vite.config.ts`。タスクの足し方は「タスクを足す」、置き場所の決定は ADR-0004                                                                                                                                                      |
-| `plugins` の React の plugin (`@vitejs/plugin-react`) | `tooling/plugins/react.ts` の `reactPlugin`。アプリの `plugins` と、ブラウザで走る project の `chromiumProjectBase` が同じ factory から作る。分岐の書き方は `docs/guides/testing/configuration.md`「テストでだけ plugin を変える」 |
+| block                                                 | 置き場所                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test`                                                | `tooling/test/config.ts` の `testConfig` (ADR-0037)。project の組み方は `docs/guides/testing/configuration.md`                                                                                                                                                                  |
+| `lint`                                                | `tooling/lint/config.ts` の `lintConfig`。ルールとプラグインの足し方は `docs/guides/lint/configuration.md`                                                                                                                                                                      |
+| `fmt`、`staged`、`resolve`、`envDir`、`plugins`       | `vite.config.ts`                                                                                                                                                                                                                                                                |
+| `run`                                                 | `vite.config.ts`。タスクの足し方は「タスクを足す」、置き場所の決定は ADR-0004                                                                                                                                                                                                   |
+| `plugins` の React の plugin (`@vitejs/plugin-react`) | `tooling/plugins/react.ts` の `reactPluginOptions`。アプリの `voidReact({ react })` と、ブラウザで走る project の `chromiumProjectBase` の `viteReact()` が、同じ関数から options を作る。分岐の書き方は `docs/guides/testing/configuration.md`「テストでだけ plugin を変える」 |
 
 ### block を別のファイルへ切り出す
 
@@ -40,7 +40,7 @@ Vite+ が読む設定は、ツールごとの設定ファイルに分けず `vit
 
 ### タスクを足す
 
-1. `vite.config.ts` の `run.tasks` に足す。worktree ごとの port で起動するサーバーなら、タスクは port を読まずに使用中の port で止まるフラグ (Vite は `--strictPort`) を付け、`.mise.toml` に同名のタスクを足して `interactive = true` を置き、`exec vp run <task> --port ${<NAME>_PORT:?…}` で渡す。ツールが起動のしかたに関わらず `--port` より `PORT` の環境変数を先に読むなら (nitro の dev server)、`PORT=${<NAME>_PORT:?…} exec vp run <task> --port $<NAME>_PORT` の形にする。Claude のプレビューから起動されたときだけ `PORT` を先に読むツール (Storybook) には付けない。daemon は `task =` でそのタスクを指す (ADR-0004)
+1. `vite.config.ts` の `run.tasks` に足す。worktree ごとの port で起動するサーバーなら、タスクは port を読まずに使用中の port で止まるフラグ (Vite は `--strictPort`) を付け、`.mise.toml` に同名のタスクを足して `interactive = true` を置き、`exec vp run <task> --port ${<NAME>_PORT:?…}` で渡す。daemon は `task =` でそのタスクを指す (ADR-0004)
 2. mise の `[env]` の値を読むなら、値が届いていなければ止まる形にする。mise の値は、呼んだシェルが mise の環境を読んでいるときだけタスクに届く (ADR-0004)。command の中で読むなら `${NAME:?mise の環境が要る。…}` のように書く。Vite Task は command を `/bin/sh` で解釈し、未設定なら `/bin/sh: NAME: …` を出して止まる (2026-10-14 に vite-plus 1.1.0 で確かめた)。値をコマンドの引数に使わないなら、`NAME=${NAME:?…} <コマンド>` と代入の形で書く。`${NAME:?…}` だけを置くと、値がコマンドの位置引数 (`vp dev` なら root) になる。コードで読むなら `src/lib/require-env.ts` の `requireEnv` を使う
 3. タスクに `cache` を書かない。`run.cache: false` がすべてのタスクのキャッシュを切っている。gate を `vp run --cache` で打たない。`--cache` は全体の設定を外し、2 回目をリプレイで済ませる (ADR-0004)
 4. command の中で TypeScript と JavaScript のスクリプトを走らせるときは `vpx <file>` を打ち、`node` と `vp node` を打たない。タスクの中の `vp node` は `error: Command 'node' not found` で落ち、`node` は tsconfig の `paths` を読まない (「タスクの中で `vpx` を打つ理由」)
@@ -84,24 +84,13 @@ Vite+ が読む設定は、ツールごとの設定ファイルに分けず `vit
 
 Vite+ は、重い plugin を `lazyPlugins` に渡す async の関数の中で `import()` する形を示している ([Vite+ docs「Troubleshooting」][]: "For heavy plugins that should be lazily imported, combine with dynamic `import()`")。この形では、plugin が全部まとめて 1 つの Promise に包まれて Vite へ渡る ([voidzero-dev/vite-plus#1215][]: "Async callbacks have their Promise wrapped in an array internally for Vite's `asyncFlatten`"。vite-plus 1.0.0 の `lazyPlugins` で 2026-09-30 に確認)。
 
-`@storybook/tanstack-react` 10.6.0 は、Storybook と衝突する TanStack Start の plugin を外すとき (`docs/guides/storybook.md`「framework を TanStack 専用にし、telemetry を切る理由」)、Promise の中を見ない。async の関数にすると plugin が残り、`vp exec storybook build` が `[plugin tanstack-start:start-manifest-capture-client-build] Error: multiple entries detected` で落ちる (2026-09-30 に観測。`storybook dev` では試していない)。`vp run verify` と CI は Storybook を build しないので、この失敗は検証では見つからない。そのため関数は同期のままにし、plugin は先頭で import する。
-
-先頭で import すると、`vp lint` と `vp fmt` が config を読むたびに plugin の module が評価される。2026-09-30 に、plugin を読み込む形ごとに `/usr/bin/time -p vp lint src/lib/app-name.ts` と `/usr/bin/time -p vp fmt --check src/lib/app-name.ts` を 11 回ずつ走らせ、初回を除いた `real` の範囲 (vite-plus 1.0.0、Node 24.21.0、`@tanstack/react-start` 1.168.58、`nitro` 3.0.260610-beta、`@tanstack/devtools-vite` 0.8.5、`@tailwindcss/vite` 4.3.3、`@vitejs/plugin-react` 6.1.1)。この計測の「全部の plugin を先頭で import」は、「重い依存を遅らせる理由」の表の「project の関数の中で外部の依存を `import()`」と同じ形である:
-
-| 形                                                                                    | `vp lint`  | `vp fmt --check` |
-| ------------------------------------------------------------------------------------- | ---------- | ---------------- |
-| 全部の plugin を先頭で import                                                         | 0.80-0.87s | 0.43-0.44s       |
-| `tanstackStart`・`nitro`・`devtools` を関数の中で `import()`                          | 0.61-0.63s | 0.23-0.24s       |
-| さらに `tailwindcss` を `import()` (`vite.config.ts` と `chromiumProjectBase` の両方) | 0.58-0.60s | 0.21s            |
-| さらに `@vitejs/plugin-react` を `import()`                                           | 0.58-0.61s | 0.20-0.21s       |
+先頭で import すると、`vp lint` と `vp fmt` が config を読むたびに plugin の module が評価される。2026-09-30 に、ほかの plugin を関数の中の `import()` へ移した形から、さらに `tailwindcss` (`vite.config.ts` と `chromiumProjectBase` の両方) と `@vitejs/plugin-react` を `import()` へ移しても、`vp lint` は 0.61-0.63s から 0.58-0.61s、`vp fmt --check` は 0.23-0.24s から 0.20-0.21s にしか縮まなかった (`/usr/bin/time -p vp lint src/lib/app-name.ts` と `/usr/bin/time -p vp fmt --check src/lib/app-name.ts` を 11 回ずつ走らせ、初回を除いた `real` の範囲。vite-plus 1.0.0、Node 24.21.0、`@tailwindcss/vite` 4.3.3、`@vitejs/plugin-react` 6.1.1)。今の `plugins` はこの 2 つだけなので、関数は同期のままにし、plugin は先頭で import する。
 
 `tailwindcss` は `tooling/test/chromium-project.ts` の `chromiumProjectBase` でも読む。`vite.config.ts` が先頭で import している間は、`chromiumProjectBase` で遅らせても同じ module が読まれるので、両方を遅らせないと縮まないと見込む (片方だけを遅らせる形は測っていない)。そのため `chromiumProjectBase` でも先頭で import する。
 
-async の関数でも `vp exec storybook build` が通るようになったら (`@storybook/tanstack-react` が Promise の plugin を解決してから外すようになるなど)、関数を async にして plugin を `import()` へ移せる。この節の計測は、そのときに移す plugin を選ぶ材料になる。
-
 ### タスクの中で `vpx` を打つ理由
 
-- [Vite+ docs「Environment」][] は `vp node` を "It runs Node.js as is, so TypeScript files get Node.js type stripping only; `vpx <file>` runs them on the same runtime with full TypeScript support." と書く。Node.js の type stripping は tsconfig の `paths` を読まず、拡張子の無い import は `ERR_MODULE_NOT_FOUND` で落ちる (`docs/guides/database.md`「seed を vpx で走らせる理由」)
+- [Vite+ docs「Environment」][] は `vp node` を "It runs Node.js as is, so TypeScript files get Node.js type stripping only; `vpx <file>` runs them on the same runtime with full TypeScript support." と書く。Node.js の type stripping は tsconfig の `paths` を読まず、拡張子の無い import は `ERR_MODULE_NOT_FOUND` で落ちる ([Node.js docs「Modules: TypeScript」][] は `paths` を "intentionally unsupported" とし、import の拡張子を "mandatory" とする)
 - `vp node` は `vp env exec node` の短縮形で、`vp env` は global の CLI に属し、project-local の `vite-plus` には無い ([Vite+ docs「Environment」][] の冒頭と Examples)。`vp run` は `node_modules/.bin` を `PATH` の先頭に置くので、タスクの中の `vp` は project-local の CLI に解決され、`vp node` は `error: Command 'node' not found` で落ちる (2026-10-30、vite-plus 1.4.0)
 - タスクの中の `vpx` も project-local の `vite-plus` の bin に解決され、global の CLI の版に頼らない。[Vite+ docs「Running Binaries」][] の In `package.json` Scripts は "It runs them on the Node.js that started it, which inside `vp run` and package manager scripts is the project's version." と書く
 - `vpx` が足す起動の時間は小さい。2026-10-30 に vite-plus 1.4.0 と Node.js 24.20.0 で、`scripts/contrast/report.ts` を `node` と project-local の `vpx` で 5 回ずつ交互に走らせ、2 回目以降の差は 0.05 秒以下だった (初回の `vpx` だけが 0.2 秒ほど長い)
@@ -125,3 +114,4 @@ async の関数でも `vp exec storybook build` が通るようになったら (
 [Vite+ docs「Run」]: https://github.com/voidzero-dev/vite-plus/blob/v1.1.0/docs/guide/run.md
 [Vite+ docs「Environment」]: https://github.com/voidzero-dev/vite-plus/blob/v1.4.0/docs/guide/env.md
 [Vite+ docs「Running Binaries」]: https://github.com/voidzero-dev/vite-plus/blob/v1.4.0/docs/guide/vpx.md
+[Node.js docs「Modules: TypeScript」]: https://nodejs.org/docs/latest-v24.x/api/typescript.html

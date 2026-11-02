@@ -1,7 +1,8 @@
 import tailwindcss from "@tailwindcss/vite";
+import viteReact from "@vitejs/plugin-react";
 import type { UserWorkspaceConfig } from "vite-plus/test/config";
 
-import { reactPlugin } from "../plugins/react";
+import { reactPluginOptions } from "../plugins/react";
 
 /**
  * Compiler を通さない project が扱う範囲。registry から取り込んだ部品だけを、ライブラリと同じく
@@ -29,7 +30,7 @@ export function chromiumProjectBase({ compiler }: { compiler: boolean }) {
     // src/test/browser/browser-setup.tsx が src/styles.css を import し、tailwindcss() がユーティリティクラスを
     // 生成する。Node の project には要らないので、テスト時の root の plugins には置かない
     // (docs/guides/testing/configuration.md「テストでだけ plugin を変える」)
-    plugins: [reactPlugin({ compiler }), tailwindcss()],
+    plugins: [viteReact(reactPluginOptions({ compiler })), tailwindcss()],
     test: {
       browser: {
         enabled: true,

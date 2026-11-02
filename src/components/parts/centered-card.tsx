@@ -19,7 +19,7 @@ const centeredCardFrame = cva("flex items-center justify-center p-6", {
     fill: {
       /** 画面全体を占める。遷移先を失った画面 (404 / 認証エラー / root の error boundary) 用 */
       screen: "min-h-svh bg-background",
-      /** 画面の一部を占める。周りに他の要素が残る route の error boundary 用 */
+      /** 画面の一部を占める。周りに他の要素が残る、ページの中の error boundary 用 */
       section: "min-h-[50vh]",
     },
   },

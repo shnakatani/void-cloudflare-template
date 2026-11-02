@@ -2,11 +2,12 @@
 export const THROWN_VALUE_UNPRINTABLE = "表示できない値が投げられました";
 
 /**
- * 投げられた値を画面に出す文言にする。Router はエラー境界に error を unknown で渡す (route は Error 以外も
- * throw できる)。Error ならその message を、それ以外は値を文字列にする (TanStack Router の data-loading ガイド
- * 「Handling Errors with routeOptions.errorComponent」の例と同じ形)。
+ * 投げられた値を画面に出す文言にする。React の error boundary が受ける error は Error とは限らないので、
+ * unknown で受ける (React の docs「Component」の `static getDerivedStateFromError` の Parameters: "this is not
+ * guaranteed because JavaScript allows to throw any value, including strings or even null")。
+ * Error ならその message を、それ以外は値を文字列にする。
  *
- * ガイドの例には次の 2 つを足した。Router の組み込みの ErrorComponent も、どちらの保護も持たない。
+ * 次の 2 つは、そのまま返さずに扱いを変える。
  * - message が空か文字列でない Error は、値を文字列にする (`Error` や `Error: [object Object]`)。空だと本文に
  *   何も出ず、文字列でないと React の描画が落ちてエラーの画面ごと壊れる
  * - `instanceof` の判定、message の読み取り、`String()` のどれかが throw する値と、文字列にすると空になる値

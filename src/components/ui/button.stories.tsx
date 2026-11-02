@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { TrashIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export const DestructiveIcon: Story = {
   },
 };
 
-/** リンクの意匠。遷移を伴うなら `ButtonLink` (parts) を使う */
+/** リンクの意匠 */
 export const Link: Story = {
   args: { variant: "link", children: "詳細を見る" },
 };

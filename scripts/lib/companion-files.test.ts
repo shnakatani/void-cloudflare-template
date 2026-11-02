@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  COMPANION_KINDS,
-  companionFilePattern,
-  companionGlobs,
-  isCompanionFile,
-  storyGlobs,
-} from "./companion-files";
+import { COMPANION_KINDS, companionGlobs, isCompanionFile, storyGlobs } from "./companion-files";
 
 describe("COMPANION_KINDS", () => {
   it("付随ファイルの 5 種別を持つ", () => {
@@ -65,20 +59,6 @@ describe("storyGlobs", () => {
   });
 });
 
-describe("companionFilePattern", () => {
-  it("5 種別 × ts / tsx に当たり、アプリのコードには当たらない", () => {
-    const pattern = new RegExp(companionFilePattern());
-
-    for (const kind of COMPANION_KINDS) {
-      expect(pattern.test(`button.${kind}.ts`), `button.${kind}.ts`).toBe(true);
-      expect(pattern.test(`button.${kind}.tsx`), `button.${kind}.tsx`).toBe(true);
-    }
-    expect(pattern.test("button.tsx")).toBe(false);
-    expect(pattern.test("handlers.server.ts")).toBe(false);
-    expect(pattern.test("routeTree.gen.ts")).toBe(false);
-  });
-});
-
 describe("isCompanionFile", () => {
   it("5 種別 × ts / tsx を付随ファイルと判定する", () => {
     for (const kind of COMPANION_KINDS) {
@@ -91,7 +71,7 @@ describe("isCompanionFile", () => {
     // basename に `.` を持つアプリのコード。字面が似ているので取り違えると本体が検査から漏れる
     expect(isCompanionFile("button.tsx")).toBe(false);
     expect(isCompanionFile("handlers.server.ts")).toBe(false);
-    expect(isCompanionFile("routeTree.gen.ts")).toBe(false);
+    expect(isCompanionFile("schema.gen.ts")).toBe(false);
     expect(isCompanionFile("env.d.ts")).toBe(false);
     expect(isCompanionFile("vite-env.d.ts")).toBe(false);
   });

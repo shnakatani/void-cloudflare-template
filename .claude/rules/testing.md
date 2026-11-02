@@ -1,7 +1,23 @@
 ---
 paths:
   - "src/**/*.test.*"
+  - "pages/**/*.test.*"
+  - "routes/**/*.test.*"
+  - "middleware/**/*.test.*"
+  - "crons/**/*.test.*"
+  - "queues/**/*.test.*"
+  - "db/**/*.test.*"
+  - "email/**/*.test.*"
+  - "durable-objects/**/*.test.*"
   - "src/**/*.test-d.*"
+  - "pages/**/*.test-d.*"
+  - "routes/**/*.test-d.*"
+  - "middleware/**/*.test-d.*"
+  - "crons/**/*.test-d.*"
+  - "queues/**/*.test-d.*"
+  - "db/**/*.test-d.*"
+  - "email/**/*.test-d.*"
+  - "durable-objects/**/*.test-d.*"
   - "scripts/**/*.test.*"
   - "src/test/**"
   - "**/*.test-helpers.*"
@@ -18,13 +34,14 @@ paths:
 ## テストの種別と置き場所
 
 壊れる原因が違うものを同じ project に混ぜない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。
+表の `<アプリ>` は、`src/` と Void の規約のディレクトリ (`scripts/lib/void-source-dirs.ts`) のどれかを指す。
 
 | 種別                   | 壊れる原因                   | 置き場所                                            | 実行                                                                                                                                                                                                                                             |
 | ---------------------- | ---------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| アプリの単体テスト     | アプリのコード変更           | `src/**/*.test.ts`                                  | `vp test run --project unit` (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)                                                                                                                                                  |
-| TZ ごとの単体テスト    | アプリのコード変更           | `src/**/*.tz.test.ts`                               | 基準の TZ は `vp test run --project unit`、基準以外は `vp run verify:time-zones` (`docs/guides/testing/time-zones.md`「Node で動くテストを TZ ごとに走らせる」)                                                                                  |
-| アプリのブラウザテスト | アプリのコード変更           | `src/**/*.test.tsx`                                 | `vp test run --project browser`。`src/components/ui/` のテストは `browser-no-compiler` にも入るので、`--project` を付けずにファイルを指定して両方で走らせる (`docs/guides/testing/configuration.md`「React Compiler を通さない project を足す」) |
-| アプリの型テスト       | アプリの型の変更             | `src/**/*.test-d.ts`                                | `vp check`。`vp test run` は集めない (`docs/guides/testing/type-tests.md`「型テストを置く」)                                                                                                                                                     |
+| アプリの単体テスト     | アプリのコード変更           | `<アプリ>/**/*.test.ts`                             | `vp test run --project unit` (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)                                                                                                                                                  |
+| TZ ごとの単体テスト    | アプリのコード変更           | `<アプリ>/**/*.tz.test.ts`                          | 基準の TZ は `vp test run --project unit`、基準以外は `vp run verify:time-zones` (`docs/guides/testing/time-zones.md`「Node で動くテストを TZ ごとに走らせる」)                                                                                  |
+| アプリのブラウザテスト | アプリのコード変更           | `<アプリ>/**/*.test.tsx`                            | `vp test run --project browser`。`src/components/ui/` のテストは `browser-no-compiler` にも入るので、`--project` を付けずにファイルを指定して両方で走らせる (`docs/guides/testing/configuration.md`「React Compiler を通さない project を足す」) |
+| アプリの型テスト       | アプリの型の変更             | `<アプリ>/**/*.test-d.ts`                           | `vp check`。`vp test run` は集めない (`docs/guides/testing/type-tests.md`「型テストを置く」)                                                                                                                                                     |
 | スクリプトの単体テスト | スクリプト自身の変更         | `scripts/**/*.test.ts` (`scripts/checks/**` を除く) | `vp test run --project scripts-tools` (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)                                                                                                                                         |
 | 整合検査               | 設定・ドキュメントの更新漏れ | `scripts/checks/integrity/`                         | `vp test run --project checks-integrity` (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)                                                                                                                                        |
 | 成果物の検査           | ビルド結果に現れる挙動の欠落 | `scripts/checks/runtime/`                           | `vp build` の後に `vp run verify:<name>` (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)                                                                                                                                        |
@@ -47,18 +64,12 @@ paths:
 - 落ちたときに判断が要らない検査は作らない。期待値の書き換えしか選択肢が無い検査は上流更新のたびに鳴り、判断を鈍らせる (`docs/guides/testing/check-scripts.md`「検査スクリプトを分けて置く理由」)
 - ビルド成果物が要る検査は vitest の project にせず、`vite.config.ts` の `verifySteps` で `verify:build` の後に置き、CI の step にも足す。project は build との順序を持てない (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
 - 成果物の検査の判定ロジックは `scripts/lib/` へ切り出して単体テストを持つ (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
-- 固定 port を使う検査は、起動前にその origin が応答しないことを確かめる。前回の残骸が答えると古い成果物の検査が緑になる (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
+- 成果物をサーバとして起動する検査は、固定の port を使わず、OS に選ばせた空きの port を `--strictPort` で使う。固定の port だと前回の残骸が答え、古い成果物の検査が緑になる (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
 - テスト全体の TZ は root の globalSetup (`tooling/test/global-setup.ts`) で決め、`APP_TIME_ZONE` と違う値にする。一致すると、ローカル TZ に依存する実装を壁時計の値のテストが見逃す (`docs/guides/testing/time-zones.md`「基準のタイムゾーンを決める理由」)
 - `Intl.DateTimeFormat` で整形した日時を固定の文字列と比べない。`format()` の出力は実装ごとに違ってよい。壁時計は数字の並びで比べ、画面の期待値は `formatDateTime` で作る。date-fns の `format` は Intl を使わないので、固定の文字列と比べてよい (`docs/guides/dates-and-time-zones.md`「整形した日時をテストで確かめる」)
 - Node で動くテスト (unit project) のうち、`Date` のローカルの getter や TZ を指定しない date-fns を直接呼ぶモジュールと、ローカルの TZ に依存しないことを保証するモジュールのテストは、ファイルごと `src/**/*.tz.test.ts` にする。1 件ずつ分けると、分け損ねたテストが基準の TZ でしか走らない (`docs/guides/testing/time-zones.md`「Node で動くテストを TZ ごとに走らせる」)
 - テストの中で `vi.stubEnv("TZ", …)` で TZ を切り替えず、TZ ごとの実行はスクリプト (`scripts/time-zones/run-tests.ts`) に任せる。threads / vmThreads の pool ではテストの中の切り替えが `Date` に効かず、無言で通る (`docs/guides/testing/time-zones.md`「TZ ごとにプロセスを分ける理由」)
 - ブラウザテストの TZ の切り替えは CDP の `Emulation.setTimezoneOverride` で行い、`afterEach` で `timezoneId: ""` を送って戻す。`vi.stubEnv` はブラウザの TZ を変えない (`docs/guides/testing/time-zones.md`「ブラウザテストで切り替える」)
-
-## テスト用の router
-
-- テストで既定にしたい router の options は、各テストに書かずに `createRouterWithTestDefaults` (`src/test/app/create-router-with-test-defaults.ts`) の既定に足す (`docs/guides/testing/real-router.md`「テスト用の router の既定をそろえる」)
-- `createRouterWithTestDefaults` の既定に本番の設定 (`src/router.tsx`) の値を写さない。本番と同じ設定を通したいテストは、その option (`notFoundMode` など) を自分で渡す (`docs/guides/testing/real-router.md`「テスト用の router の既定をそろえる」)
-- route の wrapper のテストで route tree の root を差し替えるなら、root に本番の root と同じ shell と失敗の部品を持たせ (`shellComponent` は `<HeadContent />` と children を描く関数、`errorComponent` は `FullScreenRouteError`、`notFoundComponent` は `NotFoundContent`)、router に `notFoundMode: "root"` を渡す。部品が無いと、どの route も受けない失敗で組み込みの部品と warn が出る。`HeadContent` が無いと、root が受けた失敗で title が変わらない (`docs/guides/testing/real-router.md`「route の wrapper をテストする」)
 
 ## a11y の検査は tag で分ける
 
@@ -150,7 +161,7 @@ paths:
 | -   | 無効化された要素が反応しないことの検証                | `pointer-events` と状態属性で見る。ライブラリ内部のガードまで見に行かない         |
 | -   | 決着前の二重発火の検証                                | 1 → 2 の実イベントを 2 回。同一要素への同期 2 連射は実イベントで起きない          |
 
-- Base UI の popup を開いた直後に、開いたときの focus が当たる要素へキーを送るときは、`expect.element(x).toHaveFocus()` で focus を待ってから送る。route の announcer (ADR-0035) を置いた router で、開く操作をした要素から route として開いたダイアログを離れ、そのあとの focus を確かめるときも、同じく待ってから離れる。Base UI は開いたときの focus を 1 フレーム後に当て、届く前に離れると announcer が見出しへ移す (`docs/guides/testing/user-interactions.md`「popup を開いた直後にキーを送る」)
+- Base UI の popup を開いた直後に、開いたときの focus が当たる要素へキーを送るときは、`expect.element(x).toHaveFocus()` で focus を待ってから送る。Base UI は開いたときの focus を 1 フレーム後に当てる (`docs/guides/testing/user-interactions.md`「popup を開いた直後にキーを送る」)
 - `force: true` はブラウザのヒットテストを越えない。`pointer-events: none` の対象ではイベントが下の要素へ落ち、ハンドラは呼ばれない (`docs/guides/testing/user-interactions.md`「クリックを発火する」)
 - 合成イベント (`element.dispatchEvent(new MouseEvent(...))`) は使わない。実物では起きない経路を固定する (`docs/guides/testing/user-interactions.md`「クリックを発火する」)
 - `sr-only` のテキストは 1px + clip で viewport 判定に落ちる。`getByRole(..., { name })` で本体を掴む (`docs/guides/testing/user-interactions.md`「クリックを発火する」)

@@ -1,6 +1,14 @@
 ---
 paths:
   - "src/**"
+  - "pages/**"
+  - "routes/**"
+  - "middleware/**"
+  - "crons/**"
+  - "queues/**"
+  - "db/**"
+  - "email/**"
+  - "durable-objects/**"
 ---
 
 # 型の規律

@@ -6,6 +6,7 @@ import {
 
 import { companionGlobs } from "../../scripts/lib/companion-files";
 import { isStorybookRun } from "../../scripts/lib/storybook-env";
+import { VOID_SOURCE_GLOBS } from "../../scripts/lib/void-source-dirs";
 import { browserProject } from "./browser-project";
 import { storybookProject } from "./storybook-project";
 
@@ -62,18 +63,13 @@ export const testConfig = {
       ? [...configDefaults.reporters, ["html", { singleFile: true }]]
       : configDefaults.reporters,
   setupFiles: ["./tooling/test/setup.ts"],
-  // router は View Transition の ready の reject を拾わず、飛ばされた遷移の AbortError が unhandled rejection に
-  // なる。Chromium の飛ばされた View Transition の AbortError を、理由を問わず run の失敗と出力から外す (ADR-0040)
-  onUnhandledError(error) {
-    return !(error.name === "AbortError" && error.message.includes("Transition was skipped"));
-  },
   // project はどれもこれを継承し、自分の exclude を後ろに連結する (Vitest 5 の extends は配列を連結する)
   exclude: ["**/node_modules/**", "**/dist/**", "**/.claude/worktrees/**", "**/.claude/skills/**"],
   projects: [
     {
       test: {
         name: "unit",
-        include: ["src/**/*.test.ts"],
+        include: ["src/**/*.test.ts", ...VOID_SOURCE_GLOBS.map((glob) => `${glob}/*.test.ts`)],
       },
     },
     {
@@ -102,15 +98,14 @@ export const testConfig = {
   coverage: {
     provider: "v8",
     reporter: ["text", "html", "json-summary"],
-    include: ["src/**"],
+    include: ["src/**", ...VOID_SOURCE_GLOBS],
     exclude: [
-      "src/routeTree.gen.ts",
       // 付随ファイルは出荷されないので分母に入れない
-      ...companionGlobs("src/**/"),
+      ...companionGlobs("**/"),
       // vi.mock の差し替え先。テストだけが読み、出荷されない
-      "src/**/__mocks__/**",
+      "**/__mocks__/**",
       "src/test/**",
-      "src/**/*.d.ts",
+      "**/*.d.ts",
     ],
   },
 } satisfies TestUserConfig;

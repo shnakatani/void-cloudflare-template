@@ -1,10 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { expect, fn, screen, spyOn, userEvent, waitFor } from "storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, fn, screen, userEvent, waitFor } from "storybook/test";
 
 import { Button } from "@/components/ui/button";
 import { createSettlingAction } from "@/test/app/settling-action";
 
-import { CAUGHT_PREFIX, CaughtHere, silenceConsoleError } from "./catch-boundary.story-helpers";
 import { ActionForm, ActionFormSubmit } from "./form";
 
 /**
@@ -106,39 +105,5 @@ export const PlainSubmitNotCalledTwice: Story = {
     await userEvent.keyboard("{Enter}");
     await expect(args.submitAction).toHaveBeenCalledTimes(2);
     settling.settle();
-  },
-};
-
-/** submitAction の reject は部品が握らず、最寄りの Error Boundary へ届く */
-export const RejectReachesErrorBoundary: Story = {
-  tags: ["!dev"],
-  args: { submitAction: fn(() => Promise.reject(new Error("失敗"))) },
-  render: (args) => (
-    <CaughtHere>
-      <ActionForm {...args} />
-    </CaughtHere>
-  ),
-  play: async () => {
-    // 失敗は click で起きるので、描画より前から黙らせる必要はない
-    spyOn(console, "error").mockImplementation(() => {});
-    await userEvent.click(saveButton());
-
-    await expect(await screen.findByText(`${CAUGHT_PREFIX}失敗`)).toBeInTheDocument();
-  },
-};
-
-/** `ActionFormSubmit` を `ActionForm` の外で使うと throw する (レンダー中の throw) */
-export const SubmitOutsideForm: Story = {
-  tags: ["!dev"],
-  beforeEach: silenceConsoleError,
-  render: () => (
-    <CaughtHere>
-      <ActionFormSubmit>保存</ActionFormSubmit>
-    </CaughtHere>
-  ),
-  play: async () => {
-    await expect(
-      await screen.findByText(`${CAUGHT_PREFIX}[ActionFormSubmit] ActionForm の中で使う`),
-    ).toBeInTheDocument();
   },
 };

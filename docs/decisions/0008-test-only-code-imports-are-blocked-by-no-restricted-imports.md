@@ -16,12 +16,11 @@ story (`*.stories.*`) と story 専用の helper (`*.story-helpers.*`) も同じ
 
 eslint コアの `no-restricted-imports` を、範囲を絞って当てる。
 
-| 手段                                                       | 判定                                                                                                                |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| eslint-plugin-import の `import/no-restricted-paths`       | この用途の専用ルール (zones) だが oxlint に無い (oxc-project/oxc#13789)                                             |
-| dependency-cruiser の既定ルール `not-to-test`              | 同じ用途を既定で持つが、1 ルールのためにツールを増やす                                                              |
-| TanStack Start の `importProtection` (`files`)             | パス単位で bundle から遮断できるが build 時にしか鳴らず、client / server の環境境界のための機構 (公式 guide の説明) |
-| eslint コアの `no-restricted-imports` を範囲を絞って当てる | 採用。oxlint の保守者が同じ用途に示した形 (oxc-project/oxc#20881)                                                   |
+| 手段                                                       | 判定                                                                    |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------- |
+| eslint-plugin-import の `import/no-restricted-paths`       | この用途の専用ルール (zones) だが oxlint に無い (oxc-project/oxc#13789) |
+| dependency-cruiser の既定ルール `not-to-test`              | 同じ用途を既定で持つが、1 ルールのためにツールを増やす                  |
+| eslint コアの `no-restricted-imports` を範囲を絞って当てる | 採用。oxlint の保守者が同じ用途に示した形 (oxc-project/oxc#20881)       |
 
 `patterns` の `regex` で次の specifier を止める。
 

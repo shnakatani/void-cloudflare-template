@@ -80,7 +80,7 @@ oxlint 1.79 で `react/react-compiler` と `reportAllBailouts` は廃止され�
 
 - Compiler の適用は experimental な機能に乗る (`@vitejs/plugin-react` の README が明記)。壊れたときの退避は `docs/guides/react/memoization.md`「React Compiler の診断を読む」にある
 - `package.json` から babel を外しても install からは消えない。`@vitejs/plugin-react` の optional peer として `@rolldown/plugin-babel` と `babel-plugin-react-compiler` と `@babel/core` が lockfile に残る (2026-09-02 実測: `vp why babel-plugin-react-compiler` が plugin-react 経由で解決する)。プロジェクト root からは解決できないので (`require.resolve` が `MODULE_NOT_FOUND`)、`vite.config.ts` から使うことはできない
-- Compiler は client 環境だけで走る。自前コードの SSR 出力にメモ化は入らない (2026-09-02 実測: `grep -c useMemoCache .output/server/_ssr/ssr.mjs` が 0)。`.output/server/_libs/` にはコンパイル済みで配布される base-ui と react-router が入るため、`.output/server` を丸ごと grep すると当たる。単一レンダーの経路なのでメモ化の効きどころが無い
+- Compiler は client 環境だけで走る。自前コードの SSR 出力にメモ化は入らない (2026-09-02 に SSR の bundle の `useMemoCache` を数えて実測。0 件)。単一レンダーの経路なのでメモ化の効きどころが無い
 - bail out はビルドログにしか出ない。増減はゲートにならず、気づくのはログを読んだときになる。Compiler がカバーしない箇所を欠陥として扱わないと決めているので、この非対称は意図どおりである
 - Compiler が黙って外れる経路 (`vite.config.ts` から `compiler` オプションが消える) を機械で見張るものは無い。塞ぐならビルド成果物を見る検査が要る
 - Compiler への委譲は、手で書くメモ化を否定しない。新しいコードでも、性能の問題が出た箇所と、値の同一性を精密に制御する箇所 (effect の依存など) には手で書く (React Compiler の Introduction「What should I do about useMemo, useCallback, and React.memo?」)。場面ごとの書き方と順序は `docs/guides/react/memoization.md`「手動メモ化を書く」にある

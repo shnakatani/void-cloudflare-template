@@ -1,4 +1,4 @@
-# AGENTS.md - tanstack-start-template
+# AGENTS.md - void-cloudflare-template
 
 プロジェクト概要・技術スタック・セットアップ・ドキュメント一覧は `README.md` を参照。
 
@@ -11,7 +11,6 @@ vp run verify    # マージ前に通す。手順は vite.config.ts の verifySt
 
 ## 開発上の注意
 
-- mise の hook が走らないシェル (エージェントの Bash など) では、`DB_FILE_NAME` を読むタスク (`db:*`) を `mise x -- vp run <タスク>` で打つ。`vp run` だけだと `DB_FILE_NAME` が届かず止まる (`docs/guides/dependencies-and-toolchain.md`「手元の環境を用意する」)
 - dev server と Storybook を background で動かすときは `mise daemons start serve` (`storybook`) で起動し、`mise daemons stop <同じ名前>` で止める。起動した pid にだけ SIGTERM を送ると、port を持つ子孫の node が残り、次の `mise run serve` が port を取れずに終わる (`docs/guides/dependencies-and-toolchain.md`「dev server と Storybook を止める」)
 - 依存は `vp add` / `vp remove` で足し外し、pnpm / npm / yarn で足し外さない。入口を `vp` にそろえる (`npm` はこのリポジトリの `catalog:` を読めず `EUNSUPPORTEDPROTOCOL` で止まる)。`vp` が中継しないサブコマンドは素の `pnpm` で打つ (`pnpm peers check`)。出典は `docs/guides/dependencies-and-toolchain.md`「依存を足す・外す」。一回限りの実行は `vp dlx`、devDependency 済みなら `vp exec`。Vitest / Oxlint / Oxfmt は Vite+ が内包するので install しない
 - Node.js の版は `package.json` の `devEngines.runtime` を直接書き換えて変え、`vp env pin` で書かない。`vp env pin` は範囲を渡しても exact の版に解決して書く (ADR-0004)
@@ -25,7 +24,7 @@ vp run verify    # マージ前に通す。手順は vite.config.ts の verifySt
 
 ## テストの実行
 
-- テストの置き場所は壊れる原因で分ける (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。アプリの単体は `src/**/*.test.ts` (Node で動くテストのうち、ローカルの TZ に触れうるモジュールのテストは `src/**/*.tz.test.ts`)、ブラウザは `src/**/*.test.tsx`、型だけのテストは `src/**/*.test-d.ts` (`vp check` が検査し、`vp test run` は集めない)、スクリプトは `scripts/**/*.test.ts` (`scripts/checks/**` を除く)、設定と文書の整合検査は `scripts/checks/integrity/`、ビルド成果物の検査は `scripts/checks/runtime/` (vitest の project ではなく `vp build` の後に走らせる)。新しいテストファイルを書くだけでは `paths` の rules は読み込まれない (ADR-0003)
+- テストの置き場所は壊れる原因で分ける (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。アプリのテストは `src/` と Void の規約のディレクトリ (`scripts/lib/void-source-dirs.ts`) に置き、接尾辞で種別を分ける。単体は `*.test.ts` (Node で動くテストのうち、ローカルの TZ に触れうるモジュールのテストは `*.tz.test.ts`)、ブラウザは `*.test.tsx`、型だけのテストは `*.test-d.ts` (`vp check` が検査し、`vp test run` は集めない)。スクリプトは `scripts/**/*.test.ts` (`scripts/checks/**` を除く)、設定と文書の整合検査は `scripts/checks/integrity/`、ビルド成果物の検査は `scripts/checks/runtime/` (vitest の project ではなく `vp build` の後に走らせる)。新しいテストファイルを書くだけでは `paths` の rules は読み込まれない (ADR-0003)
 - `vp test run <path>` で 1 回実行する。watch は `vp test watch` (`docs/guides/testing/configuration.md`「テストを走らせる」)
 - `vp test` を複数並行で走らせない。orphan の runner が残ると後続が collection エラーで巻き添えになる。kill 後は `ps` で残存を確かめる。スクリプトが子として起動し、全部の終わりを待つ並列 (`scripts/time-zones/run-tests.ts`) は除く。親だけを kill すると子の vitest が残るので、子も `ps` で確かめる (`docs/guides/testing/configuration.md`「テストを走らせる」)
 - background で走らせるときはパイプを付けない。buffering で完了まで出力が見えず、ハングと実行中を区別できない
@@ -89,3 +88,12 @@ release. Add a tool name to select part of the graph. For example, run
 - [ ] If setup, runtime, or package-manager behavior looks wrong, run `vp env doctor` and include its output when asking for help.
 
 <!--VITE PLUS END-->
+
+<!--injected-by-void-v1.4.0-->
+
+## Void
+
+- This project uses [Void](https://void.cloud), a full-stack Vite framework for Cloudflare Workers with file-based API routing, server-rendered pages, and typed backend services.
+- Use Void's CLI and typed APIs. Before working with Void, read the relevant Markdown docs in `node_modules/void/docs/`; start with `guide/quickstart.md` for setup and `reference/cli.md` for commands.
+
+<!--/injected-by-void-->

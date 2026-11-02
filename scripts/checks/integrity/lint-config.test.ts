@@ -98,7 +98,18 @@ const EXPECTED_OVERRIDES = [
     // (ui/) だけで、parts/ と action/ の中でも ui 部品への上書きを検査する。広げると、広げた先で
     // className の上書きと動的な className が無診断で通る。.storybook/ も消費側として扱う
     // (decorator が design system component を包む置き場になる)
-    files: ["src/**", ".storybook/**"],
+    files: [
+      "src/**",
+      ".storybook/**",
+      "pages/**",
+      "routes/**",
+      "middleware/**",
+      "crons/**",
+      "queues/**",
+      "db/**",
+      "email/**",
+      "durable-objects/**",
+    ],
     excludeFiles: ["src/components/ui/**"],
     rules: { "shadcn/no-restyle": "deny", "shadcn/require-static-classes": "deny" },
   },
@@ -108,7 +119,20 @@ const EXPECTED_OVERRIDES = [
     // 期待値は手書きで持つ。`testHelperGlobs()` を spread すると tooling/lint/config.ts と同じ
     // 入力どうしの比較になり、種別が増えても検査が通ってしまう
     // (`companion-files.ts` の docstring が禁じている)
-    files: ["src/**/*.test.tsx", "src/test/**", "**/*.test-helpers.ts", "**/*.test-helpers.tsx"],
+    files: [
+      "src/**/*.test.tsx",
+      "pages/**/*.test.tsx",
+      "routes/**/*.test.tsx",
+      "middleware/**/*.test.tsx",
+      "crons/**/*.test.tsx",
+      "queues/**/*.test.tsx",
+      "db/**/*.test.tsx",
+      "email/**/*.test.tsx",
+      "durable-objects/**/*.test.tsx",
+      "src/test/**",
+      "**/*.test-helpers.ts",
+      "**/*.test-helpers.tsx",
+    ],
     excludeFiles: ["src/test/**/*.test.ts"],
     rules: {
       "browser-test/prefer-locator-methods": "deny",
@@ -121,22 +145,19 @@ const EXPECTED_OVERRIDES = [
     // テスト専用のコードの import 禁止。緩和ではなく適用先を絞った有効化なので、テスト側は
     // off ではなく excludeFiles で外す (ADR-0008)。付随ファイルぶんは
     // 下で差し引くので、ここに残るのは src/test/** だけになる
-    files: ["src/**", "scripts/**"],
-    excludeFiles: ["src/test/**"],
-    rules: { "no-restricted-imports": "deny" },
-  },
-  {
-    // テストに router を createRouter で直接組ませる import の禁止。適用先から外すと、外した先の
-    // テストが createRouter で組めてテスト用の既定を受け取り損ねる。除外を広げても同じ
-    // (docs/guides/testing/real-router.md「テスト用の router の既定をそろえる」)
     files: [
-      "**/*.test.ts",
-      "**/*.test.tsx",
-      "src/test/**",
-      "**/*.test-helpers.ts",
-      "**/*.test-helpers.tsx",
+      "src/**",
+      "scripts/**",
+      "pages/**",
+      "routes/**",
+      "middleware/**",
+      "crons/**",
+      "queues/**",
+      "db/**",
+      "email/**",
+      "durable-objects/**",
     ],
-    excludeFiles: ["src/test/app/create-router-with-test-defaults.ts"],
+    excludeFiles: ["src/test/**"],
     rules: { "no-restricted-imports": "deny" },
   },
 ];
@@ -145,10 +166,23 @@ const EXPECTED_OVERRIDES = [
 const COMPANION_GLOBS = new Set(companionGlobs("**/"));
 
 /** lint が見に行くべきソースの所在 */
-const SOURCE_ROOTS = ["src", "scripts", ".storybook", "tooling"];
+const SOURCE_ROOTS = [
+  "src",
+  "scripts",
+  ".storybook",
+  "tooling",
+  "pages",
+  "routes",
+  "middleware",
+  "crons",
+  "queues",
+  "db",
+  "email",
+  "durable-objects",
+];
 
-/** 追跡されているのに lint されなくてよい唯一のソース。生成物 (ADR 対象外) */
-const ALLOWED_INVISIBLE = ["src/routeTree.gen.ts"];
+/** 追跡されているのに lint されなくてよいソース (生成物) */
+const ALLOWED_INVISIBLE: string[] = [];
 
 interface PrintedConfig {
   plugins: string[];
@@ -272,7 +306,20 @@ describe("書いた設定が解決後も残っている", () => {
       holders.map(({ files }) => files),
       "付随ファイルの除外が想定外の override に付いた。その override の規則が" +
         "テストと story で無診断になる (ADR-0008 / ADR-0011 / ADR-0022)",
-    ).toEqual([["src/**", "scripts/**"]]);
+    ).toEqual([
+      [
+        "src/**",
+        "scripts/**",
+        "pages/**",
+        "routes/**",
+        "middleware/**",
+        "crons/**",
+        "queues/**",
+        "db/**",
+        "email/**",
+        "durable-objects/**",
+      ],
+    ]);
     expect(
       holders[0]?.excludeFiles?.filter((glob) => COMPANION_GLOBS.has(glob)),
       "付随ファイルの除外が欠けた。その種別のファイルが自分の helper を import できなくなる " +

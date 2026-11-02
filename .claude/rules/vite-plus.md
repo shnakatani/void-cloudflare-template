@@ -25,12 +25,11 @@ paths:
 ## script とタスク
 
 - タスクは `vite.config.ts` の `run.tasks` に置き、daemons の port (`SERVE_PORT` など) を読まない。`.mise.toml` の `[tasks.*]` は `interactive = true` を置き、worktree の port を `exec vp run <task> --port ${<NAME>_PORT:?…}` で渡すだけにし、コマンドを持たせない (ADR-0004)
-- 起動のしかたに関わらず `--port` より `PORT` を先に読むツール (nitro) のタスクは `PORT` にも port を入れ、Claude のプレビューから起動されたときだけ先に読むツール (Storybook) には入れない (`docs/guides/vite-configuration.md`「タスクを足す」)
 - mise の `[env]` の値を読むタスクは、値が届いていなければ止まる形にする。command の中で読むなら `${NAME:?…}`、コードで読むなら `requireEnv` を使う (`docs/guides/vite-configuration.md`「タスクを足す」)
 - `vite.config.ts` の `run.cache: false` を外さず、gate を `vp run --cache` で打たない。キャッシュが効くと gate がリプレイで済まされ、親の環境変数が子へ届かない (ADR-0004)
 - `run.tasks` の command で TypeScript と JavaScript のスクリプトを走らせるときは `vpx <file>` を打ち、`node` と `vp node` を打たない。タスクの中の `vp node` は `Command 'node' not found` で落ち、`node` は tsconfig の `paths` を読まない (`docs/guides/vite-configuration.md`「タスクを足す」)
 - verify の手順は `vite.config.ts` の `verifySteps` にタスクとして足し、`.github/workflows/ci.yml` にも同じ位置に `vp run <タスク>` の step を足す。コマンドは workflow に写さない。step を足し忘れても CI は落ちず、その手順が CI で走らないだけになる (ADR-0004)
-- built-in と同名の script は、`start` と対の入口 (`pnpm run build` → `pnpm start`) の `build` だけを置き、開発者の入口 (`check` / `test` / `dev`) は足さない。開発者は global の `vp` を入れるので公式が script を勧める利点が当てはまらず、同名の script があると `vp <name>` のたびに stderr に note が出る (ADR-0004)
+- built-in と同名の script は、`pnpm run build` で走らせる入口の `build` だけを置き、開発者の入口 (`check` / `test` / `dev`) は足さない。開発者は global の `vp` を入れるので公式が script を勧める利点が当てはまらず、同名の script があると `vp <name>` のたびに stderr に note が出る (ADR-0004)
 - ビルド成果物を起動する検査は、`verifySteps` で `verify:build` の後に置く (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
 
 ## 型検査
@@ -50,16 +49,16 @@ paths:
 - block を切り出すときは `tooling/<block>/` に置き、`vite.config.ts` から import して組み立てる (`docs/guides/vite-configuration.md`「別のファイルから組み立てる理由」)
 - ツールごとの設定ファイル (`vitest.config.ts`、`oxlint.config.ts`、`.oxlintrc.json`) に分けない。併用するとどちらが効くかがツールごとに違い、`vitest.config.ts` があると `vite.config.ts` が丸ごと黙って無視される (`docs/guides/vite-configuration.md`「1 つの `vite.config.ts` に集める理由」)
 - `vite.config.ts` が import するモジュールに、読み込むだけで起きる副作用 (警告の出力、環境変数の書き換え) を持たせない。`vite.config.ts` は `vp lint` / `vp fmt` / `vp build` のたびに読まれる (`docs/guides/vite-configuration.md`「読み込むだけで起きる副作用を持たせない理由」)
-- `lazyPlugins` には同期の関数を渡し、plugin は先頭で import する。async にすると `@storybook/tanstack-react` が TanStack Start の plugin を外せず `storybook build` が落ち、`vp run verify` はそれを捕まえない (`docs/guides/vite-configuration.md`「plugin を先頭で import する理由」)
+- `lazyPlugins` には同期の関数を渡し、plugin は先頭で import する。今の plugin を `import()` へ移しても、`vp lint` / `vp fmt` はほとんど縮まない (`docs/guides/vite-configuration.md`「plugin を先頭で import する理由」)
 - project が使う重い依存 (playwright の provider、`@storybook/addon-vitest` の plugin) は、project を作る関数の中で動的 import する。先頭で import すると `vp lint` / `vp fmt` のたびに評価される (`docs/guides/vite-configuration.md`「重い依存を遅らせる理由」)
 - root の `plugins` と同じパッケージ (`chromiumProjectBase` の `tailwindcss`) は、project でも先頭で import する。root が先頭で import している間は、遅らせても同じ module が読まれる (`docs/guides/vite-configuration.md`「plugin を先頭で import する理由」)
 - 動的 import で遅らせるのは外部のパッケージそのものにする。`tooling/` のモジュールを動的 import しても、Vite が config を 1 ファイルへ bundle するので遅れない (`docs/guides/vite-configuration.md`「重い依存を遅らせる理由」)
 
 ## React Compiler (`vite.config.ts` の `plugins`、`tooling/plugins/react.ts`)
 
-- アプリの分岐の `reactPlugin` の `compiler: true` を外さない。外しても全部通り、最適化だけが無言で落ちる (ADR-0014)
+- アプリの分岐の `reactPluginOptions` の `compiler: true` を外さない。外しても全部通り、最適化だけが無言で落ちる (ADR-0014)
 - アプリの分岐の `reportDiagnostics: true` を外さない。外すと、Compiler が諦めた箇所がビルドログに出なくなる (ADR-0014)
-- React の plugin は `tooling/plugins/react.ts` の `reactPlugin` から作り、テストの分岐と project で別の `viteReact()` を書かない。`viteReact` のほかの option がアプリとテストで食い違っても、テストは全部通る (`docs/guides/testing/configuration.md`「テストでだけ plugin を変える」)
+- React の plugin の options は `tooling/plugins/react.ts` の `reactPluginOptions` から作り、テストの分岐と project で別の options を書かない。アプリは `voidReact({ react })` に、ブラウザで走る project は `viteReact()` に渡す。`viteReact` のほかの option がアプリとテストで食い違っても、テストは全部通る (`docs/guides/testing/configuration.md`「テストでだけ plugin を変える」)
 - テストの分岐は React の plugin を返さず、ブラウザで走る project が `chromiumProjectBase` から足す。root に置くと、継承した plugin を Compiler を通さない project で外せない (`docs/guides/testing/configuration.md`「テストでだけ plugin を変える」)
 - Compiler を通さない project には `src/components/ui/` のテストと story だけを集める (`docs/guides/testing/configuration.md`「React Compiler を通さない project を足す」)
 - `browser-no-compiler` の project を外さない。Compiler は上流の部品が描画中に部品を定義する欠陥を隠すので、`calendar.test.tsx` の再描画のガードは Compiler を通さない project でしか落ちない (`docs/guides/testing/configuration.md`「テストでも React Compiler を通す理由」)

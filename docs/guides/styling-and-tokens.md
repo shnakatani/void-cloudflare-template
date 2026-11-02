@@ -82,7 +82,7 @@ ui 部品の見た目を変えたいときは、上の行から順に当ては�
 | 本文・フォームのラベル       | `text-base` / `text-sm`   |
 | 補足・タイムスタンプ・バッジ | `text-xs` も使える        |
 
-- ページ見出しは `RoutePageHeader` (`src/components/screens/route-page-header.tsx`) で描く。名前は route の `staticData.pageName` から取り、中で `PageHeader` (`src/components/parts/page-header.tsx`) の `<h1>` を描く。カードの中に置くページ見出しは `CardPageTitle` (`src/components/parts/page-title.tsx`) で描く。どちらも寸法を `ui/card.tsx` の `cardTitleVariants` の `size="page"` から取るので、見出しの class を書き直さない
+- ページ見出しは `PageHeader` (`src/components/parts/page-header.tsx`) の `<h1>` で描く。カードの中に置くページ見出しは `CardPageTitle` (`src/components/parts/page-title.tsx`) で描く。どちらも寸法を `ui/card.tsx` の `cardTitleVariants` の `size="page"` から取るので、見出しの class を書き直さない
 - 本文に `text-xs` を使わない。タブレットで読みにくくなる
 - ページ見出しとセクション見出しを同じ大きさにしない。階層が見た目から読めなくなる
 
@@ -312,7 +312,7 @@ ADR-0024 の Context は、上流生成物の値を oklch から sRGB へ変換�
 
 ### scan と `theme(static)` の範囲
 
-`src/styles.css` の `@import "tailwindcss" source("../src")` で scan の対象をアプリのソースへ絞る。全トークンを出力させる `theme(static)` は `.storybook/preview.css` にだけ掛け、本番の CSS には載せない。
+`src/styles.css` の `@import "tailwindcss" source("../src")` で scan の対象をアプリのソースへ絞る。`src/` の外に置く Void の規約のディレクトリ (`pages/` など) は、同じファイルの `@source` で足す。全トークンを出力させる `theme(static)` は `.storybook/preview.css` にだけ掛け、本番の CSS には載せない。
 
 デザイントークンは `src/styles.css` の `@theme` と `:root` が SSOT で、Storybook のトークンの story (`src/components/tokens.stories.tsx`) は値を書き写さず、CSSOM から読んで一覧する。公式の `ColorPalette` は色値を MDX へ書き写し、専用 addon は `styles.css` へ注釈コメントを要するので、どちらも SSOT と二重管理になる。
 

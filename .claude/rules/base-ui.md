@@ -1,6 +1,14 @@
 ---
 paths:
   - "src/**/*.tsx"
+  - "pages/**/*.tsx"
+  - "routes/**/*.tsx"
+  - "middleware/**/*.tsx"
+  - "crons/**/*.tsx"
+  - "queues/**/*.tsx"
+  - "db/**/*.tsx"
+  - "email/**/*.tsx"
+  - "durable-objects/**/*.tsx"
 ---
 
 # Base UI コンポーネント利用ルール

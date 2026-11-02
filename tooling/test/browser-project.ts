@@ -1,6 +1,6 @@
 import { defineProject, mergeConfig } from "vite-plus/test/config";
 
-import { BROWSER_TEST_GLOB } from "../../scripts/lib/companion-files";
+import { BROWSER_TEST_GLOBS } from "../../scripts/lib/companion-files";
 import { ASSERT_TIMEOUT_MS } from "../../src/test/browser/assert-budget";
 import { DEFAULT_VIEWPORT } from "../../src/test/browser/viewport-sizes";
 import { chromiumProjectBase, NO_COMPILER_DIR } from "./chromium-project";
@@ -20,7 +20,7 @@ export async function browserProject({ compiler }: { compiler: boolean }) {
     defineProject({
       optimizeDeps: {
         // テストの実行中に初めて到達した依存は、再バンドルと reload をまたいだ React の二重解決で落ちる。
-        // 外せるかは症状で判定する (TanStack/router#6246 と vitest-dev/vitest#10775 の close は出口ではない)。理由は
+        // 外せるかは症状で判定する (vitest-dev/vitest#10775 の close は出口ではない)。理由は
         // docs/guides/testing/configuration.md「project に `optimizeDeps` を書く理由」、足し方と判定の手順は
         // 同「ブラウザと story の project に事前バンドルする依存を足す」
         include: [
@@ -30,12 +30,6 @@ export async function browserProject({ compiler }: { compiler: boolean }) {
           "axe-core",
           "@base-ui/react/popover",
           "react-day-picker",
-        ],
-        // Start plugin 不在の test 環境では #tanstack-*-entry 仮想 import が解決不能
-        exclude: [
-          "@tanstack/react-start",
-          "@tanstack/react-start-server",
-          "@tanstack/start-server-core",
         ],
       },
       test: {
@@ -58,7 +52,7 @@ export async function browserProject({ compiler }: { compiler: boolean }) {
           },
         ],
         setupFiles: ["src/test/browser/browser-setup.tsx"],
-        include: [compiler ? BROWSER_TEST_GLOB : `${NO_COMPILER_DIR}/**/*.test.tsx`],
+        include: compiler ? BROWSER_TEST_GLOBS : [`${NO_COMPILER_DIR}/**/*.test.tsx`],
         browser: {
           // 操作の上限を置き (vitest-dev/vitest#6983)、`expect.poll.timeout` を `expect.element` へ届かせる
           // (vitest-dev/vitest#8308、vitest-dev/vitest#7871。docs/guides/testing/waiting-and-assertions.md「assert の予算を分ける理由」)

@@ -1,6 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { ButtonLink } from "./button-link";
+import { Button } from "@/components/ui/button";
+
 import { FullScreenNotice } from "./centered-card";
 
 const meta = {
@@ -8,7 +9,7 @@ const meta = {
   args: {
     title: "ページが見つかりません",
     description: "お探しのページは存在しないか、移動された可能性があります。",
-    children: <ButtonLink to="/">ホームへ戻る</ButtonLink>,
+    children: <Button>ホームへ戻る</Button>,
   },
 } satisfies Meta<typeof FullScreenNotice>;
 

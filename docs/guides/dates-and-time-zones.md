@@ -31,7 +31,7 @@
 - 描画する値を、実行環境のローカル TZ で組み立てない。`Date#toLocaleString` 系、`Date#getHours` 系、`timeZone` を渡さない `Intl.DateTimeFormat` が当たる。`timeZone` の既定は "the runtime's time zone" ([MDN「Intl.DateTimeFormat() constructor」][] の `timeZone`)
 - 瞬間 (ADR-0031) を date-fns で整形するときは、各関数の `in` オプションに `tz(APP_TIME_ZONE)` を渡すか、値を `TZDate` にする。渡さないと date-fns はシステムの TZ で計算する ([date-fns docs「Time zones」][] の Working with time zones)
 - `tz` と `TZDate` は `@date-fns/tz` の export で、テンプレートの直接の依存には入っていない (react-day-picker 経由でだけ入っている)。使うときは `vp add @date-fns/tz` で直接の依存に足す
-- 利用者ごとのタイムゾーンで出したくなったら、`APP_TIME_ZONE` を固定値から「サーバーで一度決めてクライアントへ渡す値」に変える。決め方は [TanStack Start docs「Hydration Errors」][] の Strategy 1 と 2 (cookie を正とし、無い間は決まった値を使う)
+- 利用者ごとのタイムゾーンで出したくなったら、`APP_TIME_ZONE` を固定値から「サーバーで一度決めてクライアントへ渡す値」に変える。cookie を正とし、無い間は決まった値を使う (「タイムゾーンを明示して整形する理由」の表)
 
 ### 画面に暦の日付を出す
 
@@ -51,12 +51,12 @@
 - `Calendar` (`src/components/ui/calendar.tsx`、中身は react-day-picker) は、既定でブラウザのローカル TZ で日付を組む。[react-day-picker docs「Setting the Time Zone」][] は "By default, DayPicker uses the browser’s local time zone." と書く
 - `timeZone` prop を渡すと、指定した TZ で日付を読み書きする。その場合、値は素の `Date` ではなく `TZDate` で扱う ([react-day-picker docs「Setting the Time Zone」][] の Working with time-zoned dates)。react-day-picker 10.0.2 は `TZDate` を `@date-fns/tz` から再 export している。テンプレートは `timeZone` prop を今は使っていない
 - Calendar が強調する今日と、選択が無いときに開く月とフォーカス先 (`autoFocus` を付けたとき) は、ブラウザの TZ で決まる。ADR-0031 はこれを「今日」や期限の判定に入れず、ブラウザに任せる
-- Calendar はブラウザでだけ描く。初めに閉じていて `keepMounted` を付けない Popover の中に置くなら、そのままでよい。Base UI の `Popover.Portal` は `keepMounted` の既定が `false` で、閉じている間は popup を描かない。実例は `FormDateField` (`src/components/parts/form-fields.tsx`)。画面にじかに置くときは `<ClientOnly>` (`@tanstack/react-router`) で囲む ([TanStack Start docs「Hydration Errors」][] の Strategy 3)
+- Calendar はブラウザでだけ描く。初めに閉じていて `keepMounted` を付けない Popover の中に置くなら、そのままでよい。Base UI の `Popover.Portal` は `keepMounted` の既定が `false` で、閉じている間は popup を描かない。実例は `FormDateField` (`src/components/parts/form-fields.tsx`)
 - [shadcn docs「Calendar」][] の「Selected Date (With TimeZone)」の例 (`timeZone` を `useEffect` で渡す) は、サーバーで描いた今日の食い違いを直さない (ADR-0031 の Context の実測)
 - 暦の日付を `Calendar` で入力するときは、選ばれた `Date` から、ローカル TZ のまま年・月・日だけを取り出して `YYYY-MM-DD` にする。`toISOString()` を使わない。UTC に直すので、UTC より進んだ TZ (JST など) では 1 日前になる (ADR-0031 の Context)
 - 保存した `YYYY-MM-DD` を `new Date("YYYY-MM-DD")` で読まない。日付だけの文字列は UTC の 0 時として解釈され、UTC より遅れた TZ では 1 日前になる (ADR-0031 の Context)
 - `YYYY-MM-DD` の形式を valibot の `isoDate()` で検証しても、存在しない日付は通る。型定義の Hint は "The regex used cannot validate the maximum number of days based on year and month. For example, "2023-06-31" is valid although June has only 30 days." と書く (valibot 1.4.2、[valibot の `isoDate.ts`][])。`isoDate()` の後ろに `v.check` を足し、年・月・日が暦に存在するかを見る。[valibot docs「isoDate」][] は、存在を検証する組み込みの手段を挙げていない
-- DB の列にも `CHECK (<列> IS date(<列>) AND length(<列>) = 10)` を付ける。drizzle では `check()` で書く ([drizzle docs「Indexes & Constraints」][] の Check)。SQLite の `date()` は暦に無い日を翌月へ繰り越し、`YYYY-MM-DD` 以外の形の多くを別の文字列か NULL にするので、一致しない値を DB が弾く。`date()` の結果は 0000〜9999 年の外で未定義で ([SQLite docs「Date And Time Functions」][])、負の年 (`-0001-01-01`) も一致して通るので、長さで範囲内に絞る。入力スキーマを通らない書き込み (手書きの SQL、server function を経ない drizzle の insert) でも暦に無い日付が入らない。実例は `src/server/db/schema.ts`
+- DB の列にも `CHECK (<列> IS date(<列>) AND length(<列>) = 10)` を付ける。drizzle では `check()` で書く ([drizzle docs「Indexes & Constraints」][] の Check)。SQLite の `date()` は暦に無い日を翌月へ繰り越し、`YYYY-MM-DD` 以外の形の多くを別の文字列か NULL にするので、一致しない値を DB が弾く。`date()` の結果は 0000〜9999 年の外で未定義で ([SQLite docs「Date And Time Functions」][])、負の年 (`-0001-01-01`) も一致して通るので、長さで範囲内に絞る。入力スキーマを通らない書き込み (手書きの SQL、スキーマで検証しない drizzle の insert) でも暦に無い日付が入らない
 
 ## explanation
 
@@ -64,15 +64,14 @@
 
 SSR する画面では、同じ値をサーバーとブラウザの両方で整形する。ローカル TZ で整形すると、サーバーの TZ とブラウザの TZ が違う環境でだけ別の文字列になり、React が hydration mismatch を報告する。開発機ではサーバーとブラウザが同じ TZ なので、手元では気付けない。
 
-[TanStack Start docs「Hydration Errors」][] は原因の筆頭に `Intl` (locale / time zone) を挙げ、対処を次の 5 つに分ける。
+対処は次のとおり。
 
-| 対処       | 中身                                                                 | 採否                                                                                                                                                                                                                        |
-| ---------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Strategy 1 | サーバーで決まったタイムゾーンを選び、クライアントでも同じものを使う | 採用。`APP_TIME_ZONE` を固定値として両方で使う                                                                                                                                                                              |
-| Strategy 2 | 初回訪問でクライアントの TZ を cookie に書き、以後の SSR で使う      | 利用者ごとの TZ が要るときに Strategy 1 と組む                                                                                                                                                                              |
-| Strategy 3 | `<ClientOnly>` で包み、サーバーで描かない                            | 日時の一覧のように初回表示に要る値には向かない。SSR の利点が消える                                                                                                                                                          |
-| Strategy 4 | route の SSR を切るか `ssr: 'data-only'` にする                      | 同上                                                                                                                                                                                                                        |
-| Strategy 5 | `suppressHydrationWarning` で警告を抑える                            | 採らない。文字列が食い違ったまま出る。[TanStack Start docs「Hydration Errors」][] の Checklist は "Avoid blind suppression"、[React docs「hydrateRoot」][] は、避けられない差 (例として timestamp) に限る最終手段として扱う |
+| 対処                                      | 中身                                                                 | 採否                                                                                                                                 |
+| ----------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 決まった TZ を両方で使う                  | サーバーで決まったタイムゾーンを選び、クライアントでも同じものを使う | 採用。`APP_TIME_ZONE` を固定値として両方で使う                                                                                       |
+| cookie の TZ を使う                       | 初回訪問でクライアントの TZ を cookie に書き、以後の SSR で使う      | 利用者ごとの TZ が要るときに「決まった TZ を両方で使う」と組む                                                                       |
+| サーバーで描かない                        | クライアントでだけ描く                                               | 日時の一覧のように初回表示に要る値には向かない。SSR の利点が消える                                                                   |
+| `suppressHydrationWarning` で警告を抑える | 食い違いの警告だけを止める                                           | 採らない。文字列が食い違ったまま出る。[React docs「hydrateRoot」][] は、避けられない差 (例として timestamp) に限る最終手段として扱う |
 
 ### 書式をロケールに任せる理由
 
@@ -95,7 +94,6 @@ SSR する画面では、同じ値をサーバーとブラウザの両方で整�
 [MDN「Intl.DateTimeFormat.prototype.formatToParts()」]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/formatToParts
 [MDN「Intl.DateTimeFormat() constructor」]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat
 [date-fns docs「Time zones」]: https://github.com/date-fns/date-fns/blob/v4.4.0/pkgs/core/docs/timeZones.md
-[TanStack Start docs「Hydration Errors」]: https://tanstack.com/start/latest/docs/framework/react/guide/hydration-errors
 [MDN「Intl.DateTimeFormat.prototype.format()」]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/format
 [react-day-picker docs「Setting the Time Zone」]: https://daypicker.dev/localization/setting-time-zone
 [shadcn docs「Calendar」]: https://ui.shadcn.com/docs/components/base/calendar

@@ -2,14 +2,12 @@
 
 ユーザー操作で状態を変えるコード (イベントハンドラ、mutation、楽観表示、ダイアログの close) を書くときの手順と落とし穴を持つ。
 
-| 決定                                                                                                                  | ADR      |
-| --------------------------------------------------------------------------------------------------------------------- | -------- |
-| ユーザー操作による更新は Transition を既定にし、query 由来の楽観表示は mutation の variables で出す                   | ADR-0015 |
-| mutation は Action 層の `action` prop から `useActionMutation` で呼び、二重発火は state だけで塞ぐ                    | ADR-0016 |
-| ユーザー操作の完了点とブロック範囲は機能ごとに選び、既定は対象の項目だけを止める                                      | ADR-0017 |
-| 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ                     | ADR-0026 |
-| ページのデータは Query から読み、欠かせない query だけを loader で待ち、副次的な query は待たずに Suspense の中で読む | ADR-0033 |
-| フォームのダイアログは子 route にし、既存の値を編集するものは loader が最新の値を取り終えてから開く                   | ADR-0041 |
+| 決定                                                                                                | ADR      |
+| --------------------------------------------------------------------------------------------------- | -------- |
+| ユーザー操作による更新は Transition を既定にし、query 由来の楽観表示は mutation の variables で出す | ADR-0015 |
+| mutation は Action 層の `action` prop から `useActionMutation` で呼び、二重発火は state だけで塞ぐ  | ADR-0016 |
+| ユーザー操作の完了点とブロック範囲は機能ごとに選び、既定は対象の項目だけを止める                    | ADR-0017 |
+| 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ   | ADR-0026 |
 
 ## explanation
 
@@ -20,13 +18,13 @@
 | Transition | `startTransition` に渡した関数の中で行う state 更新。割り込み可能で、Suspense の fallback を出さずに待てる              |
 | 緊急更新   | Transition でない state 更新。React は即座に描画へ反映する                                                              |
 | Action     | `startTransition` に渡す非同期関数。`await` した Promise の決着まで Transition が続く ([React docs「useTransition」][]) |
-| mutation   | `useMutation` を通して server function を呼ぶ操作 (POST 相当)。GET 相当のデータ取得は含まない                           |
+| mutation   | `useMutation` を通してサーバーへ書き込む操作 (POST 相当)。GET 相当のデータ取得は含まない                                |
 
 ### query のキャッシュとダイアログの close は Transition に乗らない
 
-TanStack Query の `useQuery` / `useMutation`、TanStack Router のストア、Base UI のダイアログの handle は、どれも `useSyncExternalStore` で購読されている。React はこの購読の更新を、Transition の中で起きても緊急更新として描く。
+TanStack Query の `useQuery` / `useMutation`、Base UI のダイアログの handle は、どれも `useSyncExternalStore` で購読されている。React はこの購読の更新を、Transition の中で起きても緊急更新として描く。
 そのため mutation を Action にしても、query の再取得による一覧の描き直しと `handle.close()` によるアンマウントは即座に起き、「古い画面を保ったまま待つ」効果も `<ViewTransition>` のアニメーションも付かない。Transition から得られるのは、pending の管理と、pending の切り替えを `<ViewTransition>` で装飾できることである (ADR-0015)。Transition は Action の実行順を保証しない ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)。
-出典と実測は ADR-0015「制約: TanStack Query と Router のストアは Transition に参加しない」が持つ。`useOptimistic` に query の値を渡せない理由もここにある (「楽観表示を出す」)。
+出典と実測は ADR-0015「制約: TanStack Query のストアは Transition に参加しない」が持つ。`useOptimistic` に query の値を渡せない理由もここにある (「楽観表示を出す」)。
 
 ### `await` の後の更新の扱いを選んだ理由
 
@@ -34,7 +32,7 @@ Action の中で `await` の後に state を set する書き方には、公式�
 
 | set する値                            | 手段                                           | 理由                                                                                                                                                                                                                                                                                                                                                                   |
 | ------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| サーバーの値                          | set せず、query の再取得に任せる               | ページのデータは Query が持つ (ADR-0033)。手で set すると同じ値を query のキャッシュと state の 2 か所に持ち、再取得で query だけが新しくなる                                                                                                                                                                                                                          |
+| サーバーの値                          | set せず、query の再取得に任せる               | ページのデータは Query が持つ。手で set すると同じ値を query のキャッシュと state の 2 か所に持ち、再取得で query だけが新しくなる                                                                                                                                                                                                                                     |
 | Action の結果                         | `useActionState`                               | 呼び出しを順に処理し、前の呼び出しの結果を次へ渡す ([React docs「useActionState」][])。順序を保つ手段として公式が挙げる ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)                                                                                                                                       |
 | どちらでもない値 (ローカルの段階など) | `await` の後の set を `startTransition` で包む | 公式の直し方 ([React docs「useTransition」][] の Troubleshooting「React doesn't treat my state update after `await` as a Transition」)。順序は保証されず、先に始めた呼び出しが後から終わると新しい値を上書きしうる。順序が要るときは自前の queue と中断が要る ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」) |
 
@@ -61,7 +59,6 @@ Action の中で `await` の後に state を set する書き方には、公式�
 
 - ハンドラは同期関数として宣言し、非同期処理はその内側の関数へ閉じる。JSX の prop に `async` 関数や `void` 式を直接書かない
 - 待たない判断は内側で 1 回だけ書く。呼び先が失敗を自分で通知するなら `void`、呼び出し側で通知や後始末をするなら `.catch()` を付ける
-- 実例は `src/hooks/use-route-retry.ts` の `handleRetry`
 - mutation を伴う操作は、次の「mutation を Action 層から呼ぶ」に従う
 
 ### mutation を Action 層から呼ぶ
@@ -98,16 +95,14 @@ mutation は `src/hooks/use-action-mutation.ts` の `useActionMutation` を通�
 
 完了点のどれを選ぶかは ADR-0017 の軸で決める。選んだら、次の形で組む。ダイアログの無い操作では、Action が return する時点が close の時点に当たる。
 
-| 完了点         | Transition の終え方                                                                                                                                                                                                               | Transition の pending                                       |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| 確定操作の直後 | Action は `handle.close()` だけを含み (ダイアログが無ければ何もしない)、mutation は Transition の外で `void runAction(...)` として走らせる。失敗は `onError` の toast と項目の復帰で伝える                                        | 確定操作で終わる                                            |
-| サーバー応答   | `onSuccess` の先頭でダイアログを閉じ (子 route のダイアログは `open` を false にし、handle で開くダイアログは `handle.close()` を呼ぶ)、その後に再取得の Promise を返す (ダイアログが無ければ `mutateAsync` を await して return) | 再取得の完了まで続くが、閉じた後は見えない                  |
-| 再取得完了     | `onSuccess` で再取得を await した後にダイアログを閉じる                                                                                                                                                                           | 再取得の完了まで続き、ダイアログの pending 表示として見える |
+| 完了点         | Transition の終え方                                                                                                                                                                        | Transition の pending                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| 確定操作の直後 | Action は `handle.close()` だけを含み (ダイアログが無ければ何もしない)、mutation は Transition の外で `void runAction(...)` として走らせる。失敗は `onError` の toast と項目の復帰で伝える | 確定操作で終わる                                            |
+| サーバー応答   | `onSuccess` の先頭でダイアログを閉じ (`handle.close()` を呼ぶ)、その後に再取得の Promise を返す (ダイアログが無ければ `mutateAsync` を await して return)                                  | 再取得の完了まで続くが、閉じた後は見えない                  |
+| 再取得完了     | `onSuccess` で再取得を await した後にダイアログを閉じる                                                                                                                                    | 再取得の完了まで続き、ダイアログの pending 表示として見える |
 
 - 完了点「確定操作の直後」では Transition が確定の直後に終わるので、close の animate-out の間やダイアログの無い操作では `isPending` の dedupe が効かない。同じ対象の mutation が pending なら action を no-op にする。判定は `queryClient.isMutating` か `useMutationState` で取る
 - 完了点「サーバー応答」で handle を複数の対象で共有するときは、閉じる前に、開いている対象がこの mutation の対象と同じかを確かめる。先行する操作の `onSuccess` が、別の対象で開き直したダイアログを閉じてしまう
-- 入力を保存するフォームのダイアログ (追加、編集) は、handle で開かず子 route にする (ADR-0041)。同じ対象で開き直したダイアログは別の入力を持つが、上の対象の id の比較では見分けられず、先行する保存の `onSuccess` が開き直したダイアログを入力ごと閉じうる
-- 子 route のダイアログは、そのダイアログの mutation の pending の間、ユーザー起点の close を止める。応答の前に閉じると route ごと unmount し、保存に失敗したときに入力が残らない
 - 再取得の完了より前に閉じるなら、対象の項目にその pending から busy の表現を付ける。付け忘れると、古い一覧が pending の表示なしで見える
 
 並行実行を許す操作では `mutationKey` を付ける。
@@ -132,24 +127,17 @@ mutation は `src/hooks/use-action-mutation.ts` の `useActionMutation` を通�
 - `useOptimistic` の第 1 引数に `useQuery` / `useSuspenseQuery` の `data` と、そこから計算した値を渡さない。query のストアは Transition に乗らないので、楽観値と再取得の結果が揺れる ([TanStack/query#9742][])
 - `useOptimistic` を使うのは、query を経由しない部品のローカル値だけにする
 
-### ナビゲーションを Router に任せる
-
-- `Link`・`navigate`・`router.invalidate()` による遷移と読み込みを、自分で `startTransition` に包まない。Router は、読み込んだ結果を画面へ反映する更新を React の `startTransition` で包む ([`@tanstack/react-router` の `Transitioner.tsx`][] と [`@tanstack/router-core` の `load-client.ts`][])。`Link` と `navigate` の `startTransition` option も "All navigations now use startTransition under the hood" として deprecated になっている ([`@tanstack/router-core` の `link.ts`][])。どれも 2026-10-06 に、このリポジトリの版 (`@tanstack/react-router` 1.170.39、`@tanstack/router-core` 1.171.32) で確かめた
-- ナビゲーションを Router に任せることは ADR-0015 の「ナビゲーション、GET」の行が決める。Error Boundary からの再試行の組み方は `docs/guides/data-loading.md`「読み込みに失敗した画面から再試行する」にある
-
 ### 操作の型ごとの当て方
 
-一覧の行の削除 (確認ダイアログあり)、子 route のダイアログで開いたフォームからの追加、対象の行を子 route のダイアログで開いたフォームからの更新には、ADR-0017 の軸を次のように当てる。新しい操作を足すときの見本になる。
+一覧の行の削除 (確認ダイアログあり) には、ADR-0017 の軸を次のように当てる。新しい操作を足すときの見本になる。
 
-| 操作 | 完了点                 | 表現                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | 理由                                                                                                                 |
-| ---- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 削除 | 確定操作の直後に閉じる | 行を半透明にし、行のトリガーだけを無効にする。mutation に `mutationKey` を付け、一覧側で `useMutationState` (`status: "pending"`) の `variables` を配列で読み、行ごとに判定する。同時の削除を許し、各 mutation は自分の再取得を待つ                                                                                                                                                                                                                                                                  | 失敗は toast と行の復帰で戻せる。確定で閉じるので、共有の handle を先行する削除の `onSuccess` が閉じる問題も起きない |
-| 追加 | サーバー応答で閉じる   | ダイアログは子 route にする (ADR-0041)。`onSuccess` の先頭で閉じ、再取得の Promise を返す。閉じると route を離れて unmount するが、`useMutation` に渡した callback はそのあとも走る ([TanStack Query docs「Mutations」][])。mutation はダイアログ側にあるので `mutationKey` を付け、一覧側で `useMutationState` の `variables` を読んで新しい行を半透明で出し、再取得の完了で実データに置き換える。開くたびに mount し直すので、再取得を待つ間に開き直して保存できる                                 | 楽観で閉じると、失敗したときに入力を戻す先が無い                                                                     |
-| 更新 | サーバー応答で閉じる   | ダイアログは子 route にし、loader が最新の値を取り終えてから開く (ADR-0041)。`onSuccess` の先頭で閉じ、再取得の Promise を返す。閉じると route を離れて unmount するが、`useMutation` に渡した callback はそのあとも走る ([TanStack Query docs「Mutations」][])。mutation に `mutationKey` を付け、一覧側で `useMutationState` (`status: "pending"`) の `variables` を読んで対象の行を半透明にし、編集後の値を出す。対象の行のリンクだけを無効にし、他の行は操作できる。再取得の完了で実データに戻る | 楽観で閉じると、失敗したときに入力を戻す先が無い                                                                     |
+| 操作 | 完了点                 | 表現                                                                                                                                                                                                                                | 理由                                                                                                                 |
+| ---- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 削除 | 確定操作の直後に閉じる | 行を半透明にし、行のトリガーだけを無効にする。mutation に `mutationKey` を付け、一覧側で `useMutationState` (`status: "pending"`) の `variables` を配列で読み、行ごとに判定する。同時の削除を許し、各 mutation は自分の再取得を待つ | 失敗は toast と行の復帰で戻せる。確定で閉じるので、共有の handle を先行する削除の `onSuccess` が閉じる問題も起きない |
 
 - 半透明は `src/lib/busy-opacity.ts` の `BUSY_OPACITY_CLASS` を使う。値の理由と、当たる対の測り方は同じ定数の docstring が持つ
-- 半透明は読み上げに出ない。通知は announcer で出し、行には仮想カーソル用の静的テキスト (「削除中」「保存中」「更新中」) を置く (ADR-0026)
-- `variables` を行へ絞るスキーマ (削除中の id、保存中の行、更新中の id と入力項目) と mutation の filters は `src/features/<domain>/` に置く
+- 半透明は読み上げに出ない。通知は announcer で出し、行には仮想カーソル用の静的テキスト (「削除中」) を置く (ADR-0026)
+- `variables` を行へ絞るスキーマ (削除中の id) と mutation の filters は `src/features/<domain>/` に置く
 
 ## 出典
 
@@ -165,7 +153,3 @@ mutation は `src/hooks/use-action-mutation.ts` の `useActionMutation` を通�
 [TkDodo「Concurrent Optimistic Updates in React Query」]: https://tkdodo.eu/blog/concurrent-optimistic-updates-in-react-query
 [`@tanstack/query-core` の `utils.ts`]: https://github.com/TanStack/query/blob/@tanstack/query-core@5.104.0/packages/query-core/src/utils.ts
 [TanStack/query#9742]: https://github.com/TanStack/query/issues/9742
-[TanStack Query docs「Mutations」]: https://tanstack.com/query/latest/docs/framework/react/guides/mutations
-[`@tanstack/react-router` の `Transitioner.tsx`]: https://github.com/TanStack/router/blob/@tanstack/react-router@1.170.39/packages/react-router/src/Transitioner.tsx
-[`@tanstack/router-core` の `load-client.ts`]: https://github.com/TanStack/router/blob/@tanstack/router-core@1.171.32/packages/router-core/src/load-client.ts
-[`@tanstack/router-core` の `link.ts`]: https://github.com/TanStack/router/blob/@tanstack/router-core@1.171.32/packages/router-core/src/link.ts

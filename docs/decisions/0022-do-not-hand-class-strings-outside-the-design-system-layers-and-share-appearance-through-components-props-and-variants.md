@@ -10,9 +10,9 @@
 中身が読めるかは渡し方で決まり、他ファイルから import した `const` は読まれない (2026-09-19、`@shadcn/lint` 0.1.0 の実測。渡し方ごとの表は `docs/guides/lint/tailwind-and-shadcn.md`「`require-static-classes` が読む className」)。
 `@shadcn/lint` の `resolveIdentifier` が `Variable` 型でない定義で解決を打ち切り、import 束縛はこの型を持たないためである。
 
-`require-static-classes` を一時的に足して測った違反は、`src/routes/` の 2 件だけだった (2026-09-19)。
+`require-static-classes` を一時的に足して測った違反は、ページのコードの 2 件だけだった (2026-09-19)。
 `src/components/screens/` と直下、`src/features/` は 0 件である。測定時の `excludeFiles` (`ui/` `action/` `parts/`) の内側は測っていない。
-2 件はどちらも `src/components/` の層が export した class 定数を `src/routes/` が import し、design system component へ渡す形である。
+2 件はどちらも `src/components/` の層が export した class 定数をページのコードが import し、design system component へ渡す形である。
 
 `src/components/ui/dialog.tsx` も同種の class 定数を 2 つ export するが、消費側が `src/components/ui/alert-dialog.tsx` で層の内側に閉じているため規則に当たらない。
 **当たるのは定数を共有するパターンではなく、共有が層の境界を越えることである。**

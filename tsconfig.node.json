@@ -1,0 +1,15 @@
+// Node.js で動くコード (検査とツールのスクリプト、設定ファイル) (ADR-0047)
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "ESNext.Error"],
+    "types": ["node"]
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "tooling/**/*.ts",
+    "vite.config.ts",
+    "void.config.ts",
+    ".storybook/main.ts"
+  ]
+}

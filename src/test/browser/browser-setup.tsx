@@ -1,7 +1,7 @@
 /**
  * ブラウザテスト全体に Tailwind の実 CSS を注入する setup。
  *
- * `src/styles.css` は本番では `src/routes/__root.tsx` が `?url` で読み込むため、
+ * `src/styles.css` は本番ではアプリの root の document が読み込むため、
  * コンポーネント単体 render のブラウザテストには届かない。ここで直接 import し、
  * `tooling/test/chromium-project.ts` の `chromiumProjectBase` が足す `@tailwindcss/vite` plugin にユーティリティクラスを
  * 実 CSS へ解決させることで、getBoundingClientRect / getComputedStyle による
@@ -42,7 +42,7 @@ beforeEach(async () => {
 });
 
 /**
- * `announce()` (ADR-0026) の書き込み先を全ブラウザテストに用意する。本番は `RootDocument` が
+ * `announce()` (ADR-0026) の書き込み先を全ブラウザテストに用意する。本番はアプリの root の document が
  * 持つが、部品やページ単体の描画はそこを通らない。無いと `announce()` が region を見つけられずに warn を
  * 出し、region へ書くことを確かめる `src/lib/live-announcer.test.tsx` も読む先を失うので、setup で 1 回描く。
  *

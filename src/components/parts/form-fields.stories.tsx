@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useState } from "react";
 import { expect, fn, screen, spyOn, userEvent, waitFor, within } from "storybook/test";

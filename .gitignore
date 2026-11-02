@@ -149,28 +149,24 @@ vite.config.ts.timestamp-*
 # Turbo Repo
 .turbo
 
-# @tanstack/cli 0.71.0 の create の出力
+# void init 1.4.0 (--framework react --starter sqlite) の出力
 node_modules
-.DS_Store
 dist
-dist-ssr
-*.local
-.env
-.nitro
-.tanstack
+.void
 .wrangler
-.output
-.vinxi
-__unconfig*
-todos.json
+.void-wrangler.jsonc
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.DS_Store
 
-# create-storybook 10.6.0 (Storybook の init) が足す行
+# create-storybook 10.6.4 (Storybook の init) が足す行
 *storybook.log
 storybook-static
 
-# Vitest・Nitro・Claude Code・superpowers が出すファイル
+# Vitest・Claude Code・superpowers が出すファイル
 .vitest/
-.data
 .claude/worktrees/
 .claude/settings.local.json
 .superpowers/

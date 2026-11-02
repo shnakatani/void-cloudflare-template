@@ -1,0 +1,29 @@
+// Cloudflare Workers だけで動くコードと、そのテスト (Workers の型)。void/env が @cloudflare/workers-types を
+// 読み、DOM の型とぶつかるので、ブラウザのコードと同じ tsconfig に入れない。include のディレクトリは
+// tsconfig.test.json の exclude と揃える (ADR-0047)
+{
+  "extends": ["./tsconfig.base.json", "./.void/tsconfig.json"],
+  "compilerOptions": {
+    "lib": ["ES2024", "ESNext.Error"],
+    "types": ["void/env"]
+  },
+  "include": [
+    "routes/**/*.ts",
+    "routes/**/*.tsx",
+    "middleware/**/*.ts",
+    "middleware/**/*.tsx",
+    "crons/**/*.ts",
+    "crons/**/*.tsx",
+    "queues/**/*.ts",
+    "queues/**/*.tsx",
+    "db/**/*.ts",
+    "db/**/*.tsx",
+    "email/**/*.ts",
+    "email/**/*.tsx",
+    "durable-objects/**/*.ts",
+    "durable-objects/**/*.tsx",
+    "pages/**/*.server.ts",
+    "auth.ts",
+    "env.ts"
+  ]
+}

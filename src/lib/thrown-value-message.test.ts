@@ -36,7 +36,7 @@ describe("thrownValueMessage", () => {
     });
   });
 
-  // Error でない値は、message を持っていても読まずに文字列にする (Router の data-loading ガイドの例と同じ)
+  // Error でない値は、message を持っていても読まずに文字列にする
   it("Error でない値は文字列にして返す", () => {
     expect(thrownValueMessage("中断されました")).toBe("中断されました");
     expect(thrownValueMessage(404)).toBe("404");

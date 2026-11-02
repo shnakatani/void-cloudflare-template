@@ -1,6 +1,6 @@
 import { posix } from "node:path";
 
-import type { StorybookConfig } from "@storybook/tanstack-react";
+import type { StorybookConfig } from "@storybook/react-vite";
 
 /** `.storybook/main.ts` の `stories` 1 つが `../<起点>/**\/<ファイル名の glob>` の形のとき、その起点とファイル名の glob */
 const STORIES_PATTERN = /^\.\.\/(.+?)\/\*\*\/([^/]+)$/;

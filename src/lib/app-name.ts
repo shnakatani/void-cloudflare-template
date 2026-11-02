@@ -1,8 +1,8 @@
 /**
- * アプリ名。ホームの route の `staticData.pageName` と、`<title>` (`pageTitle`) が参照する。
+ * アプリ名。
  *
  * 環境変数にしない。環境ごとに値が変わるものでも秘密でもなく、変わるのはテンプレートを
  * 自分のアプリへ置き換えるときだけで、それはソースの編集である。
  * 環境変数にすると、値の定義・型宣言・未設定の検出・CI への受け渡しが芋づるで要る。
  */
-export const APP_NAME = "TanStack Start Template";
+export const APP_NAME = "void-cloudflare-template";
