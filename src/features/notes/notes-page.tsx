@@ -29,7 +29,12 @@ import {
 } from "./note-search";
 import { NoteSearchField } from "./note-search-field";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
-import { noteDialogKey, notesDocumentTitle, type NotesPageData } from "./notes-page-data";
+import {
+  noteDialogKey,
+  notesDocumentTitle,
+  type NotesPageData,
+  type OpenNoteDialogState,
+} from "./notes-page-data";
 import { NotesResults } from "./notes-results";
 import { noteCreateUrl, notesListQuery, notesListUrl, pendingNoteEditId } from "./notes-url";
 import { NOTE_ENTITY_LABEL, noteListFilterSchema, type Note } from "./schema";
@@ -182,14 +187,30 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
       return;
     }
     // 閉じる操作 (キャンセル・Escape・外側・X) は一覧の URL へ移る。新しい props でダイアログが閉じる。
-    // 同じ一覧に戻るので scroll を保つ。Void は新しい遷移で先頭へ scroll し、開いた元の行のリンクへ戻した focus が画面の外へ出る
+    // 同じ一覧に戻るので scroll を保つ。Void は新しい遷移で先頭へ scroll し、開いた元の行のリンクへ戻した focus が画面の外へ出る。
+    // クロスフェードにしない。Overlay が Base UI の閉じ方より長く残る (ADR-0056「閉じる見せ方」)
     abandonSearch();
-    startVisit(router, notesListUrl(q), { preserveScroll: true });
+    startVisit(router, notesListUrl(q), { preserveScroll: true, viewTransition: false });
   };
 
   // ダイアログの開閉の title の読み上げ。query だけの遷移は遷移の読み上げの部品 (ADR-0049) が読まないので、
   // ページが props の変化で読む。直前に読んだダイアログは ref に持ち、初期表示は読まない (ADR-0027 と同じ形)
   const dialogKey = noteDialogKey(dialog);
+
+  // 閉じた props の間も、直前に開いていたダイアログを閉じ終わるまで描く。中身を外すと Popup が閉じるアニメーションを
+  // 流さずに消える。閉じ終わりは Base UI が onOpenChangeComplete で知らせる (ADR-0056「閉じる見せ方」)
+  const [closingDialog, setClosingDialog] = useState<OpenNoteDialogState | null>(null);
+  const [previousDialog, setPreviousDialog] = useState(dialog);
+  if (previousDialog !== dialog) {
+    setPreviousDialog(dialog);
+    if (dialog.kind !== "closed") {
+      setClosingDialog(null);
+    } else if (previousDialog.kind !== "closed") {
+      setClosingDialog(previousDialog);
+    }
+  }
+  const renderedDialog = dialog.kind === "closed" ? (closingDialog ?? dialog) : dialog;
+
   const announcedDialogKey = useRef(dialogKey);
   const announceDialogTitle = useEffectEvent(() => {
     announce(notesDocumentTitle({ notes, dialog }));
@@ -244,10 +265,18 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
         fallbackFocusRef={noteCreateLinkRef}
       />
       {/* Root は開閉をまたいで残し、open を URL の query から導く。中身は種類と id で作り直す */}
-      <Dialog open={dialog.kind !== "closed"} onOpenChange={handleDialogOpenChange}>
+      <Dialog
+        open={dialog.kind !== "closed"}
+        onOpenChange={handleDialogOpenChange}
+        onOpenChangeComplete={(open) => {
+          if (!open) {
+            setClosingDialog(null);
+          }
+        }}
+      >
         <NoteDialogContent
-          key={dialogKey}
-          dialog={dialog}
+          key={noteDialogKey(renderedDialog)}
+          dialog={renderedDialog}
           q={q}
           saving={saving}
           onSaveStart={() => {

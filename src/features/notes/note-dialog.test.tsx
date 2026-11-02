@@ -1,6 +1,6 @@
 import { format } from "date-fns/format";
 import { ja } from "date-fns/locale/ja";
-import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import { submitAction, VoidActionError } from "void/pages-client";
 
@@ -16,6 +16,7 @@ import {
   expectEmptyTextboxes,
   expectText,
 } from "@/test/assert/screen-assertions";
+import { enableAnimations } from "@/test/browser/animations";
 
 import {
   bodyTextbox,
@@ -234,7 +235,7 @@ describe("追加のダイアログ", () => {
     await expectNoteDialogClosed(screen);
   });
 
-  it("キャンセルで閉じると、一覧の scroll の位置を保って一覧の URL へ移る", async () => {
+  it("キャンセルで閉じると、一覧の scroll の位置を保ち、クロスフェードにせずに一覧の URL へ移る", async () => {
     const { screen, router } = await renderNotesPage({ q: "x", dialog: { kind: "create" } });
     await titleTextbox(screen).fill("一時入力");
 
@@ -242,7 +243,7 @@ describe("追加のダイアログ", () => {
 
     await expect
       .poll(() => router.visits)
-      .toEqual([{ url: "/notes?q=x", options: { preserveScroll: true } }]);
+      .toEqual([{ url: "/notes?q=x", options: { preserveScroll: true, viewTransition: false } }]);
   });
 
   it("保存に失敗すると固定文言を toast に出し、server の raw message は表示しない", async () => {
@@ -379,6 +380,43 @@ describe("追加のダイアログ", () => {
     await expect.element(titleTextbox(screen)).toHaveValue(NOTE_VIEW.title);
     await expect.element(titleTextbox(screen)).toHaveFocus();
     expect(focusins.map((target) => target.textContent)).not.toContain(createLinkText);
+  });
+});
+
+/** 要素に `data-closed` が付いた時点で、その要素で動いている animation の数を記録する */
+function recordClosingAnimations(element: Element): number[] {
+  const counts: number[] = [];
+  const observer = new MutationObserver(() => {
+    if (element.hasAttribute("data-closed")) {
+      counts.push(element.getAnimations().length);
+    }
+  });
+  observer.observe(element, { attributeFilter: ["data-closed"] });
+  onTestFinished(() => {
+    observer.disconnect();
+  });
+  return counts;
+}
+
+describe("ダイアログの閉じ方", () => {
+  it("新しい props で閉じても、Popup と Overlay は閉じるアニメーションを流してから消える", async () => {
+    // 閉じかけの Popup が残る窓を見るので animation を戻す (docs/guides/testing/user-interactions.md「animation を戻すテストを書く」)
+    enableAnimations();
+    const { screen, rerender } = await renderNotesPage({ dialog: { kind: "create" } });
+    const dialog = screen.getByRole("dialog", { name: NOTE_CREATE_DIALOG_TITLE });
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    // Overlay は aria-hidden で accessibility tree に出ないので、slot で掴む
+    const overlay = document.querySelector("[data-slot=dialog-overlay]");
+    expect.assert(overlay);
+    const popup = dialog.element();
+    const popupClosing = recordClosingAnimations(popup);
+    const overlayClosing = recordClosingAnimations(overlay);
+
+    await rerender({ dialog: { kind: "closed" } });
+
+    await expectRemoved(dialog);
+    expect(popupClosing).toEqual([1]);
+    expect(overlayClosing).toEqual([1]);
   });
 });
 

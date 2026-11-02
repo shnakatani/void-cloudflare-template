@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-02
-- 関連: ADR-0016 (ページの query を `pageQuery` で action の URL に載せる)、ADR-0017 (完了点と、後の送信による取り消し)、ADR-0027 (ページは URL の変化で作り直さず、props の変化を effect で通知する)、ADR-0049 (遷移の読み上げ)、ADR-0053 (redirect を絶対 URL で返す)
+- 関連: ADR-0016 (ページの query を `pageQuery` で action の URL に載せる)、ADR-0017 (完了点と、後の送信による取り消し)、ADR-0027 (ページは URL の変化で作り直さず、props の変化を effect で通知する)、ADR-0049 (遷移の読み上げ)、ADR-0053 (redirect を絶対 URL で返す)、ADR-0058 (遷移のクロスフェード)
 
 ## Context
 
@@ -66,6 +66,20 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 | `finalFocus` が呼ばれた時点の `window.location` の query で決める                                   | `finalFocus` の中で読むと、3 つの替わり方と Escape のどれでも前の URL だった。Void は history を、新しいページの commit の後に書く (`packages/react/src/runtime/pages-client.ts` の `finishNavigation` が layout effect から呼ぶ `resource.commit()`)                                                                                                       | 却下     |
 | ページが描画のたびに今のダイアログを ref に書き、それを読む                                         | 描画中に ref へ書くことになる。React の docs「useRef」は、描画中に `ref.current` を読み書きしないよう求める                                                                                                                                                                                                                                                 | 却下     |
 
+### 閉じる見せ方
+
+ダイアログは、閉じる操作でも、保存の redirect でも、戻る・進むでも、Base UI の閉じるアニメーション (handle で開くダイアログと同じ閉じ方) で消す。
+
+- props のダイアログが閉じた後も、直前に開いていたダイアログの中身を、Base UI が閉じ終わりを `onOpenChangeComplete(false)` で知らせるまで描く。中身を外すと、Popup は閉じるアニメーションを流さずに commit の時点で消える (2026-11-02、dev で Escape の直後を frame ごとに採り、Popup は `data-closed` が付かないまま 3 frame 目に無くなった)
+- 閉じる操作の遷移は `viewTransition: false` で始める。クロスフェード (ADR-0058) にすると、Overlay が root の旧画面の snapshot に残り、Base UI の閉じ方 (100ms) より長い 250ms かけて薄れる
+- 閉じた props の間に別のダイアログが開いたら、閉じかけの中身を描くのをやめ、開いたダイアログに替える
+
+| 案                                                                         | 評価                                                                                                                                                                                        | 採否     |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 閉じ終わるまで直前の中身を描き、Base UI の閉じるアニメーションを流す       | 閉じ方が 3 つの経路で同じになり、handle で開くダイアログの閉じ方とも同じになる。Root が開閉をまたいで残るので、Base UI が閉じかけの Popup を描き続けられる                                  | **採用** |
+| 中身をすぐ外し、旧画面の snapshot の Popup に閉じ方の keyframes を当て直す | View Transition の type で閉じる遷移を見分ける必要があるが、Void は type を渡す口を持たない (ADR-0058 の Context)。当て直した keyframes と registry の閉じ方を 2 か所で揃え続けることになる | 却下     |
+| 中身をすぐ外す                                                             | 閉じる遷移だけ、開く遷移と違ってアニメーションが無い                                                                                                                                        | 却下     |
+
 ### 検討した選択肢
 
 | 案                                                     | 評価                                                                                                                                                                                                                                   | 採否         |
@@ -77,6 +91,7 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 
 ## Consequences
 
+- 戻る・進むで閉じると、Popup は Base UI の閉じ方で消えるが、Overlay はクロスフェードで 250ms かけて薄れる。戻る・進むの遷移の `viewTransition` は Void の外から変えられない (ADR-0058)
 - 保存のあとの redirect は履歴を積む。保存のあとブラウザの戻るを押すと、ダイアログがもう一度開く (2026-11-02 に dev で確認)。`usePageAction` は `submitAction` に `replace` を渡していない (ADR-0016「制約: Action の中の送信は `_resolveOnShell` を付けて決着させる」)
 - 開くリンク、閉じる遷移、保存と削除の action は、どれも `preserveScroll` を渡して一覧の scroll の位置を保つ。Void は `preserveScroll` の無い遷移で先頭へ scroll し (Void docs「Scroll Restoration」)、一覧を下まで送ってから開閉・保存・削除すると、開いた元のリンクや次の行へ戻した focus が画面の外に出た (2026-11-02、dev、30 行、1280×720)。scroll の位置は Void の遷移が動かすので、偽の router で描くブラウザテスト (ADR-0048) では測れない。テストは visit と送信に `preserveScroll` が渡ることを見る
 - 開閉のたびに一覧も読み直す。loader が 1 つなので、ダイアログの値だけを読む経路は無い

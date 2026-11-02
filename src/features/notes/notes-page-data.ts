@@ -25,6 +25,9 @@ export type NoteDialogState =
   | { readonly kind: "edit-not-found"; readonly id: Note["id"] | null }
   | { readonly kind: "edit-failed"; readonly id: Note["id"] };
 
+/** 開いているダイアログ。閉じる間に描き続ける中身 */
+export type OpenNoteDialogState = Exclude<NoteDialogState, { readonly kind: "closed" }>;
+
 export type NotesPageData = {
   readonly q: string;
   /** null は一覧を読めなかった */
