@@ -1,8 +1,8 @@
-# ADR-0055: ドメインの schema と query は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める
+# ADR-0055: ドメインの schema と query と画面の部品は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める
 
 - Status: Accepted
 - Date: 2026-11-02
-- 関連: ADR-0008 (テスト専用コードの import を同じ lint で止める)、ADR-0013 (ドメイン型は valibot スキーマから導出する)、ADR-0047 (tsconfig の program の分け方)、ADR-0054 (query を Miniflare の D1 で試す)
+- 関連: ADR-0008 (テスト専用コードの import を同じ lint で止める)、ADR-0013 (ドメイン型は valibot スキーマから導出する)、ADR-0047 (tsconfig の program の分け方)、ADR-0054 (query を Miniflare の D1 で試す)、ADR-0063 (規約のディレクトリはルート、アプリのコードは `src/`)
 
 ## Context
 
@@ -38,13 +38,15 @@ server で起きた例外の文言は、production の Void が client へ運ば
 
 ## Decision
 
-**1 つのドメインの schema と query は `src/features/<domain>/` に置く。`pages/*.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を渡すだけにする。client で動くコードから `.server` の module の値を import するのを lint で止める。server のエラーの文言には仕組みを足さない。**
+**1 つのドメインの schema と query と、その画面の部品・hook・純粋関数は、1 つの画面だけで使うものも `src/features/<domain>/` に置く。`pages/<path>.tsx` はページ本体の部品に props を渡すだけ、`pages/*.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を渡すだけにする。client で動くコードから `.server` の module の値を import するのを lint で止める。server のエラーの文言には仕組みを足さない。**
 
-| 置くもの                                            | 置き場所                                                                                                                    |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| valibot の schema と、そこから導出する型 (ADR-0013) | `src/features/<domain>/`                                                                                                    |
-| `db` と `userId` を引数で受ける query の関数        | `src/features/<domain>/` の `*.server.ts`                                                                                   |
-| loader・action・`head`                              | `pages/<path>.server.ts`。`getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡し、結果を返すだけにする |
+| 置くもの                                                                                    | 置き場所                                                                                                                    |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| valibot の schema と、そこから導出する型 (ADR-0013)                                         | `src/features/<domain>/`                                                                                                    |
+| `db` と `userId` を引数で受ける query の関数                                                | `src/features/<domain>/` の `*.server.ts`                                                                                   |
+| 画面の部品、hook、純粋関数、列定義、定数 (複数の画面から使うものも、1 つの画面だけのものも) | `src/features/<domain>/`。どのドメインにも属さない画面のものは `src/components/screens/`・`src/hooks/`・`src/lib/`          |
+| ページ本体                                                                                  | `src/features/<domain>/` の部品。`pages/<path>.tsx` はそれを描いて props を渡すだけにする                                   |
+| loader・action・`head`                                                                      | `pages/<path>.server.ts`。`getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡し、結果を返すだけにする |
 
 - DB を読む module はファイル名を `*.server.ts` にする。lint はファイル名で server の module を見分ける
 - `tooling/lint/config.ts` の `no-restricted-imports` が、`src/**` と `pages/**` から `\.server(\.[cm]?[jt]sx?)?$` に当たる specifier の値の import を止める。Void は `.server.tsx` なども companion として読む (Void の docs「Pages Routing」の Directory Structure)。`*.server.*` 自身、テストと story の付随ファイル、`src/test/**` は範囲の外にする。`import type` は `allowTypeImports` で通す。発火は `scripts/checks/integrity/server-import-lint.test.ts` が実際のファイルで確かめる
@@ -53,11 +55,13 @@ server で起きた例外の文言は、production の Void が client へ運ば
 
 置き場所。
 
-| 案                                                                                 | 評価                                                                                                                                         | 採否     |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| schema と query を `src/features/<domain>/` に置き、`pages/*.server.ts` を薄くする | query を DB と user を引数で受ける関数にでき、Miniflare の D1 で試せる (ADR-0054)。1 つのドメインが 1 つのディレクトリに収まる               | **採用** |
-| query を `pages/*.server.ts` の loader と action に直に書く                        | Void の docs の例の形。loader を試すには HTTP の層が要り、ユーザーの絞り込みを速く試せない                                                   | 却下     |
-| server のコードを `src/server/<domain>/` に分ける                                  | 1 つのドメインが client 側と server 側の 2 つのツリーに割れる。Void は止める仕組みを持たないので、ディレクトリで分けても import は止まらない | 却下     |
+| 案                                                                                           | 評価                                                                                                                                                                                                                                                                                                                                                             | 採否     |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| schema と query を `src/features/<domain>/` に置き、`pages/*.server.ts` を薄くする           | query を DB と user を引数で受ける関数にでき、Miniflare の D1 で試せる (ADR-0054)。1 つのドメインが 1 つのディレクトリに収まる                                                                                                                                                                                                                                   | **採用** |
+| query を `pages/*.server.ts` の loader と action に直に書く                                  | Void の docs の例の形。loader を試すには HTTP の層が要り、ユーザーの絞り込みを速く試せない                                                                                                                                                                                                                                                                       | 却下     |
+| server のコードを `src/server/<domain>/` に分ける                                            | 1 つのドメインが client 側と server 側の 2 つのツリーに割れる。Void は止める仕組みを持たないので、ディレクトリで分けても import は止まらない                                                                                                                                                                                                                     | 却下     |
+| 1 つの画面だけで使う部品・hook・純粋関数を、その画面のファイルの隣 (`pages/_<画面>/`) に置く | `pages/` の下は事前バンドルの entry として丸ごと読まれ、`_` で始まるパスをページから外すのは docs に無いソースの挙動 (ADR-0063)。lint と tsconfig の `pages/` の範囲は `*.server.ts` を前提に組んであり、部品を混ぜると範囲を分け直すことになる。1 つの画面だけのものも features に置けば、ドメインを消すときに 1 つのディレクトリと `pages/<path>.*` だけで済む | 却下     |
+| 1 つの画面だけで使うものを `src/components/screens/` に置く                                  | 画面の部品がドメインの schema と離れ、ドメインを消すときに grep で拾うことになる。`screens/` はどのドメインにも属さない画面のものに限る                                                                                                                                                                                                                          | 却下     |
 
 境界。
 

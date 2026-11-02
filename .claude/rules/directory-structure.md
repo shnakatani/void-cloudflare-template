@@ -22,7 +22,7 @@ paths:
 | `src/components/parts/`   | ui 部品を組み合わせる自作部品。見た目の差は `docs/guides/styling-and-tokens.md`「部品の見た目を変える」の順で持つ。層の規則を適用する (ADR-0011 / ADR-0022)               |
 | `src/components/screens/` | 部品を並べて画面を組む共有コンポーネント。層の規則を適用する (ADR-0011 / ADR-0022)                                                                                        |
 | `src/components/`         | 上のどれでもないもの。層の規則を適用する (ADR-0011 / ADR-0022)。実例は `live-regions.tsx`                                                                                 |
-| `src/features/<domain>/`  | ドメイン固有で複数の画面から使うコンポーネント                                                                                                                            |
+| `src/features/<domain>/`  | ドメイン固有のコンポーネント。複数の画面から使うものも、1 つの画面だけで使うものも、ページ本体も置く (ADR-0055)                                                           |
 
 - 部品として配るなら `parts/`、既存の部品を並べて画面を組むなら `screens/`。配る部品を `screens/` や直下へ置くと `componentImports` に入らず、素の要素に当てる見た目の上書きが検査から漏れる (ADR-0011)
 - 一覧テーブルは `DataTable` (`parts/`) に列定義と data を渡す。列定義は `createColumnHelper` で書き、cell は名前付きの部品を参照で渡す (`docs/guides/lists-and-search.md`「cell を部品の参照で渡す理由」)
@@ -40,13 +40,19 @@ paths:
 
 | 配置先                   | 内容                                                                                                                                                                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/features/<domain>/` | 1 つのドメインに属し、複数の画面から使うものか、ドメインの形と同じ場所に居るべきもの (スキーマ / 共有 UI) (`docs/guides/placement.md`「features か lib・hooks か」)                                                                      |
+| `src/features/<domain>/` | 1 つのドメインに属するもの (スキーマ / query / ページ本体 / 画面の部品 / hook / 列定義 / 定数)。1 つの画面だけで使うものも置く (`docs/guides/placement.md`「features か lib・hooks か」)                                                 |
 | `src/hooks/`             | どのドメインにも属さない React 依存のカスタム hook (`use-*`) と、複数のファイルから使う React 依存の context 定義。1 つの部品のファイルだけで使う context はそのファイルに置く (`docs/guides/placement.md`「features か lib・hooks か」) |
 | `src/lib/`               | ドメインに属さない汎用ロジック・型 (React 非依存) (`docs/guides/placement.md`「features か lib・hooks か」)                                                                                                                              |
 
 - `src/features/<domain>/` の中の import は相対パスで書く。ディレクトリごと移せる形を保つ (`docs/guides/placement.md`「features か lib・hooks か」)
 - ドメインの valibot の schema と、`db` と `userId` を引数で受ける query の関数は `src/features/<domain>/` に置く。DB を読む module はファイル名を `*.server.ts` にする。lint は名前で client からの import を止めるので、名前が無いと止まらない (ADR-0055)
 - `pages/<path>.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡すだけにする。分岐を足すと、preview を HTTP で叩く検査でしか確かめられなくなる (ADR-0055)
+
+## Void の規約のディレクトリ
+
+- 規約のディレクトリ (`pages/`・`routes/`・`middleware/`・`db/` など) はルートに置き、`void.config.ts` に `sourceDir` を書かない。アプリのコードは `src/` に置く (ADR-0063)
+- 部品・hook・純粋関数を `pages/` の中に置かない。`pages/<path>.tsx` は `src/features/<domain>/` のページ本体に props を渡すだけにする。`pages/` の下はページの木として丸ごと読まれる (`docs/guides/placement.md`「Void の規約のディレクトリと `src/` を分ける」)
+- 規約のディレクトリを足したら、`scripts/lib/void-source-dirs.ts` の一覧と、その docstring が挙げる字面で持つ箇所にも足す。足し忘れた箇所は、そのディレクトリのコードだけが検査から無言で外れる (`docs/guides/placement.md`「Void の規約のディレクトリと `src/` を分ける」)
 
 ## テストとスクリプトの配置
 

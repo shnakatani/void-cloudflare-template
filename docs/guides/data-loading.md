@@ -2,16 +2,16 @@
 
 ページのデータを loader で読む手順、loader が読めなかったときの返し方、client に届く文言の書き方、描画の失敗を受ける境界の置き方、失敗した画面から再試行させるときの手順と、その形にしている理由を持つ。
 
-| 決定                                                                                                                                | ADR      |
-| ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                      | ADR-0016 |
-| 描画の失敗は root の layout と区画の error boundary で受け、当たらない URL と server の失敗には静的な 404 と 500 のページを返す     | ADR-0050 |
-| inline の script を許さない CSP を送り、Void の deferred props を使わない                                                           | ADR-0051 |
-| ドメインの schema と query は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
-| 一覧の上に重ねるダイアログは、一覧のページの query で開き、保存と削除は一覧の絶対 URL へ redirect して条件を保つ                    | ADR-0056 |
-| 検索の条件は、打鍵が止まったときと Enter で URL に replace で書き、loader は読み込みの失敗と見つからない行を値で返す                | ADR-0057 |
-| 遷移は Void の View Transitions でクロスフェードにし、送信とダイアログの Popup はクロスフェードに混ぜない                           | ADR-0058 |
-| ページのデータは loader の props だけで読み、client に取得とキャッシュの層を置かず、リンクは既定で先読みしない                      | ADR-0062 |
+| 決定                                                                                                                                            | ADR      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                                  | ADR-0016 |
+| 描画の失敗は root の layout と区画の error boundary で受け、当たらない URL と server の失敗には静的な 404 と 500 のページを返す                 | ADR-0050 |
+| inline の script を許さない CSP を送り、Void の deferred props を使わない                                                                       | ADR-0051 |
+| ドメインの schema と query と画面の部品は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
+| 一覧の上に重ねるダイアログは、一覧のページの query で開き、保存と削除は一覧の絶対 URL へ redirect して条件を保つ                                | ADR-0056 |
+| 検索の条件は、打鍵が止まったときと Enter で URL に replace で書き、loader は読み込みの失敗と見つからない行を値で返す                            | ADR-0057 |
+| 遷移は Void の View Transitions でクロスフェードにし、送信とダイアログの Popup はクロスフェードに混ぜない                                       | ADR-0058 |
+| ページのデータは loader の props だけで読み、client に取得とキャッシュの層を置かず、リンクは既定で先読みしない                                  | ADR-0062 |
 
 ## how-to
 

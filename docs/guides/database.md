@@ -2,14 +2,14 @@
 
 D1 の schema・migration・query を変える手順と、部分一致の検索を組む手順と、見本のデータを入れる手順と、テストで D1 を使う手順と、その形にしている理由を持つ。
 
-| 決定                                                                                                                                | ADR      |
-| ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| ドメイン型は valibot スキーマから導出する                                                                                           | ADR-0013 |
-| フロントで使うスキーマはテーブル定義から作らず、テーブル定義の型と型テストで突き合わせる                                            | ADR-0034 |
-| tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ            | ADR-0047 |
-| DB は void/db と D1 で持ち、migration は auth の table ごと void db generate で生成して commit する                                 | ADR-0052 |
-| query は Miniflare の D1 で試し、保護したページの経路は preview を HTTP で叩いて試す                                                | ADR-0054 |
-| ドメインの schema と query は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
+| 決定                                                                                                                                            | ADR      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| ドメイン型は valibot スキーマから導出する                                                                                                       | ADR-0013 |
+| フロントで使うスキーマはテーブル定義から作らず、テーブル定義の型と型テストで突き合わせる                                                        | ADR-0034 |
+| tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ                        | ADR-0047 |
+| DB は void/db と D1 で持ち、migration は auth の table ごと void db generate で生成して commit する                                             | ADR-0052 |
+| query は Miniflare の D1 で試し、保護したページの経路は preview を HTTP で叩いて試す                                                            | ADR-0054 |
+| ドメインの schema と query と画面の部品は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
 
 ## how-to
 
