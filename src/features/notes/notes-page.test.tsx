@@ -350,8 +350,8 @@ describe("NotesPage の削除", () => {
 
     await expect.element(noteRow(screen, NOTE_VIEW)).toHaveStyle("opacity: 0.6");
     await expect.element(noteRow(screen, OTHER_NOTE_VIEW)).toHaveStyle("opacity: 1");
-    // 止めるのは削除中の行だけ (ADR-0017「ブロック範囲」)。他の行のトリガーは有効のまま
-    await expect.element(rowDeleteButton(screen, OTHER_NOTE_VIEW)).toBeEnabled();
+    // 削除が進んでいる間は、どの行の削除トリガーも止める (ADR-0017)
+    await expect.element(rowDeleteButton(screen, OTHER_NOTE_VIEW)).toBeDisabled();
     await expect.element(rowDeleteButton(screen, NOTE_VIEW)).toBeDisabled();
     // 行は静的テキスト (sr-only) で状態を持つ (ADR-0026)
     await expect.element(noteRow(screen, NOTE_VIEW).getByText("削除中")).toBeInTheDocument();
@@ -364,14 +364,25 @@ describe("NotesPage の削除", () => {
     await expectAnnouncements(["削除しています", `『${NOTE_VIEW.title}』を削除しました`]);
   });
 
-  it("削除中でも他の行を削除でき、後の送信が前を取り消しても、両方の行が後の Action の終わりまで busy のまま", async () => {
+  // 続けて確定すると、後の送信が前の送信を取り消し、前の要求がサーバーへ届く前なら前の削除は黙って起きない (ADR-0017)
+  it("削除が進んでいる間は、focus を移した次の行の削除も止め、終わると確定できる", async () => {
     const first = deferMock(submitAction);
     const { screen, rerender } = await renderNotesPage({ notes: [NOTE_VIEW, OTHER_NOTE_VIEW] });
     await openDeleteConfirm(screen, NOTE_VIEW);
     await confirmDeleteButton(screen).click();
     await expectDeleteConfirmClosed(screen);
 
-    const second = deferMock(submitAction);
+    const next = rowDeleteButton(screen, OTHER_NOTE_VIEW);
+    await expect.element(next).toHaveFocus();
+    await expect.element(next).toBeDisabled();
+    await userEvent.keyboard("{Enter}");
+    await expect.element(next).toHaveFocus();
+    await expectAbsent(screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title)));
+    expect(submitAction).toHaveBeenCalledOnce();
+
+    first.resolve({ ok: true, pageData: undefined });
+    await rerender({ notes: [OTHER_NOTE_VIEW] });
+    await expect.element(next).toBeEnabled();
     await openDeleteConfirm(screen, OTHER_NOTE_VIEW);
     await confirmDeleteButton(screen).click();
 
@@ -381,20 +392,9 @@ describe("NotesPage の削除", () => {
         deletedWith("/notes?delete", NOTE_VIEW.id),
         deletedWith("/notes?delete", OTHER_NOTE_VIEW.id),
       ]);
-    // Void は新しい visit のたびに前の visit を abort し、前の action() は AbortError で reject する (ADR-0017)
-    first.reject(new DOMException("Navigation aborted", "AbortError"));
-
-    await expectAnnouncements(["削除しています", "削除しています"]);
-    await expect.element(noteRow(screen, NOTE_VIEW)).toHaveStyle("opacity: 0.6");
-    await expect.element(noteRow(screen, OTHER_NOTE_VIEW)).toHaveStyle("opacity: 0.6");
-
-    second.resolve({ ok: true, pageData: undefined });
-    await rerender({ notes: [] });
-
-    await expectText(screen, `${NOTE_ENTITY_LABEL}が登録されていません`);
-    // 取り消された run は false で決着するので、前の削除の完了は読み上げない (ADR-0017 の Consequences)
     await expectAnnouncements([
       "削除しています",
+      `『${NOTE_VIEW.title}』を削除しました`,
       "削除しています",
       `『${OTHER_NOTE_VIEW.title}』を削除しました`,
     ]);

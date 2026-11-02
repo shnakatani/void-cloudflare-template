@@ -87,7 +87,7 @@ export function NoteUpdatedAtCell({ row }: NoteCellContext) {
  * 確認ダイアログの Root はページが 1 つだけ描き、トリガーとは handle で結ぶ
  */
 export function NoteActionsCell({ row, table }: NoteCellContext) {
-  const { note, isDeleting, editHref, isEditPending } = row.original;
+  const { note, isDeleting, isDeleteBlocked, editHref, isEditPending } = row.original;
   // 可視ラベル「編集」「削除」を含めて WCAG 2.5.3 (Label in Name) を満たし、行が増えても対象が読み上げで分かる
   const editLabel = `${note.title}を編集`;
   return (
@@ -95,7 +95,7 @@ export function NoteActionsCell({ row, table }: NoteCellContext) {
       {/* 削除中は行から可視の手掛かりが半透明しか出ないので、読み上げ用のテキストを足す (ADR-0026) */}
       {isDeleting && <span className="sr-only">削除中</span>}
       {isDeleting ? (
-        // 削除中は開かせない (ADR-0017「ブロック範囲」)。ButtonLink は無効の状態を持たないので、focus できる
+        // 削除中は開かせない (ADR-0017 の「止める範囲」)。ButtonLink は無効の状態を持たないので、focus できる
         // 無効のボタンに描き替え、tab 順に残す
         <Button variant="outline" size="sm" focusableWhenDisabled disabled aria-label={editLabel}>
           編集
@@ -118,12 +118,15 @@ export function NoteActionsCell({ row, table }: NoteCellContext) {
           編集
         </ButtonLink>
       )}
+      {/* 確定のあと focus は次の行のこのトリガーへ移る (DeleteConfirmDialog)。止めている間も focus を保つよう、
+          native の disabled でなく aria-disabled で止める。Trigger は focusableWhenDisabled を持たないので、
+          描く Button に渡す */}
       <AlertDialogTrigger
         handle={noteDeleteDialogHandle}
         payload={{ id: note.id, name: note.title }}
-        render={<Button variant="destructive" size="sm" />}
+        render={<Button variant="destructive" size="sm" focusableWhenDisabled />}
         aria-label={`${note.title}を削除`}
-        disabled={isDeleting}
+        disabled={isDeleteBlocked}
       >
         削除
       </AlertDialogTrigger>
