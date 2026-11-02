@@ -434,6 +434,12 @@ describe("ダイアログの閉じ方", () => {
     await rerender({ dialog: { kind: "closed" } });
     // 閉じかけを待つ。待たずに替えると、閉じる props と替わる props が 1 つの commit に潰れる
     await expect.element(closing).toHaveAttribute("data-closed");
+    // 閉じ方が終わってから替えても、このテストの残りの assert は通る
+    await expect
+      .poll(() =>
+        closingPopup.getAnimations().some((animation) => animation.playState === "running"),
+      )
+      .toBe(true);
     await rerender({ dialog: { kind: "edit", note: OTHER_NOTE_VIEW } });
 
     await expect.element(titleTextbox(screen)).toHaveValue(OTHER_NOTE_VIEW.title);
