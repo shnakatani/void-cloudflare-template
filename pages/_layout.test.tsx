@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 import { auth } from "void/client";
+import type { NavigationState } from "void/pages-client";
 
 import { toast } from "@/components/ui/toast";
 import type { AppShared, SharedUser } from "@/features/auth/shared";
@@ -23,9 +24,10 @@ async function renderLayout(
   children: React.ReactNode,
   router = createFakeRouter("/"),
   shared: AppShared = SIGNED_OUT,
+  navigation?: NavigationState,
 ) {
   return render(
-    <VoidRouterProvider router={router} shared={shared}>
+    <VoidRouterProvider router={router} shared={shared} navigation={navigation}>
       <Layout>{children}</Layout>
     </VoidRouterProvider>,
   );
@@ -57,6 +59,15 @@ describe("root layout", () => {
     await expect
       .element(page.elementLocator(viewport).getByText("保存しました"))
       .toBeInTheDocument();
+  });
+
+  it("遷移の読み込み中は、画面の上端に読み込み中の帯を出す", async () => {
+    const screen = await renderLayout(<p>x</p>, createFakeRouter("/a"), SIGNED_OUT, {
+      state: "loading",
+      location: new URL("/b", "http://localhost"),
+      method: "GET",
+    });
+    await expect.element(screen.getBySlot("navigation-progress")).toBeVisible();
   });
 
   it("path の変わる遷移で、新しいページの見出しへ focus を移す", async () => {

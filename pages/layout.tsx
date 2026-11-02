@@ -3,6 +3,7 @@ import { StrictMode, type ReactNode } from "react";
 
 import { AppDevtools } from "@/components/app-devtools";
 import { LiveRegions } from "@/components/live-regions";
+import { NavigationProgress } from "@/components/navigation-progress";
 import { RouteAnnouncer } from "@/components/route-announcer";
 import { AppErrorBoundary } from "@/components/screens/app-error";
 import { Toaster } from "@/components/ui/toast";
@@ -33,6 +34,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <AppErrorBoundary>{children}</AppErrorBoundary>
         <Toaster />
       </main>
+      <NavigationProgress />
       <LiveRegions />
       <RouteAnnouncer />
       <AppDevtools />
