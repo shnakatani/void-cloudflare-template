@@ -4,6 +4,7 @@
 
 | 決定                                                                                                               | ADR      |
 | ------------------------------------------------------------------------------------------------------------------ | -------- |
+| ルールの選定は上流 recommended を基準にし、typescript だけ strict を基準にする                                     | ADR-0007 |
 | メモ化は React Compiler に委ね、予防的なメモ化を強制しない                                                         | ADR-0014 |
 | registry との乖離は生成時 baseline との 3-way で判別し、許容リスト (registry コードと `src/styles.css`) の行に限る | ADR-0020 |
 
@@ -69,7 +70,8 @@ const sentinels = (code.match(/memo_cache_sentinel/g) ?? []).length;
 
 - bail out は `vp build` のログに出る (`compiler.reportDiagnostics`)。ログの行は `[plugin vite:react-compiler]` で始まり、`error` / `warn` を含まない。`react-compiler` で grep する
 - `react-compiler(Todo)` の診断は、Compiler が未対応の構文に当たり、その関数の最適化を諦めたことを示す。ビルドは止まらず、その関数だけがコンパイル前のまま動く ([React docs「panicThreshold」][] の `'none'`)。コードの誤りではないので、診断を消すために書き換えず、その関数で性能の問題が実際に出たときに限って手を入れる (ADR-0014)。ログの `help:` 行は書き換えを案内するが、Todo では従わない。`src/components/ui/` に出たものは書き換えない。ADR-0020「追加と削除の基準」は性能を改変の理由に含めない
-- `vp lint -D react/todo` は同じ bail out を file:line つきで報告する (2026-09-02 に同じツリーで件数が一致)。`oxc-transform-react` が非 fatal の診断をビルドログへ出さなくなったときは、こちらをその場で叩く。`react/todo` は設定で有効にしない (ADR-0014「bail out を lint で報告しない」)
+- `react-compiler(Invariant)` の診断は、`vp check` が `react/invariant` で止める (ADR-0007「基準から外れる名指し」)。help は Oxc への報告を案内するが、先に宣言の順を見直す。hook に渡す関数が、後で宣言する関数を経由してその hook の戻り値を読むと出る (2026-11-02、oxlint 1.89.0)。宣言より前の値を読む経路を切ると消える。書き換えで消えないときだけ `oxlint-disable-next-line react/invariant` で行単位に抑制し、`--` に理由を書く
+- `vp lint -D react/todo` は同じ bail out を file:line つきで報告する (2026-09-02 に同じツリーで件数が一致)。`oxc-transform-react` が非 fatal の診断をビルドログへ出さなくなったときは、こちらをその場で叩く。`react/todo` は設定で有効にしない (ADR-0014「未実装による bail out を lint で報告しない」)
 - Compiler の適用が壊れたら、`@vitejs/plugin-react` と `oxc-transform-react` を前の版へ揃えて下げる。babel の経路へは戻さない (ADR-0014)
 
 ## 出典

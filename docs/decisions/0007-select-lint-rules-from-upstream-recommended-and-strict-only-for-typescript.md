@@ -1,7 +1,7 @@
 # ADR-0007: ルールの選定は上流 recommended を基準にし、typescript だけ strict を基準にする
 
 - Status: Accepted
-- Date: 2026-10-10
+- Date: 2026-11-02
 - 関連: ADR-0014 (React Compiler の診断ルールの扱い)、ADR-0023 (色の統制に足す `@shadcn/lint`)、ADR-0008 (テスト専用コードの import 境界)
 
 ## Context
@@ -96,7 +96,7 @@ oxlint 1.79 で `react/react-compiler` は廃止され、React Compiler の診�
 | `unsupported-syntax`             | `restriction`     | `rules` へ名指し |
 | `config` / `gating`              | 実装なし          | —                |
 
-上流が既定 off にするルールのうち oxlint に実装があるものは有効にしない (`perf` 経由で入る 1 つを除く)。一覧は `docs/guides/lint/configuration.md`「React Compiler の既定 off のルール」にある。
+上流が既定 off にするルールのうち oxlint に実装があるものは有効にしない (`perf` 経由で入る 1 つと、「基準から外れる名指し」の `react/invariant` を除く)。一覧は `docs/guides/lint/configuration.md`「React Compiler の既定 off のルール」にある。
 
 `unsupported-syntax` だけを `restriction` から引き上げるのは、これが Compiler の未実装ではなく「対応する予定がない構文」(`this` / `with` / インライン `class` 宣言) を指すためである。
 書き換えれば消えるのでコード側の欠陥として扱える。上流も `todo` を off にしたまま、このルールだけ recommended に入れている。
@@ -113,11 +113,12 @@ oxc 自身の設定と同じく、`correctness` と `perf` に入る分だけを
 
 recommended に無くても、規約や他の決定を機械で守るために足すルールがある。
 
-| ルール                                  | 名指しの理由                                                                                                                                                                                                                                                                                                        |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `typescript/consistent-type-assertions` | `assertionStyle: "never"` の指定が要る                                                                                                                                                                                                                                                                              |
-| `no-restricted-imports`                 | `*.test-helpers.ts` と `src/test/` をアプリのコードから import させない (ADR-0008)。テストの import を重くする依存のバレルを止める (ADR-0032)                                                                                                                                                                       |
-| `react/no-unstable-nested-components`   | 描画中の部品の定義 (props に直接渡す形を含む) を止める。React Compiler を通すと症状が消え、Compiler を通す project のテストでは見つからない (`docs/guides/testing/configuration.md`「テストでも React Compiler を通す理由」)。`react/static-components` は props に直接渡す形を止めない (oxlint 1.85.0、2026-10-08) |
+| ルール                                  | 名指しの理由                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `typescript/consistent-type-assertions` | `assertionStyle: "never"` の指定が要る                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `no-restricted-imports`                 | `*.test-helpers.ts` と `src/test/` をアプリのコードから import させない (ADR-0008)。テストの import を重くする依存のバレルを止める (ADR-0032)                                                                                                                                                                                                                                                                                                                        |
+| `react/no-unstable-nested-components`   | 描画中の部品の定義 (props に直接渡す形を含む) を止める。React Compiler を通すと症状が消え、Compiler を通す project のテストでは見つからない (`docs/guides/testing/configuration.md`「テストでも React Compiler を通す理由」)。`react/static-components` は props に直接渡す形を止めない (oxlint 1.85.0、2026-10-08)                                                                                                                                                  |
+| `react/invariant`                       | Compiler が部品ごと最適化を諦めたことを gate で止める (ADR-0014)。上流は Compiler 自身の不整合として既定 off にするが、oxlint は書き換えで消える形もこの名前で報告する。2026-11-02 に、hook に渡す関数が後で宣言する関数を経由してその hook の戻り値を読む部品を、oxlint 1.89.0 は `react/invariant` で報告し、`correctness` の `react/immutability` では報告しなかった。babel-plugin-react-compiler 1.0.0 は同じ部品を Immutability (宣言の前に読む) として報告する |
 
 テスト専用コードの import を止める範囲と手段の比較は ADR-0008 が持つ。
 

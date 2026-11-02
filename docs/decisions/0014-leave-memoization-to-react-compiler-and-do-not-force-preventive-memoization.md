@@ -1,7 +1,7 @@
 # ADR-0014: メモ化は React Compiler に委ね、予防的なメモ化を強制しない
 
 - Status: Accepted
-- Date: 2026-09-02
+- Date: 2026-11-02
 - 関連: ADR-0007 (React Compiler ルールの選定基準)、ADR-0005 (依存の待機と pin の一般則)、ADR-0020 (registry コードは改変しない)
 
 ## Context
@@ -23,7 +23,7 @@
 
 - `@vitejs/plugin-react` の `compiler` オプション (`oxc-transform-react`) で Compiler を適用し、`compilationMode` は既定の `infer` を使う。babel は経路から外す
 - `react-perf` などメモ化を強制するプラグインを `lint.plugins` に置かない
-- 分割後の React Compiler ルールは `correctness` / `perf` のカテゴリ経由と `react/unsupported-syntax` の名指しで入れる。bail out を報告する `react/todo` は有効にしない
+- 分割後の React Compiler ルールは `correctness` / `perf` のカテゴリ経由と `react/unsupported-syntax` / `react/invariant` の名指しで入れる。未実装による bail out を報告する `react/todo` は有効にしない
 - 手動メモ化を外すのは、撤去前後でコンパイル出力が悪化しないことを実測できた箇所だけとする
 - Compiler がカバーしない箇所を欠陥として扱わない。判断は実測された性能劣化で行い、予防的なメモ化は入れない
 - bail out は `compiler.reportDiagnostics` でビルドログへ出す。期待値として固定する検査は持たない
@@ -50,7 +50,7 @@ bail out の一覧を期待値として固定する検査は置かない。理�
 
 この検査を置く動機になりうるのは、`@babel/core` 8 系が最適化を silent に落とすことである。Compiler を `compiler` オプションで適用して babel を経路から外しているので、その動機は無い。
 
-### bail out を lint で報告しない
+### 未実装による bail out を lint で報告しない
 
 oxlint 1.79 で `react/react-compiler` と `reportAllBailouts` は廃止され、診断は 22 のルールへ分割された。
 未実装による bail out は `react/todo` が担う (カテゴリ分けと選定の基準は ADR-0007)。
@@ -64,6 +64,15 @@ oxlint 1.79 で `react/react-compiler` と `reportAllBailouts` は廃止され�
 `react/unsupported-syntax` は分けて扱い `"error"` で入れる。
 こちらが指すのは Compiler が対応する予定のない構文 (`this` / `with` / インライン `class` 宣言) で、書き換えれば消えるためコード側の欠陥として扱える。
 
+`react/invariant` も `"error"` で名指しする。Oxlint docs「react/invariant」はこのルールを Compiler 自身の不整合の報告とし、上流も既定 off にしている。
+それでも名指しするのは、oxlint が書き換えで消える形をこの名前で報告し、その部品が Compiler の対象から丸ごと外れるためである。
+
+- 2026-11-02 に、hook に渡す関数が後で宣言する関数を経由してその hook の戻り値を読む部品を、oxlint 1.89.0 と oxc-transform-react 0.152.0 は Invariant (`PruneHoistedContexts`) で報告した。`correctness` の `react/immutability` は報告せず、`vp check` は通った
+- 同じ部品を babel-plugin-react-compiler 1.0.0 は Immutability (宣言の前に読む) として報告する。上流の recommended に入る分類である
+- 循環を切ると消え、部品は Compiler の対象に戻る。ビルドログ (`reportDiagnostics`) には出ていたが、gate は落ちなかった
+
+`react/todo` と違い、Invariant は書き換えで消えるものを含むので、gate に載せて直す側に倒す。直し方は `docs/guides/react/memoization.md`「React Compiler の診断を読む」にある。
+
 ### 検討した選択肢
 
 | 案                                           | 評価                                                                                                                                               | 採否     |
@@ -75,13 +84,16 @@ oxlint 1.79 で `react/react-compiler` と `reportAllBailouts` は廃止され�
 | Compiler の適用を babel で行う               | `@babel/core` が 8 系で最適化を silent に落とすため major の停止が要り、ビルドも延びる                                                             | 却下     |
 | bail out をビルドログへ出す                  | 見えるのは処理を試みて失敗した箇所だけで、対象外の関数はイベントすら出ない。それでも維持コストがゼロなので採る                                     | **採用** |
 | bail out の一覧を検査で固定する              | 落ちてもコードは直さず期待値を更新するだけになる (Compiler がカバーしない箇所を欠陥として扱わない決定)。検査自体も `vite.config.ts` の配線を見ない | 却下     |
+| `react/invariant` を `"error"` で名指しする  | 書き換えで消える形が `correctness` を抜けて gate に載らない (2026-11-02 実測)。代償は、Compiler 自身の不整合でも gate が落ちること                 | **採用** |
+| `react/invariant` を上流に揃えて off に保つ  | Invariant で出る形は、ビルドログを読むまで気づけない。部品が丸ごと最適化から外れる                                                                 | 却下     |
 
 ## Consequences
 
 - Compiler の適用は experimental な機能に乗る (`@vitejs/plugin-react` の README が明記)。壊れたときの退避は `docs/guides/react/memoization.md`「React Compiler の診断を読む」にある
 - `package.json` から babel を外しても install からは消えない。`@vitejs/plugin-react` の optional peer として `@rolldown/plugin-babel` と `babel-plugin-react-compiler` と `@babel/core` が lockfile に残る (2026-09-02 実測: `vp why babel-plugin-react-compiler` が plugin-react 経由で解決する)。プロジェクト root からは解決できないので (`require.resolve` が `MODULE_NOT_FOUND`)、`vite.config.ts` から使うことはできない
 - Compiler は client 環境だけで走る。自前コードの SSR 出力にメモ化は入らない (2026-09-02 に SSR の bundle の `useMemoCache` を数えて実測。0 件)。単一レンダーの経路なのでメモ化の効きどころが無い
-- bail out はビルドログにしか出ない。増減はゲートにならず、気づくのはログを読んだときになる。Compiler がカバーしない箇所を欠陥として扱わないと決めているので、この非対称は意図どおりである
+- Todo の bail out はビルドログにしか出ない。増減はゲートにならず、気づくのはログを読んだときになる。Compiler がカバーしない箇所を欠陥として扱わないと決めているので、この非対称は意図どおりである。Invariant は `react/invariant` が `vp check` で止める
+- Compiler 自身の不整合で `react/invariant` が鳴り、書き換えで消えないときは、行単位で抑制して理由を書くことになる。oxlint が書き換えで消える形を `react/immutability` などの上流の分類で報告するようになったら、名指しを外すかを見直す
 - Compiler が黙って外れる経路 (`vite.config.ts` から `compiler` オプションが消える) を機械で見張るものは無い。塞ぐならビルド成果物を見る検査が要る
 - Compiler への委譲は、手で書くメモ化を否定しない。新しいコードでも、性能の問題が出た箇所と、値の同一性を精密に制御する箇所 (effect の依存など) には手で書く (React Compiler の Introduction「What should I do about useMemo, useCallback, and React.memo?」)。場面ごとの書き方と順序は `docs/guides/react/memoization.md`「手動メモ化を書く」にある
 - Rules of React の検査を外すと Compiler が bail out する土壌ができる。分割後のルール群は導入の前提として据え置く
@@ -95,6 +107,7 @@ oxlint 1.79 で `react/react-compiler` と `reportAllBailouts` は廃止され�
 - eslint-plugin-react-hooks のルール一覧: https://react.dev/reference/eslint-plugin-react-hooks
 - 既存コードの手動メモ化を残す推奨: https://github.com/reactwg/react-compiler/discussions/16
 - bail out を lint で報告しない設計: https://github.com/reactwg/react-compiler/discussions/24
+- Oxlint docs「react/invariant」(Compiler 自身の不整合の報告で、その関数は最適化されない): https://oxc.rs/docs/guide/usage/linter/rules/react/invariant.html
 - Todo の bail out は未実装の構文で、コードの誤りではないという React チームの説明: https://github.com/react/react/issues/31532#issuecomment-2474533557
 - `@babel/core` 8 系のバグ (babel 経路を却下する根拠): https://github.com/react/react/issues/36868
 - 診断が 1 ルールに束ねられていた件と、その解消 (per-category ルールへの分割): https://github.com/oxc-project/oxc/issues/23538 / https://oxc.rs/blog/2026-08-18-react-compiler-support
