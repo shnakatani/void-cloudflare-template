@@ -418,6 +418,33 @@ describe("ダイアログの閉じ方", () => {
     expect(popupClosing).toEqual([1]);
     expect(overlayClosing).toEqual([1]);
   });
+
+  it("閉じかけの間に別のメモの編集へ props が替わると、閉じかけの中身を外し、前の行のリンクを経ずに替わった先の入力欄へ focus を移す", async () => {
+    // 閉じかけの窓を作るので animation を戻す (docs/guides/testing/user-interactions.md「animation を戻すテストを書く」)
+    enableAnimations();
+    const { screen, rerender } = await renderNotesPage({
+      notes: [NOTE_VIEW, OTHER_NOTE_VIEW],
+      dialog: { kind: "edit", note: NOTE_VIEW },
+    });
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    const closing = screen.getByRole("dialog", { name: NOTE_EDIT_DIALOG_TITLE });
+    const closingPopup = closing.element();
+    const focusins = recordFocusins();
+
+    await rerender({ dialog: { kind: "closed" } });
+    // 閉じかけを待つ。待たずに替えると、閉じる props と替わる props が 1 つの commit に潰れる
+    await expect.element(closing).toHaveAttribute("data-closed");
+    await rerender({ dialog: { kind: "edit", note: OTHER_NOTE_VIEW } });
+
+    await expect.element(titleTextbox(screen)).toHaveValue(OTHER_NOTE_VIEW.title);
+    await expect.element(titleTextbox(screen)).toHaveFocus();
+    // 替わった先も同じ名前のダイアログなので、locator でなく閉じかけの要素で見る
+    await expect.poll(() => closingPopup.isConnected).toBe(false);
+    // 行のリンクはダイアログの背後で aria-hidden になり locator で引けないので、aria-label で見分ける
+    expect(focusins.map((target) => target.getAttribute("aria-label"))).not.toContain(
+      `${NOTE_VIEW.title}を編集`,
+    );
+  });
 });
 
 describe("編集のダイアログ", () => {
