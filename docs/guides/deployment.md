@@ -18,17 +18,19 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
    vp exec void deploy --platform cloudflare
    ```
 
-2. Cloudflare の API token を作り、repository の secret に置く。権限は、Workers Scripts の Edit、bind する資源の読み取り、Void が作る資源の Edit の 3 つにする ([Void docs「Cloudflare」][] の Deploying from CI)。このアプリが bind し、Void が作る資源は D1 である
+2. GitHub の Settings → Environments で `production` を開き、無ければ New environment で作る。Deployment branches and tags で Selected branches and tags を選び、`main` の規則を足す ([GitHub Docs「Managing environments for deployment」][])。Environment の secret は、その Environment を参照して規則を通った job だけが読むので、main 以外のブランチの workflow には渡らない ([GitHub Docs「Deployments and environments」][])。reviewer の承認は付けない。付けると main への push のたびに deploy が承認を待つ
+3. Cloudflare の API token を作り、Environment `production` の secret に置く。権限は、Workers Scripts の Edit、bind する資源の読み取り、Void が作る資源の Edit の 3 つにする ([Void docs「Cloudflare」][] の Deploying from CI)。このアプリが bind し、Void が作る資源は D1 である。repository の secret には同じ名前で置かない。置くと、Environment を参照しない job からも読める
 
    ```bash
-   gh secret set CLOUDFLARE_API_TOKEN
+   gh secret set CLOUDFLARE_API_TOKEN --env production
    ```
 
-3. `void.lock.json` を commit して main へ push する。選んだアカウントと作った資源の ID はここに残り、CI の deploy はこれを読む (「最初の deploy を手元で行う理由」)。この push で workflow が走るので、token は先に置く
-4. 以後は main への push のたびに `.github/workflows/void-deploy.yml` が `void deploy --platform cloudflare` を走らせる。同じブランチの前の deploy が走っていれば取り消す
+4. `void.lock.json` を commit して main へ push する。選んだアカウントと作った資源の ID はここに残り、CI の deploy はこれを読む (「最初の deploy を手元で行う理由」)。この push で workflow が走るので、token は先に置く
+5. 以後は main への push のたびに `.github/workflows/void-deploy.yml` が `void deploy --platform cloudflare` を走らせる。同じブランチの前の deploy が走っていれば取り消す
 
-- token が複数のアカウントに届くなら、repository の secret に `CLOUDFLARE_ACCOUNT_ID` も置き、workflow の Deploy の step の `env` に足す ([Void docs「Cloudflare」][] の Deploying from CI)
-- Worker の version に preview の URL が無いときは、repository の変数に `CLOUDFLARE_WORKERS_SUBDOMAIN` を置く。Cloudflare Access が readiness の URL を守るときは、secret に `CF_ACCESS_CLIENT_ID` と `CF_ACCESS_CLIENT_SECRET` を置く。workflow はどちらも渡している ([Void docs「Cloudflare」][] の Deploying from CI)
+- GitHub Free の private repository では、Environment の secret と Deployment branches and tags が使えない ([GitHub Docs「Deployments and environments」][])。そのときは、この節で `production` に置く secret を repository の secret に置く (`gh secret set CLOUDFLARE_API_TOKEN`)。Environment を参照する job も repository の secret を読む ([GitHub Docs「Secrets reference」][] の同じ名前の secret の優先順位)
+- token が複数のアカウントに届くなら、`production` の secret に `CLOUDFLARE_ACCOUNT_ID` も置き、workflow の Deploy の step の `env` に足す ([Void docs「Cloudflare」][] の Deploying from CI)
+- Worker の version に preview の URL が無いときは、repository の変数に `CLOUDFLARE_WORKERS_SUBDOMAIN` を置く。Cloudflare Access が readiness の URL を守るときは、`production` の secret に `CF_ACCESS_CLIENT_ID` と `CF_ACCESS_CLIENT_SECRET` を置く。workflow はどちらも渡している ([Void docs「Cloudflare」][] の Deploying from CI)
 - Access が route か Custom Domain を守り、`workers_dev` が `false` なら、その origin を `CF_ACCESS_READINESS_ORIGIN` として workflow の Deploy の step の `env` に足す。`void.config.ts` に書いた値は無視される ([Void docs「Cloudflare」][] の Cloudflare Access)
 - secret を置く前の push では、Deploy の step が ``Cloudflare authentication is required. Set CLOUDFLARE_API_TOKEN in CI, or run `void cloudflare login` in an interactive terminal.`` で失敗する (Void 1.4.0 の `cli/cloudflare-auth.ts`)。出さない repository なら「deploy しない repository で workflow を止める」に従う
 
@@ -90,4 +92,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 [Void CLI reference「Secrets and Environment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/secrets.md
 [Void docs「Project Structure」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/structure.md
 [Void docs「First Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/platform/installation/first-deployment.md
+[GitHub Docs「Managing environments for deployment」]: https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments
+[GitHub Docs「Deployments and environments」]: https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
+[GitHub Docs「Secrets reference」]: https://docs.github.com/en/actions/reference/security/secrets
 [GitHub Docs「Disabling and enabling a workflow」]: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows
