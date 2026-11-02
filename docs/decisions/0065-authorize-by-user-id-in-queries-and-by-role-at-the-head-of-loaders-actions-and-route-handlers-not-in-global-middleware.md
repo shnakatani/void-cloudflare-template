@@ -62,4 +62,4 @@
 - Void docs「Auth API」(`AuthUser`): `node_modules/void/docs/reference/api/auth.md`
 - Void docs「Server Routing」(Per-route middleware): `node_modules/void/docs/guide/server-routing.md`
 - Better Auth docs「Admin」(`role` の項目、`defaultRole`、`adminRoles`、複数のロールの持ち方、`userHasPermission`): https://www.better-auth.com/docs/plugins/admin
-- voidzero-dev/void#564 (page の loader・action に middleware を渡すと壊れる。2026-11-02 の時点で open)
+- voidzero-dev/void#564 (page の loader・action に middleware を渡すと壊れる。修正の voidzero-dev/void#624 は 2026-11-02 に merge された。2026-11-03 の時点で最新の v1.5.0 は、その merge より前に公開され、修正を含まない)
