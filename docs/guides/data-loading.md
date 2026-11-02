@@ -24,6 +24,8 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 - 失敗の値を返したら、server の `console.error` に残す。応答は HTTP の 200 で届くので、ほかに気付く手掛かりが無い (ADR-0057)
 - not found に `throw new HTTPException(404)` を使わない。本文が message だけの text の 404 になり、`public/404.html` を通らない (ADR-0050)
 - loader の Props の型で、読めた値と失敗の値を区別できる形にする (一覧なら `readonly T[] | null`)。ページは型の分岐で失敗の区画を描く
+- loader が失敗の値を返した区画の見出しは、`StatusHeading` (`src/components/parts/status-heading.tsx`) で描く。遷移でページへ来たときの focus が、ページ名の `<h1>` でなく失敗の見出しへ移る (ADR-0057)
+- 区画がページの主な中身で、それが失敗の値なら、`head()` が loader の props から組む title に `errorPageTitle` (`src/lib/page-title.ts`) を付ける。付けないと、タブの title と遷移の読み上げにページ名だけが出て、失敗が伝わらない (ADR-0057)
 
 ### 描画の失敗を受ける境界を置く
 
