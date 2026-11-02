@@ -81,6 +81,7 @@ lint では見ないのでレビューで見る。
 - ページの本文に `<h1>` を 1 つ描き、title のページ名と同じ文字列にする。見出しの行を持つページは `PageHeader` の `title` に渡す (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 - 読み込んだデータで名前が決まるページは、`head()` の 2 つ目の引数 (loader の props) から title を組む (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 - layout に `<h1>` を置かない。遷移のたびに focus が layout の `<h1>` へ移る (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+- ページを足したとき、見出しか title を変えたときは、VoiceOver で遷移と戻るの読み上げを聞いて確かめる。自動テストは聞こえ方を見られない (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 
 ## ページの失敗は loader の値と区画の境界で受ける
 

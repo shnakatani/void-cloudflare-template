@@ -222,6 +222,7 @@ export const head = defineHead(() => ({ title: pageTitle("<ページ名>") }));
 - 読み込んだデータで名前が決まるページは、`head()` の 2 つ目の引数 (loader の props) から title を組み、同じ名前を `<h1>` に渡す ([Void docs「Head Management」][] の Page titles and metadata)
 - layout に `<h1>` を置かない。遷移のたびに、focus がページの見出しでなく layout の `<h1>` へ移る
 - `<h1>` が無いページへ遷移すると focus は `<body>` に落ち、`focusPageHeading` の `console.warn` が出るだけで何も落ちない (ADR-0049)
+- ページを足したとき、見出しか title を変えたときは、VoiceOver でそのページへの遷移と戻るを聞き、見出しと title の読み上げが聞こえることを確かめる。自動テストは聞こえ方を見られない (ADR-0049)
 
 ### accessible name を与える
 
