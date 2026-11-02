@@ -1,6 +1,6 @@
 # DB
 
-D1 の schema・migration・query を変える手順と、見本のデータを入れる手順と、テストで D1 を使う手順と、その形にしている理由を持つ。
+D1 の schema・migration・query を変える手順と、部分一致の検索を組む手順と、見本のデータを入れる手順と、テストで D1 を使う手順と、その形にしている理由を持つ。
 
 | 決定                                                                                                                                | ADR      |
 | ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -61,6 +61,13 @@ D1 の schema・migration・query を変える手順と、見本のデータを�
 - ユーザーの行は、読み出しも更新も削除も `where` で `userId` に絞る。更新と削除は `and(eq(<table>.id, id), eq(<table>.userId, userId))` にする。Void の docs に、ユーザーで行を絞る仕組みや例は無い
 - 読み出した行は、読み出し口で valibot のスキーマの `v.safeParse` に通す (ADR-0013)
 
+### ユーザー入力で部分一致の検索を組む
+
+- 部分一致は `src/lib/like-pattern.server.ts` の `likeContains(<列>, <入力>)` で組み、パターンと `ESCAPE` 句を手で書かない。エスケープと `ESCAPE` 句は対で要り、片方を忘れてもエラーにならず結果だけが変わる。エスケープを忘れると入力の `%` と `_` がワイルドカードとして効き、`ESCAPE` 句を忘れるとエスケープに足した `\` が文字として残る (「部分一致の検索を D1 で確かめる理由」)
+- `void/db` の `like` にも SQLite にも、入力をエスケープする関数は無い。LIKE のパターンでは `%` が 0 文字以上の並びに、`_` が任意の 1 文字に当たり、文字そのものとして当てるには `ESCAPE` 句で決めた文字を前に置く ([SQLite docs「SQL Language Expressions」][] の The LIKE, GLOB, REGEXP, MATCH, and extract operators)
+- 大文字小文字を同一視するのは ASCII の英字だけである ([SQLite docs「SQL Language Expressions」][]: "SQLite only understands upper/lower case for ASCII characters by default.")。ASCII でない文字の大文字小文字をまとめて当てたいなら、`likeContains` では足りない
+- 検索の query を足したら、`%`・`_`・`\` を含む検索語、ASCII の大文字小文字、日本語を、`createTestD1()` の D1 で確かめる (「テストで D1 を使う」)
+
 ### テストで D1 を使う
 
 query の関数のテストは `src/features/<domain>/*.test.ts` (unit project) に置き、`src/test/app/d1.ts` の `createTestD1()` で D1 を作る (ADR-0054)。`db/` にはテストを置けない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。
@@ -92,6 +99,10 @@ it("別のユーザーの行を返さない", async () => {
 
 `db.query.*` と casing はアプリでだけ効き、テストと型では効かない。列名を schema で明示し、query builder で書くと、アプリとテストと型の 3 つで同じに動く。
 
+### 部分一致の検索を D1 で確かめる理由
+
+エスケープの関数だけを単体で確かめると、SQL に `ESCAPE` 句を付け忘れても通る。エスケープと `ESCAPE` 句の対応は、SQL を走らせないと確かめられない。`src/lib/like-pattern.server.test.ts` は `createTestD1()` の D1 に table を作って `likeContains` を通し、`ESCAPE` 句を外した形とエスケープを外した形の両方で `%`・`_`・`\` の行が落ちる (2026-11-02 に確かめた)。
+
 ### `db/migrations/meta/` を format しない理由
 
 `meta/` の JSON は drizzle-kit の生成物で、`vp check` の format に通すと落ちる (2026-11-02)。format し直すと、生成のたびに手で整える手順が要り、commit したものが drizzle-kit の出力のままかどうかを見分けにくくなる。deploy は `meta/` の snapshot を schema と比べるので ([Void docs「Database」][] の Hand-written migrations)、`vite.config.ts` の `fmt.ignorePatterns` で外し、生成したままの形で持つ。
@@ -110,9 +121,10 @@ it("別のユーザーの行を返さない", async () => {
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。SQLite docs の引用は 2026-11-02 に原文と照らした。
 
 [Void docs「Database」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/database.md
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
 [Void docs「void db reset」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md
+[SQLite docs「SQL Language Expressions」]: https://www.sqlite.org/lang_expr.html#like
 [Void docs「void db seed」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md

@@ -15,7 +15,7 @@ function escapePattern(text: string): string {
  * SQLite の `LIKE` の既定 (ASCII の英字だけ大文字小文字を無視) を使う。20,000 行の `:memory:` で
  * 20 回平均 (2026-09-23、better-sqlite3): `LIKE ? ESCAPE ?` 1.12ms / `instr(title, ?)` 1.05ms /
  * `instr(lower(title), lower(?))` 2.00ms。
- * 検証は src/features/notes/queries.test.ts が D1 で行う (`%` / `_` / `\` を含む検索語)。`ESCAPE` 句との対応は、
+ * 検証は like-pattern.server.test.ts が D1 で行う (`%` / `_` / `\` を含む検索語)。`ESCAPE` 句との対応は、
  * エスケープの純粋関数だけを単体で見ても抜けたまま通るので、SQL まで通して見る。
  * 先頭が `%` の LIKE は index が効かず全行を走査する。`created_at` の index を足しても絞り込み時は
  * 速くならない (同じ 20,000 行で 1.64ms → 2.72ms、2026-09-23)。件数が問題になったら FTS5 を検討する。
