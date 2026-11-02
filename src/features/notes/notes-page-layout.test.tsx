@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import {
   cellInColumn,
@@ -19,6 +19,13 @@ import { NOTE_VIEW, OTHER_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
 import { noteEditUrl } from "./notes-url";
 import { NOTE_FIELD_LABELS } from "./schema";
+
+// 読み込みの navigation を渡して、読み込み中のダイアログが開く前の一覧を見る。待ちを広げ、遅い runner でも
+// 待ちが過ぎてダイアログが一覧を覆わないようにする
+vi.mock(import("@/lib/pending-display"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  PENDING_DISPLAY_DELAY_MS: 60_000,
+}));
 
 /**
  * 中身が cell の幅を超えた cell を、列見出しと超えた px で返す。`truncate` で切り詰めた中身は

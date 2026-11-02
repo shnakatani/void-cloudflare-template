@@ -35,12 +35,15 @@ import {
 } from "./notes-page-constants";
 import { NOTE_VIEW, OTHER_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
+import { noteEditUrl } from "./notes-url";
 import { NOTE_BODY_MAX_LENGTH, NOTE_FIELD_LABELS, NOTE_TITLE_MAX_LENGTH } from "./schema";
 
 vi.mock(import("void/pages-client"), async (importOriginal) => ({
   ...(await importOriginal()),
   submitAction: vi.fn(),
 }));
+// 読み込み中を出すまでの待ちを縮める (`src/lib/__mocks__/pending-display.ts`)
+vi.mock(import("@/lib/pending-display"));
 
 const CREATE_ACTION_URL = "/notes?create";
 
@@ -600,6 +603,20 @@ describe("編集のダイアログ", () => {
 });
 
 describe("編集の状態のダイアログ", () => {
+  it("編集の URL へ読み込みが続くと、編集の見出しで読み込み中のダイアログを出し、閉じると一覧の URL へ移る", async () => {
+    const { screen, router } = await renderNotesPage({ q: "x", notes: [NOTE_VIEW] }, undefined, {
+      state: "loading",
+      location: new URL(noteEditUrl(NOTE_VIEW.id, "x"), "http://localhost"),
+      method: "GET",
+    });
+
+    const dialog = screen.getByRole("dialog", { name: NOTE_EDIT_DIALOG_TITLE });
+    await expect.element(dialog).toHaveAccessibleDescription("読み込み中");
+    await dialog.getByRole("button", { name: "閉じる" }).click();
+
+    await expect.poll(() => router.visits.map((visit) => visit.url)).toEqual(["/notes?q=x"]);
+  });
+
   it("見つからないメモはダイアログで伝え、閉じると一覧の URL へ移る", async () => {
     const { screen, router } = await renderNotesPage({ dialog: { kind: "edit-not-found", id: 9 } });
 

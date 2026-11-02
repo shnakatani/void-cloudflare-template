@@ -9,11 +9,12 @@ import type {
 } from "@/components/parts/data-table-features";
 import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { dialogOpenerProps } from "@/lib/dialog-final-focus";
 import { formatCalendarDateLabel } from "@/lib/format-calendar-date-label";
 import { formatDateTime } from "@/lib/format-date-time";
 
 import { noteDeleteDialogHandle } from "./note-delete-dialog-handle";
-import { noteEditLinkProps } from "./note-dialog-focus";
+import { noteEditOpener } from "./note-dialog-focus";
 import type { NoteRow } from "./note-rows";
 
 type NoteCellContext = DataTableCellContext<NoteRow>;
@@ -94,30 +95,24 @@ export function NoteActionsCell({ row, table }: NoteCellContext) {
     <div className="flex gap-2">
       {/* 削除中は行から可視の手掛かりが半透明しか出ないので、読み上げ用のテキストを足す (ADR-0026) */}
       {isDeleting && <span className="sr-only">削除中</span>}
-      {isDeleting ? (
-        // 削除中は開かせない (ADR-0017 の「止める範囲」)。ButtonLink は無効の状態を持たないので、focus できる
-        // 無効のボタンに描き替え、tab 順に残す
-        <Button variant="outline" size="sm" focusableWhenDisabled disabled aria-label={editLabel}>
-          編集
-        </Button>
-      ) : (
-        // ダイアログは一覧の上に開くので、一覧の scroll を保つ。Void の Link は既定で先頭へ scroll する
-        <ButtonLink
-          href={editHref}
-          preserveScroll
-          // meta は押した時点で読む。cell の部品は props の row が同じなら描き直されず、描いた時点の callback は
-          // ページの古い state を読む
-          onNavigate={() => table.options.meta?.onRowNavigate?.()}
-          variant="outline"
-          size="sm"
-          {...noteEditLinkProps(note.id)}
-          aria-label={editLabel}
-          // 押した行のダイアログを読み込む間 (ADR-0042)。読み上げは開いたときのダイアログの title が持つ
-          isPending={isEditPending}
-        >
-          編集
-        </ButtonLink>
-      )}
+      {/* ダイアログは一覧の上に開くので、一覧の scroll を保つ。Void の Link は既定で先頭へ scroll する */}
+      <ButtonLink
+        href={editHref}
+        preserveScroll
+        // meta は押した時点で読む。cell の部品は props の row が同じなら描き直されず、描いた時点の callback は
+        // ページの古い state を読む
+        onNavigate={() => table.options.meta?.onRowNavigate?.()}
+        variant="outline"
+        size="sm"
+        {...dialogOpenerProps(noteEditOpener(note.id))}
+        aria-label={editLabel}
+        // 削除中は開かせない (ADR-0017 の「止める範囲」)。要素を替えずに止めるので、削除に失敗して解けても focus が残る
+        disabled={isDeleting}
+        // 押した行のダイアログを読み込む間 (ADR-0042)。読み上げは開いたときのダイアログの title が持つ
+        isPending={isEditPending}
+      >
+        編集
+      </ButtonLink>
       {/* 確定のあと focus は次の行のこのトリガーへ移る (DeleteConfirmDialog)。止めている間も focus を保つよう、
           native の disabled でなく aria-disabled で止める。Trigger は focusableWhenDisabled を持たないので、
           描く Button に渡す */}

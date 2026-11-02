@@ -81,14 +81,20 @@ export function firstValueQuery(searchParams: URLSearchParams): Record<string, s
 }
 
 /**
- * 読み込み中の遷移が編集のダイアログを開く一覧へ向かうなら、その id。押したリンクの Spinner に使う。
+ * 読み込み中の遷移が一覧へ向かうなら、その行き先で開くダイアログ。押したリンクの Spinner と、読み込みが続いたときの
+ * ダイアログの形の読み込み中に使う。一覧へ向かう読み込みでなければ `closed`。
  * 行き先は loader と同じ読み方 (`firstValueQuery`) で読み、URL の文字列では比べない (query の順と percent-encoding が揃わない)
  */
-export function pendingNoteEditId(navigation: NavigationState): Note["id"] | null {
+export function pendingNoteDialogQuery(navigation: NavigationState): NoteDialogQuery {
   const { state, location } = navigation;
   if (state !== "loading" || location === null || location.pathname !== NOTES_PATH) {
-    return null;
+    return { kind: "closed" };
   }
-  const { dialog } = parseNotesPageQuery(firstValueQuery(location.searchParams));
+  return parseNotesPageQuery(firstValueQuery(location.searchParams)).dialog;
+}
+
+/** 読み込み中の遷移が編集のダイアログを開く一覧へ向かうなら、その id */
+export function pendingNoteEditId(navigation: NavigationState): Note["id"] | null {
+  const dialog = pendingNoteDialogQuery(navigation);
   return dialog.kind === "edit" ? dialog.id : null;
 }

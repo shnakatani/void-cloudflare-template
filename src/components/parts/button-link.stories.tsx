@@ -40,6 +40,11 @@ export const Link: Story = {
   args: { variant: "link", size: "sm", children: "新規登録する" },
 };
 
+/** 開かせない間。リンクのまま薄く描き、押しても遷移しない */
+export const Disabled: Story = {
+  args: { variant: "outline", disabled: true },
+};
+
 /** 押したあとの読み込み中。label の場所に Spinner を重ね、幅は変えない */
 export const Pending: Story = {
   args: { variant: "outline", isPending: true },

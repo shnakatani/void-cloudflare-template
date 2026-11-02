@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import type { Locator } from "vite-plus/test/browser/context";
 import { render } from "vitest-browser-react";
@@ -300,19 +300,42 @@ describe("NoteActionsCell", () => {
       .toBeInTheDocument();
   });
 
-  it("削除中の行は編集を、focus できる無効のボタンに描き替える", async () => {
+  it("削除中の行は編集のリンクを、focus できるまま無効にする", async () => {
     const { screen } = await renderCells({ deletingIds: [NOTE_VIEW.id] });
 
-    const edit = screen.getByRole("button", { name: noteEditTriggerName(NOTE_VIEW) });
-    await expect.element(edit).toBeDisabled();
-    // native の disabled は tab 順から外す。focusableWhenDisabled は aria-disabled で無効にし、tab 順に残す (Base UI の Button)
+    const edit = screen.getByRole("link", { name: noteEditTriggerName(NOTE_VIEW) });
     await expect.element(edit).toHaveAttribute("aria-disabled", "true");
-    await expect.poll(() => edit.element().hasAttribute("disabled")).toBe(false);
-    await expectAbsent(screen.getByRole("link", { name: noteEditTriggerName(NOTE_VIEW) }));
+    edit.element().focus();
+    await expect.element(edit).toHaveFocus();
     // 止めるのは削除中の行だけ
     await expect
       .element(screen.getByRole("link", { name: noteEditTriggerName(OTHER_NOTE_VIEW) }))
-      .toBeInTheDocument();
+      .not.toHaveAttribute("aria-disabled");
+  });
+
+  it("focus を持った編集のリンクは、削除に失敗して削除中が解けても focus を失わず、受け直しもしない", async () => {
+    const { screen, update } = await renderCells({ deletingIds: [NOTE_VIEW.id] });
+    const edit = screen.getByRole("link", { name: noteEditTriggerName(NOTE_VIEW) });
+    await expect.element(edit).toHaveAttribute("aria-disabled", "true");
+    edit.element().focus();
+    await expect.element(edit).toHaveFocus();
+    const focusEvents: string[] = [];
+    const record = (event: Event) => {
+      focusEvents.push(event.type);
+    };
+    // blur は bubble しないので capture で受ける
+    for (const type of ["blur", "focusout", "focusin"]) {
+      document.addEventListener(type, record, true);
+      onTestFinished(() => {
+        document.removeEventListener(type, record, true);
+      });
+    }
+
+    await update({ deletingIds: [] });
+
+    await expect.element(edit).not.toHaveAttribute("aria-disabled");
+    await expect.element(edit).toHaveFocus();
+    expect(focusEvents).toEqual([]);
   });
 
   it("トリガーを押すと同じ handle の確認ダイアログが開き、確定で行の id と title が渡る", async () => {

@@ -8,26 +8,42 @@ import { Popover, PopoverContent, PopoverTitle } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { recordFocusins } from "@/test/assert/focusin";
 
-import { finalFocusToOpener } from "./dialog-final-focus";
+import { dialogOpenerProps, dialogOpenerRef, finalFocusToOpener } from "./dialog-final-focus";
 
-function findLink(): HTMLElement | null {
-  return document.querySelector<HTMLElement>("[data-opener]");
-}
+const OPENER = "item-edit-1";
 
 describe("finalFocusToOpener", () => {
-  it("Base UI には false を返し、開いた元へは自分で移す", async () => {
+  it("Base UI には false を返し、名前の合う開いた元へは自分で移す", async () => {
     const screen = await render(
       <>
         <h1>ページ</h1>
-        <a href="/x" data-opener="">
+        <a href="/y" {...dialogOpenerProps("item-edit-2")}>
+          ほかの開いた元
+        </a>
+        <a href="/x" {...dialogOpenerProps(OPENER)}>
           開いた元
         </a>
       </>,
     );
 
-    expect(finalFocusToOpener(findLink)("mouse")).toBe(false);
+    expect(finalFocusToOpener(OPENER)("mouse")).toBe(false);
 
-    await expect.element(screen.getByRole("link", { name: "開いた元" })).toHaveFocus();
+    await expect.element(screen.getByRole("link", { name: "開いた元", exact: true })).toHaveFocus();
+  });
+
+  it("開いた元の名前が null なら、ページの見出しへ移す", async () => {
+    const screen = await render(
+      <>
+        <h1>ページ</h1>
+        <a href="/x" {...dialogOpenerProps(OPENER)}>
+          開いた元
+        </a>
+      </>,
+    );
+
+    finalFocusToOpener(null)("mouse");
+
+    await expect.element(screen.getByRole("heading", { name: "ページ" })).toHaveFocus();
   });
 
   // 操作の前の programmatic な focus は、option が無くても :focus-visible になる。先にボタンを pointer で押して
@@ -41,7 +57,7 @@ describe("finalFocusToOpener", () => {
       const screen = await render(
         <>
           <button type="button">キャンセル</button>
-          <a href="/x" data-opener="">
+          <a href="/x" {...dialogOpenerProps(OPENER)}>
             開いた元
           </a>
         </>,
@@ -49,7 +65,7 @@ describe("finalFocusToOpener", () => {
       await userEvent.click(screen.getByRole("button", { name: "キャンセル" }));
       const link = screen.getByRole("link", { name: "開いた元" });
 
-      finalFocusToOpener(findLink)(closeType);
+      finalFocusToOpener(OPENER)(closeType);
 
       await expect.element(link).toHaveFocus();
       await expect.poll(() => link.element().matches(":focus-visible")).toBe(focusVisible);
@@ -59,7 +75,7 @@ describe("finalFocusToOpener", () => {
   it("開いた元が無ければ、ページの見出しへ移す", async () => {
     const screen = await render(<h1>ページ</h1>);
 
-    finalFocusToOpener(findLink)("mouse");
+    finalFocusToOpener(OPENER)("mouse");
 
     await expect.element(screen.getByRole("heading", { name: "ページ" })).toHaveFocus();
   });
@@ -68,7 +84,7 @@ describe("finalFocusToOpener", () => {
     // Popover の Popup も role="dialog" と data-open を持つ。替わったダイアログと取り違えないことを見る
     const screen = await render(
       <>
-        <a href="/x" data-opener="">
+        <a href="/x" {...dialogOpenerProps(OPENER)}>
           開いた元
         </a>
         <Popover open>
@@ -80,7 +96,7 @@ describe("finalFocusToOpener", () => {
     );
     await expect.element(screen.getByRole("dialog", { name: "ポップオーバー" })).toBeVisible();
 
-    finalFocusToOpener(findLink)("mouse");
+    finalFocusToOpener(OPENER)("mouse");
 
     await expect.element(screen.getByRole("link", { name: "開いた元" })).toHaveFocus();
   });
@@ -123,7 +139,7 @@ describe("finalFocusToOpener", () => {
     const screen = await render(
       <>
         <h1>ページ</h1>
-        <a href="/x" data-opener="">
+        <a href="/x" {...dialogOpenerProps(OPENER)}>
           開いた元
         </a>
         {popup}
@@ -133,11 +149,27 @@ describe("finalFocusToOpener", () => {
     await expect.element(input).toHaveFocus();
     const focusins = recordFocusins();
 
-    finalFocusToOpener(findLink)("mouse");
+    finalFocusToOpener(OPENER)("mouse");
     // 判定は呼んだ時点で積んだ microtask の中で走る。後に積んだ microtask を待てば、判定は済んでいる
     await Promise.resolve();
 
     await expect.element(input).toHaveFocus();
     expect(focusins).toEqual([]);
+  });
+});
+
+describe("dialogOpenerRef", () => {
+  it("読むたびに、その時点の DOM から名前の合う開いた元を返す", async () => {
+    const ref = dialogOpenerRef(OPENER);
+    const screen = await render(<h1>ページ</h1>);
+    expect(ref.current).toBeNull();
+
+    await screen.rerender(
+      <a href="/x" {...dialogOpenerProps(OPENER)}>
+        開いた元
+      </a>,
+    );
+
+    await expect.poll(() => ref.current?.textContent).toBe("開いた元");
   });
 });
