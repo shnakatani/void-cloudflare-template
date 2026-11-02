@@ -1,5 +1,6 @@
 import type { Row, RowData, TableOptions } from "@tanstack/react-table";
 import { useTable } from "@tanstack/react-table";
+import { useTanStackTableDevtools } from "@tanstack/react-table-devtools";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 
@@ -22,6 +23,8 @@ interface DataTableBaseProps<TData extends RowData> extends Pick<
   TableOptions<DataTableFeatures, TData>,
   "columns" | "data" | "getRowId"
 > {
+  /** devtools に登録する識別子。画面ごとに一意にする (`useTable` の `key`) */
+  tableKey: string;
   /**
    * table の名前。見た目には出さず caption に置く。読み込み中の `TableSkeleton` にも同じ値を渡し、
    * 本体へ置き換わっても名前を変えない (`docs/guides/lists-and-search.md`「一覧テーブルを組む」)
@@ -64,6 +67,7 @@ type DataTableProps<TData extends RowData> = DataTableBaseProps<TData> &
  * 列見出しの `scope="col"` の理由も ADR-0018。
  */
 export function DataTable<TData extends RowData>({
+  tableKey,
   caption,
   columns,
   data,
@@ -75,6 +79,7 @@ export function DataTable<TData extends RowData>({
   renderSubComponent,
 }: DataTableProps<TData>) {
   const table = useTable({
+    key: tableKey,
     features: dataTableFeatures,
     columns,
     data,
@@ -85,6 +90,7 @@ export function DataTable<TData extends RowData>({
     // 戻さない (TanStack Table の guide「Expanding」の Auto Reset Expanded State)
     autoResetExpanded: false,
   });
+  useTanStackTableDevtools(table);
   const rows = table.getRowModel().rows;
 
   return (

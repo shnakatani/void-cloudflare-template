@@ -58,6 +58,7 @@ async function renderCells(options: CellsOptions = {}) {
     return (
       <VoidRouterProvider router={router}>
         <DataTable
+          tableKey="notes"
           caption={NOTES_PAGE_TITLE}
           columns={noteColumns}
           data={toNoteRows({ notes, deletingIds, q })}

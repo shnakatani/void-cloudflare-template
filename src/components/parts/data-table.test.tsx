@@ -47,7 +47,9 @@ describe("DataTable", () => {
   // table は名前が必須のロール (WAI-ARIA 1.2)。HTML の table には caption で名前を付ける
   // (APG「Providing Accessible Names and Descriptions」の table の行)
   it("caption を table の名前にする", async () => {
-    const screen = await render(<DataTable caption="果物の一覧" columns={columns} data={FRUITS} />);
+    const screen = await render(
+      <DataTable tableKey="fruits" caption="果物の一覧" columns={columns} data={FRUITS} />,
+    );
 
     await expect.element(screen.getByRole("table", { name: "果物の一覧" })).toBeInTheDocument();
   });
@@ -60,7 +62,7 @@ describe("DataTable", () => {
     ]);
     const screen = await render(
       <div style={{ width: 160 }}>
-        <DataTable caption="果物の一覧" columns={sized} data={FRUITS} />
+        <DataTable tableKey="fruits" caption="果物の一覧" columns={sized} data={FRUITS} />
       </div>,
     );
 
@@ -68,7 +70,9 @@ describe("DataTable", () => {
   });
 
   it("列定義の順に列見出しを scope=col で描き、行はセル単位で描く", async () => {
-    const screen = await render(<DataTable caption="果物の一覧" columns={columns} data={FRUITS} />);
+    const screen = await render(
+      <DataTable tableKey="fruits" caption="果物の一覧" columns={columns} data={FRUITS} />,
+    );
 
     const headers = screen.getByRole("columnheader");
     await expect
@@ -83,6 +87,7 @@ describe("DataTable", () => {
   it("rowProps で busy にした行だけを半透明にする", async () => {
     const screen = await render(
       <DataTable
+        tableKey="fruits"
         caption="果物の一覧"
         columns={columns}
         data={FRUITS}
@@ -96,7 +101,9 @@ describe("DataTable", () => {
   });
 
   it("data が空のときは列数ぶんの colSpan を持つ案内行を 1 つ描く", async () => {
-    const screen = await render(<DataTable caption="果物の一覧" columns={columns} data={[]} />);
+    const screen = await render(
+      <DataTable tableKey="fruits" caption="果物の一覧" columns={columns} data={[]} />,
+    );
 
     await expect
       .element(screen.getByRole("cell", { name: "データがありません" }))
@@ -135,6 +142,7 @@ describe("DataTable", () => {
       return (
         <div style={{ width: 160 }}>
           <DataTable
+            tableKey="fruits"
             caption="果物の一覧"
             columns={expandable}
             data={data}
@@ -202,6 +210,7 @@ describe("DataTable", () => {
       const screen = await render(
         <div style={{ display: "flex", width: 160 }}>
           <DataTable
+            tableKey="fruits"
             caption="果物の一覧"
             columns={expandable}
             data={FRUITS}
@@ -222,6 +231,7 @@ describe("DataTable", () => {
       const screen = await render(
         <div style={{ display: "flex", width: 160 }}>
           <DataTable
+            tableKey="fruits"
             caption="果物の一覧"
             columns={expandable}
             data={FRUITS}
