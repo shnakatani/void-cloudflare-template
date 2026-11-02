@@ -40,7 +40,7 @@ export function NoteSearchField({
             type="search"
             aria-label={NOTE_SEARCH_LABEL}
             placeholder={NOTE_SEARCH_LABEL}
-            // 上限は maxLength で打ち止めにしない。超えた分は schema が切り詰める (ADR-0019、ADR-0036)
+            // 上限は maxLength で打ち止めにしない。超えた分は schema が切り詰める (ADR-0036)
             value={value}
             onChange={(event) => onValueChange(event.target.value)}
           />

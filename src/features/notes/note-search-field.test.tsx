@@ -18,7 +18,7 @@ describe("NoteSearchField", () => {
     expect(onValueChange).toHaveBeenLastCalledWith("りんご");
   });
 
-  // 上限は入力欄で打ち止めにしない。超えた分は schema が切り詰める (ADR-0019、ADR-0036)
+  // 上限は入力欄で打ち止めにしない。超えた分は schema が切り詰める (ADR-0036)
   it("上限を超えて打っても入力欄は切らずに渡す", async () => {
     const onValueChange = vi.fn();
     const screen = await render(
