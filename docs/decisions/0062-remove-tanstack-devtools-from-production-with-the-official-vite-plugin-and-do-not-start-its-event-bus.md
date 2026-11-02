@@ -8,9 +8,9 @@
 
 dev の画面に TanStack Devtools の panel (`<TanStackDevtools>`) を出す。本番の build には入れない。
 
-- TanStack Devtools の docs「Vite Plugin」は、`@tanstack/devtools-vite` を dev の依存に入れ、Vite の config の最初の plugin に置くよう案内する。plugin の sub-plugin はどれも `enforce: 'pre'` で、framework の plugin が JSX を変換する前に動く (同梱の skill `devtools-vite-plugin`)
+- TanStack Devtools の docs「Vite Plugin」は、`@tanstack/devtools-vite` を dev の依存に入れ、Vite の config の最初の plugin に置くよう案内する。plugin の sub-plugin のうち、アプリの JSX を触る transform (`inject-source`・`remove-devtools-on-build`・`better-console-logs`・`console-pipe-transform`) は `enforce: 'pre'` で、framework の plugin が JSX を変換する前に動く (`@tanstack/devtools-vite` の `src/plugin.ts`)
 - docs「Production」は、Vite の project では plugin が本番の build から devtools を外すとする。devtools を import したファイルを環境で分けて読む形は、Vite でない project のための形である
-- Void の docs は `voidPlugin()` を framework の plugin より前に置く (`node_modules/void/docs/integrations/frameworks/tanstack-start.md`)。devtools の plugin を最初に置いても、この順は崩れない
+- Void の docs は `voidPlugin()` を framework の plugin より前に置く (`node_modules/void/docs/guide/pages-routing/overview.md` の `plugins: [voidPlugin(), voidReact()]`。"must come before the framework plugin" の注記は `integrations/frameworks/tanstack-start.md`)。devtools の plugin を最初に置いても、この順は崩れない
 
 ### Void の dev で各機能が働くか
 
