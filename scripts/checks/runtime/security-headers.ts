@@ -166,6 +166,12 @@ async function run(): Promise<void> {
           `${path} の応答を得られない: ${error instanceof Error ? error.message : String(error)}`,
         );
       });
+      if (signedIn && response.status === 302) {
+        // 守る path は、session が効いていないと login へ redirect する。path ではなくログインを疑う
+        throw new CheckFailure(
+          `${path} が 302 を返した。検査のユーザーのログインが効いていない (session の cookie が preview の origin に合わないなど)`,
+        );
+      }
       if (response.status !== status) {
         // 期待と違う status の応答を検査しても、その path の経路を確かめたことにならない
         throw new CheckFailure(
