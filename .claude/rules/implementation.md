@@ -91,6 +91,18 @@ lint では見ないのでレビューで見る。
 - 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)
 - loader が失敗の値を返した区画の再試行は、`router.refresh()` を `Button` の `onClick` から呼ぶ。`SectionErrorBoundary` の再試行は loader を読み直さない (`docs/guides/data-loading.md`「失敗した画面から再試行する」)
 
+## 一覧の上のフォームのダイアログは一覧のページの query で開く
+
+lint では見ないのでレビューで見る。
+
+- 追加と編集のダイアログは一覧のページの query (`<一覧>?new`、`<一覧>?edit=<id>`) で開き、Dialog の Root は開閉をまたいで描いたまま `open` を props から導く (ADR-0056)
+- 保存の Action の間は、Root の `onOpenChange` で `eventDetails.cancel()` を呼び、キャンセルのボタンも `disabled` にする。止める条件はそのダイアログ自身の保存の pending だけにする。閉じる遷移が保存の送信を取り消す (ADR-0056)
+- ダイアログの中身に、ダイアログの種類と値の id から作った `key` を渡す。渡さないと、開いたまま別の値へ移ったとき form が前の値のまま残る (ADR-0056)
+- `finalFocus` に関数を渡し、開いた元のリンクを data 属性で探して返す。無ければ `moveFocusToPageHeading()` を呼んで `false` を返し、別のダイアログに替わるときも `false` を返す (ADR-0056)
+- 操作中の行の開くリンクは `Button` の `focusableWhenDisabled` と `disabled` に描き替える。native の `disabled` は tab 順から外れ、focus が `<body>` へ落ちる (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
+- ダイアログを足したら、閉じたときの focus を、URL を直接開いた状態からページのテストで確かめる。開くリンクを押して開くと、探し方が誤っていても Base UI の既定でリンクへ戻り、テストが通る (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
+- 替わったときに開いた元のリンクが focus を受けないことは、`recordFocusins` (`src/test/assert/focusin.ts`) の記録で確かめる。`toHaveFocus` の retry では捉えられない (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
+
 ## 日付と日時の値は意味で分類して持つ
 
 lint では見ないのでレビューで見る。
