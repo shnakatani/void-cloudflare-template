@@ -1,9 +1,11 @@
 import { useRouter } from "@void/react";
 import { useEffect, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 
+import { ActionButton } from "@/components/action/button";
 import { FullScreenNotice } from "@/components/parts/centered-card";
-import { Button } from "@/components/ui/button";
+import { focusPageHeading } from "@/lib/focus-page-heading";
 
 /**
  * 本文に出す固定の文言。原因ではなく次に取れる行動だけを伝える
@@ -19,9 +21,23 @@ const ERROR_TITLE_PREFIX = "エラー: ";
  *
  * 出している間は `document.title` の前に「エラー: 」を付け、タブと遷移の読み上げ (ADR-0049) にも失敗を出す。
  * 外れたときは、title が付けたときのままなら戻す。再試行や遷移で Void が書き換えていたら、その値を残す。
- * `error` が変わったら付け直す。遷移の先でも失敗すると、この部品は作り直されずに次の `error` を受ける
+ * `error` が変わったら付け直す。遷移の先でも失敗すると、この部品は作り直されずに次の `error` を受ける。
+ *
+ * 出た時点で focus が無ければ見出しへ移す。遷移を伴わない失敗 (操作による再描画の throw) では、
+ * 失敗で消えた要素に乗っていた focus が body に落ちて、キーボードの利用者の位置が失われる。
+ * 再試行は決着するまで押せない (`ActionButton`)。
  */
-export function AppError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+export function AppError({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => Promise<void> | void;
+}) {
+  useEffect(() => {
+    focusPageHeading(true);
+  }, []);
+
   useEffect(() => {
     const pageTitle = document.title;
     const errorTitle = `${ERROR_TITLE_PREFIX}${pageTitle}`;
@@ -35,16 +51,19 @@ export function AppError({ error, onRetry }: { error: unknown; onRetry: () => vo
 
   return (
     <FullScreenNotice title="エラーが発生しました" description={APP_ERROR_MESSAGE}>
-      <Button onClick={onRetry} className="w-full">
+      <ActionButton action={onRetry} className="w-full">
         再試行
-      </Button>
+      </ActionButton>
     </FullScreenNotice>
   );
 }
 
 /**
  * 再試行は loader を読み直してから境界を戻す。先に戻すと、失敗したときの props のまま描き直して同じ失敗を繰り返し、
- * 読み直した props が届いても境界は戻らない
+ * 読み直した props が届いても境界は戻らない。
+ *
+ * 戻した描画を同期で確定させてから見出しへ focus を移す。押した再試行のボタンは境界を戻すと消え、
+ * focus は body に落ちる
  */
 function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const router = useRouter();
@@ -56,15 +75,11 @@ function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       // 読み直せなくても境界は戻し、描き直せるかを試す。描き直しも失敗すれば、この表示に戻る
       console.warn("[AppErrorBoundary] 再読み込みに失敗した", { error: refreshError });
     }
-    resetErrorBoundary();
+    flushSync(resetErrorBoundary);
+    focusPageHeading(true);
   }
 
-  function handleRetry() {
-    // retry が失敗を warn に残して処理し切る
-    void retry();
-  }
-
-  return <AppError error={error} onRetry={handleRetry} />;
+  return <AppError error={error} onRetry={retry} />;
 }
 
 /**

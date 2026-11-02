@@ -116,7 +116,7 @@ export function usePageAction<U extends ActionUrl>(
  * form の field に出す処理と、送る前にそのエラーを消す `submit` を足す。
  *
  * ```tsx
- * const form = useAppForm({ defaultValues, onSubmit: async ({ value }) => { await run(value); } });
+ * const form = useAppForm({ defaultValues, onSubmit: async ({ value }) => { await run(v.parse(inputSchema, value)); } });
  * const { run, submit } = usePageActionForm(form, "/notes/:id", { method: "PUT", params });
  * <ActionForm submitAction={submit}>...</ActionForm>
  * ```
@@ -130,7 +130,8 @@ export function usePageAction<U extends ActionUrl>(
  * - `submit` は、各 field の `errorMap.onSubmit` を消してから `form.handleSubmit()` を呼ぶ。form-core (1.33.5) は
  *   検証を持たない field の `errorMap.onSubmit` を submit の検証で消さず、`handleSubmit` が `onSubmit` の前に止まる。
  *   原因が別の field にあるエラー、編集できない field へのエラー、server の状態で決まるエラーが残ると、form が
- *   二度と送れない。消しても失うものは無い。client の `onSubmit` の validator は、submit の検証で計算し直される
+ *   二度と送れない。消すと、送信が決着するまでは前回の server のエラーの表示が消えるが、server が同じエラーを返せば
+ *   決着で再び出る。client の `onSubmit` の validator は、submit の検証で計算し直される
  *   (`canSubmitWhenInvalid` は `canSubmit` の判定だけを外し、この止まり方は外さない)
  * - `run` は失敗でも `false` を返して resolve するので、`onSubmit` も resolve し、form-core は `isSubmitSuccessful` を
  *   `true` にする。form-core が `false` にするのは `onSubmit` が throw したときだけである。

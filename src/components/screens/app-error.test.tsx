@@ -1,4 +1,5 @@
 import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
+import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
 import { deferMock } from "@/test/app/defer-mock";
@@ -75,6 +76,45 @@ describe("AppError", () => {
 
     expect(document.title).toBe("ノート — アプリ");
   });
+
+  it("error が変わったら、そのときの title の前に付け直す", async () => {
+    const previous = document.title;
+    onTestFinished(() => {
+      document.title = previous;
+    });
+    document.title = "ノート — アプリ";
+    const screen = await render(<AppError error={new Error("a")} onRetry={() => {}} />);
+    await expect.poll(() => document.title).toBe("エラー: ノート — アプリ");
+
+    // 遷移の先でも失敗すると、Void が title を書き換えてからこの部品が次の error を受ける
+    document.title = "設定 — アプリ";
+    await screen.rerender(<AppError error={new Error("b")} onRetry={() => {}} />);
+
+    await expect.poll(() => document.title).toBe("エラー: 設定 — アプリ");
+  });
+
+  it("出た時点で focus が無ければ、見出しへ移す", async () => {
+    const screen = await render(<AppError error={new Error("x")} onRetry={() => {}} />);
+
+    await expect
+      .element(screen.getByRole("heading", { name: "エラーが発生しました", level: 1 }))
+      .toHaveFocus();
+  });
+
+  it("再試行が決着するまで押せず、再クリックでは onRetry を呼ばない", async () => {
+    const pending = Promise.withResolvers<undefined>();
+    const onRetry = vi.fn(() => pending.promise);
+    const screen = await render(<AppError error={new Error("x")} onRetry={onRetry} />);
+    const button = screen.getByRole("button", { name: "再試行" });
+
+    await button.click();
+    await expect.element(button).toBeDisabled();
+    await expect.element(button).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(onRetry).toHaveBeenCalledOnce();
+    pending.resolve(undefined);
+  });
 });
 
 describe("AppErrorBoundary", () => {
@@ -102,6 +142,25 @@ describe("AppErrorBoundary", () => {
       .toBeVisible();
     reload.resolve(undefined);
     await expect.element(screen.getByRole("heading", { name: "ページの中身" })).toBeVisible();
+  });
+
+  it("再試行が成功したら、描き直した見出しへ focus を移す", async () => {
+    const { screen, state } = await renderBoundary();
+    state.failing = false;
+
+    await screen.getByRole("button", { name: "再試行" }).click();
+
+    await expect.element(screen.getByRole("heading", { name: "ページの中身" })).toHaveFocus();
+  });
+
+  it("再試行のあとも失敗したら、失敗の見出しへ focus を移す", async () => {
+    const { screen } = await renderBoundary();
+
+    await screen.getByRole("button", { name: "再試行" }).click();
+
+    await expect
+      .element(screen.getByRole("heading", { name: "エラーが発生しました", level: 1 }))
+      .toHaveFocus();
   });
 
   it("再読み込みが失敗しても子を描き直し、失敗を warn に残す", async () => {

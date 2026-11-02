@@ -50,7 +50,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 | `router.refresh()` の決着を待ってから境界を戻す                                          | 読み直した props で描き直し、ページに戻った                                                                                                                          | **採用** |
 | 境界を戻してから `router.refresh()` を呼ぶ (`ErrorBoundary` の `onReset` で呼ぶ形を含む) | 失敗したときの props のまま描き直して同じ失敗をもう一度受け、エラー表示に戻った。読み直した props が届いても `resetKeys` (path) は変わらないので、境界は戻らなかった | 却下     |
 
-`onReset` は `resetErrorBoundary()` の中で、境界の state を戻す前に呼ばれる (`react-error-boundary` 6.1.6 の型の docstring「Optional callback to be notified when an error boundary is reset」)。refresh を呼び出せても、その決着は待てない。
+`onReset` は `resetErrorBoundary()` の中で、境界の state を戻す前に呼ばれる (`react-error-boundary` 6.1.6 の `dist/react-error-boundary.js` の `resetErrorBoundary` が `this.props.onReset?.(...)` の後に `this.setState` を呼ぶ。dist を読んで確かめた)。refresh を呼び出せても、その決着は待てない。
 
 ### 検討した案: 全画面のエラー表示の title
 

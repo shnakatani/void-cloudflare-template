@@ -25,10 +25,8 @@ vp dlx gitpick shnakatani/tanstack-start-template my-app && cd my-app && git ini
 ## 名前を置換する
 
 ```bash
-grep -rn "tanstack-start-template" --exclude-dir=node_modules --exclude-dir=.git .
+grep -rn "void-cloudflare-template" --exclude-dir=node_modules --exclude-dir=.git .
 ```
-
-grep に出ない `src/lib/app-name.ts` の `APP_NAME` も替える。
 
 ## 後始末
 
