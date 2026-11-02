@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-02
-- 関連: ADR-0047 (`CloudContextVariables` の augmentation は worker の program にだけある)、ADR-0048 (テストで `SharedContext` に値を渡す)、ADR-0052 (auth の table の migration)、ADR-0054 (保護を preview で確かめる)
+- 関連: ADR-0047 (`CloudContextVariables` の augmentation は worker の program にだけある)、ADR-0048 (テストで `SharedContext` に値を渡す)、ADR-0052 (auth の table の migration)、ADR-0054 (保護を preview で確かめる)、ADR-0060 (別の origin からの書き込みと、`routes/` の handler で user を読む)
 
 ## Context
 
