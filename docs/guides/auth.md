@@ -17,7 +17,7 @@
 
 1. `src/features/auth/access.ts` の `PROTECTED_PATHS` に、そのページの path の定数を import して足す。文字列を直に書くと、ページを動かして定数だけを直したときに、動かした先が黙って守られなくなる (ADR-0059)。下位の path (`/x/1`) も守られる。`/` だけは `/` そのものに限る
 2. `scripts/checks/runtime/auth-redirect.ts` の `EXPECTATIONS` に、その path が未ログインで `/login` へ送られる行を足す
-3. その path がページなら、`scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` に `signedIn: true` の行を足す。足さないと、そのページの HTML に CSP で止まる script があっても落ちない (`docs/guides/security-headers.md`「CSP の下で script を足す」)
+3. その path がページなら、`scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` に `signedIn: true` の行を足す。足さないと、そのページの HTML の `<script>` に CSP の nonce が届かなくても落ちない (`docs/guides/security-headers.md`「CSP の下で script を足す」)
 4. `vp build` のあと `vp run verify:auth-redirect` と `vp run verify:security-headers` で確かめる
 
 - どちらの一覧にも無い path は、未ログインでも開く。足し忘れても何も落ちないので、`auth-redirect.ts` の `EXPECTATIONS` の行で守る (ADR-0053)

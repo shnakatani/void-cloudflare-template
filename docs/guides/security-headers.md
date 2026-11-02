@@ -1,26 +1,29 @@
 # セキュリティヘッダ
 
-`void.config.ts` の `routing.headers` で付けるセキュリティヘッダ (CSP を含む)の変え方と、CSP を広げる前に試す手順と違反の集め方と、ヘッダが届く範囲、ヘッダごとの効き方を持つ。
+`void.config.ts` の `routing.headers` で付けるセキュリティヘッダと、`middleware/00.csp.ts` が付ける CSP の変え方と、CSP の下で script を足す手順、CSP を広げる前に試す手順と違反の集め方、ヘッダが届く範囲、ヘッダごとの効き方を持つ。
 
-| 決定                                                                      | ADR      |
-| ------------------------------------------------------------------------- | -------- |
-| inline の script を許さない CSP を送り、Void の deferred props を使わない | ADR-0051 |
+| 決定                                                                              | ADR      |
+| --------------------------------------------------------------------------------- | -------- |
+| HTML の応答に、global の middleware が応答ごとに作る nonce で strict CSP を付ける | ADR-0051 |
 
 ## how-to
 
 ### CSP の下で script を足す
 
-- `<script>` は `src` を持つ module の script にする。inline の `<script>` は本番で実行されない。dev は `script-src` に `'unsafe-inline'` が付くので止まらず、違反は本番の成果物でしか見えない (ADR-0051)
-- Void の deferred props は使わない。値が nonce の無い inline の script で届き、解決しない (ADR-0051)
-- 本番の HTML に CSP で止まる script が無いことは、`vp run verify:security-headers` が `scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` の HTML で見る。inline の `<script>`、別の origin の `src`、イベントハンドラの属性、`javascript:` の URL を落とす。判定は `scripts/lib/script-src-violations.ts`
+- server が描く HTML の `<script>` には、`middleware/00.csp.ts` が応答の nonce を付ける。`<script>` に nonce を手で書かない (ADR-0051)
+- イベントハンドラは React の `onClick` などで付け、`on*` の属性や `javascript:` の URL で書かない。CSP の `script-src` が止める
+- 利用者の入力を `dangerouslySetInnerHTML` で HTML に入れない。入った `<script>` にも middleware が nonce を付け、CSP は止めない (ADR-0051)
+- HTML の応答の nonce は、`vp run verify:security-headers` が `scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` のうち 200 の HTML を 2 回ずつ取って見る。すべての `<script>` がヘッダと同じ nonce を持たないか、nonce が 2 回で同じなら落ちる。判定は `scripts/lib/csp-nonce.ts`
 - ログインが要るページは、検査のユーザーでログインして読む。ページを足したら、`CHECKED_RESPONSES` に `signedIn: true` で 1 行足す。足さないと、そのページの HTML は検査されず、何も落ちない
 - 検査のユーザー (`scripts/checks/runtime/security-headers.ts` の `CHECK_USER`) は、検査が初めて走ったときにローカルの D1 に作られ、dev の D1 にも残る。preview は dev と同じ D1 を使う。検査は走るたびに未適用の migration を当て、終わるとログアウトして session を消す
 
 ### ヘッダを足す・変える
 
 1. `void.config.ts` の `routing.headers` の `"/*"` の配列を書き換える。1 要素を `"Name: value"` の形で書く ([Void docs「Custom Headers」][])
-2. `scripts/checks/runtime/security-headers.ts` の `EXPECTED_HEADERS` を同じ値に揃える。CSP は production の値 (`NODE_ENV` が development 以外) を書く。定数を共有せず写しで持つ理由は、そのファイルの docstring にある
+2. `scripts/checks/runtime/security-headers.ts` の `EXPECTED_HEADERS` を同じ値に揃える。定数を共有せず写しで持つ理由は、そのファイルの docstring にある
 3. `vp run verify:build` のあとに `vp run verify:security-headers` を走らせる。検査は `vp preview` を空きの port で起動し、SSR のページ (ログインが要るページを含む)、`public/` の `/robots.txt`、route の無い path の 404 の応答に全件が乗ることを見る
+
+CSP は `routing.headers` に書かない。応答ごとの nonce を持つので、`middleware/00.csp.ts` が `Content-Type` が `text/html` の応答にだけ付ける (ADR-0051)。CSP の値を変えるときは、`src/lib/csp-nonce.server.ts` の `contentSecurityPolicy` と、検査の `EXPECTED_CSP` を揃える。
 
 | 対象                                                    | 起きること                                                                                                                                                                                                                                                                                     | 対処                                            |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
@@ -32,10 +35,10 @@
 
 `style-src` のように、いま止めていない種類の資源を止めるディレクティブを足すときは、先に `Content-Security-Policy-Report-Only` で配って違反を集める。Report-Only は違反を止めず、報せるだけにする ([MDN「Content-Security-Policy-Report-Only」][])。違反は `securitypolicyviolation` の event に `disposition: "report"` で出る (2026-11-02、Chromium 156 で確かめた)。
 
-1. `void.config.ts` の `routing.headers` の `"/*"` に、`Content-Security-Policy` と並べて `"Content-Security-Policy-Report-Only: <試すディレクティブ>"` を足す。`Content-Security-Policy` の行は変えない
-2. `vp build` のあと `vp preview` で起動し、「違反を集める」の手順で、ページの表示・client の遷移・ダイアログの開閉・戻るを通して違反を集める。dev は CSP の値が本番と違うので (ADR-0051)、dev では試さない
+1. `void.config.ts` の `routing.headers` の `"/*"` に `"Content-Security-Policy-Report-Only: <試すディレクティブ>"` を足す。nonce を使うディレクティブを試すときは、`middleware/00.csp.ts` で `Content-Security-Policy` と並べて付ける
+2. `vp build` のあと `vp preview` で起動し、「違反を集める」の手順で、ページの表示・client の遷移・ダイアログの開閉・戻るを通して違反を集める。dev の CSS は Vite が差し込む `<style>` で届き、本番と形が違うので、dev では試さない
 3. 違反を、コードを直すか、ディレクティブを広げるかで解消する
-4. 違反が出なくなったら、Report-Only の行を消してディレクティブを `void.config.ts` の `CSP` に入れ、「ヘッダを足す・変える」の手順で `EXPECTED_HEADERS` を揃える
+4. 違反が出なくなったら、Report-Only の行を消してディレクティブを `src/lib/csp-nonce.server.ts` の `contentSecurityPolicy` に入れ、検査の `EXPECTED_CSP` を揃える
 
 - テンプレートには違反の報告先 (`report-to`) が無い。違反はブラウザの event で見る
 - `style-src 'self'` を Report-Only で配ると、Void の `Link` が SSR で描く `style` 属性が `style-src-attr` の違反として出る (2026-11-02、Void 1.4.0 の `vp preview` と Playwright の Chromium 156。`Link` を持つページを直接開いたとき)。同じページへ client の遷移で入ったときは、違反が増えなかった。`style-src` を足すなら、`style-src-attr` に `'unsafe-inline'` を置いて属性だけを緩めることになる (ADR-0051)
@@ -90,17 +93,17 @@ SSR の page は 2026-11-02 に `/login` で取り直した。`/` は未ログ�
 
 ### ヘッダごとの効き方
 
-値は `void.config.ts` が持つ。効き方の出典は各ヘッダの MDN のページで、2026-09-30 に確かめた。
+値は `void.config.ts` が持ち、CSP だけは `src/lib/csp-nonce.server.ts` が持つ。効き方の出典は各ヘッダの MDN のページで、2026-09-30 に確かめた。
 
-| ヘッダ                         | 効き方                                                                                                                                                                                                                                                                                                           |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `X-Content-Type-Options`       | `nosniff` で MIME スニッフィングを止める。`script` と `style` の要求では MIME type が合わない応答をブラウザが止め、他の応答も `Content-Type` のまま扱う ([MDN「X-Content-Type-Options」][])                                                                                                                      |
-| `X-Frame-Options`              | `DENY` で、どの origin の frame にも読み込ませない。clickjacking を防ぐ ([MDN「X-Frame-Options」][])                                                                                                                                                                                                             |
-| `Referrer-Policy`              | `strict-origin-when-cross-origin` で、別 origin への要求には origin だけを送り、HTTPS から HTTP へは送らない。path とクエリが外部へ漏れない。値はブラウザの既定と同じ ([MDN「Referrer-Policy」][])                                                                                                               |
-| `Cross-Origin-Opener-Policy`   | `same-origin` で、別 origin の文書と browsing context group を分ける。`window.open()` の戻り値から global object に届かせない ([MDN「Cross-Origin-Opener-Policy」][])                                                                                                                                            |
-| `Cross-Origin-Resource-Policy` | `same-origin` で、別 origin からの `no-cors` の読み込みをブラウザが止める ([MDN「Cross-Origin-Resource-Policy」][])                                                                                                                                                                                              |
-| `Content-Security-Policy`      | `script-src 'self'` で、同じ origin の `src` 付きの script だけを実行する。`object-src 'none'` と `base-uri 'none'` で `<object>`・`<embed>` と `<base>` の差し込みを止め、`frame-ancestors 'none'` でどの origin の frame にも読み込ませない ([MDN「Content-Security-Policy」][])。決定と dev の扱いは ADR-0051 |
-| `Strict-Transport-Security`    | 以後の http のアクセスを HTTPS へ上げ、証明書のエラーを利用者が飛ばせなくする。`includeSubDomains` でサブドメインにも掛かる ([MDN「Strict-Transport-Security」][])                                                                                                                                               |
+| ヘッダ                         | 効き方                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `X-Content-Type-Options`       | `nosniff` で MIME スニッフィングを止める。`script` と `style` の要求では MIME type が合わない応答をブラウザが止め、他の応答も `Content-Type` のまま扱う ([MDN「X-Content-Type-Options」][])                                                                                                                                                                    |
+| `X-Frame-Options`              | `DENY` で、どの origin の frame にも読み込ませない。clickjacking を防ぐ ([MDN「X-Frame-Options」][])                                                                                                                                                                                                                                                           |
+| `Referrer-Policy`              | `strict-origin-when-cross-origin` で、別 origin への要求には origin だけを送り、HTTPS から HTTP へは送らない。path とクエリが外部へ漏れない。値はブラウザの既定と同じ ([MDN「Referrer-Policy」][])                                                                                                                                                             |
+| `Cross-Origin-Opener-Policy`   | `same-origin` で、別 origin の文書と browsing context group を分ける。`window.open()` の戻り値から global object に届かせない ([MDN「Cross-Origin-Opener-Policy」][])                                                                                                                                                                                          |
+| `Cross-Origin-Resource-Policy` | `same-origin` で、別 origin からの `no-cors` の読み込みをブラウザが止める ([MDN「Cross-Origin-Resource-Policy」][])                                                                                                                                                                                                                                            |
+| `Content-Security-Policy`      | `script-src 'nonce-…' 'strict-dynamic'` で、応答の nonce を持つ script と、それが作った script だけを実行する。`object-src 'none'` と `base-uri 'none'` で `<object>`・`<embed>` と `<base>` の差し込みを止め、`frame-ancestors 'none'` でどの origin の frame にも読み込ませない ([MDN「Content-Security-Policy」][])。HTML の応答にだけ付く。決定は ADR-0051 |
+| `Strict-Transport-Security`    | 以後の http のアクセスを HTTPS へ上げ、証明書のエラーを利用者が飛ばせなくする。`includeSubDomains` でサブドメインにも掛かる ([MDN「Strict-Transport-Security」][])                                                                                                                                                                                             |
 
 `Strict-Transport-Security` は、HTTPS で受け取った応答でだけ効く。http の応答に載っても、ブラウザは無視する ([RFC 6797][] の 8.1 節: "If an HTTP response is received over insecure transport, the UA MUST ignore any present STS header field(s).")。`vp dev` と `vp preview` は http で応答するので、手元のブラウザが HTTPS に固定されることは無い。
 
