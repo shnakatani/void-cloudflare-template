@@ -44,11 +44,16 @@ describe("NavigationProgress", () => {
     await renderProgress(loading);
     const bar = page.getBySlot("navigation-progress");
     await expect.element(bar).toBeInTheDocument();
-    const mountedAt = performance.now();
-    // 遅れ (300ms) より前の 150ms の時点では透明のまま
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    await expect.element(bar).toHaveStyle("opacity: 0");
-    expect.assert(performance.now() - mountedAt < 300, "遅れより前に読めなかった");
+    // 現れるまでの遅れは実時間で測らず、animation の timing で読む (実時間の読みは遅い実行環境で遅れを過ぎる)。
+    // fill-mode-backwards なので、遅れの間は fade-in の始まり (透明) のまま
+    await expect
+      .poll(() =>
+        bar
+          .element()
+          .getAnimations()
+          .map((animation) => animation.effect?.getTiming()),
+      )
+      .toEqual([expect.objectContaining({ delay: 300, fill: "backwards" })]);
     await expect.poll(() => getComputedStyle(bar.element()).opacity).toBe("1");
   });
 });
