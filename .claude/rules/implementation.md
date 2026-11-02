@@ -99,7 +99,7 @@ lint では見ないのでレビューで見る。
 - 追加と編集のダイアログは一覧のページの query (`<一覧>?new`、`<一覧>?edit=<id>`) で開き、Root は `QueryDialog` (`src/components/screens/query-dialog.tsx`) で描く。Dialog の Root を手で書かない。閉じる遷移、閉じ終わるまでの描画、中身の作り直し、開閉の読み上げ、読み込み中を書き写すことになる (ADR-0056)
 - `QueryDialog` の `blocksClose` には、そのダイアログ自身の保存の pending だけを渡し、キャンセルのボタンも同じ値で `disabled` にする。閉じる遷移が保存の送信を取り消す (ADR-0056)
 - `dialogKey` は種類と値の id から作る。id を含めないと、開いたまま別の値へ移ったとき form が前の値のまま残る (ADR-0056)
-- `pending` には `useNavigation()` の行き先が開くダイアログを渡す。渡さないと、読み込みが続いても戻る・進むで開いたダイアログには何も見えない (ADR-0056「読み込み中」)
+- `pending` には `useNavigation()` の行き先が開くダイアログを渡す。常に `null` を渡すと、読み込みが続いても戻る・進むで開いたダイアログには何も見えない (ADR-0056「読み込み中」)
 - 見つからない・読めない 1 件は `StatusDialogContent` で描く (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
 - `finalFocus` に `finalFocusToOpener(<開いた元の名前>)` (`src/lib/dialog-final-focus.ts`) を渡し、開くリンクには `dialogOpenerProps(<同じ名前>)` を spread する。閉じたら開いた元のリンクへ、無ければ見出しへ移し、別のダイアログに替わったら触れない。`finalFocus` からリンクを返すと、替わるときに focus がリンクを経由する (ADR-0056)
 - 操作中の行の開くリンクは `ButtonLink` の `disabled` で止め、無効のボタンに描き替えない。操作が失敗して無効が解けると要素が替わり、focus が `<body>` へ落ちる (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
