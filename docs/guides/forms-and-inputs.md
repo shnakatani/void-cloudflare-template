@@ -115,7 +115,7 @@ ADR-0056 に沿って、一覧のページの query で開く追加と編集の�
 | Dialog の Root                                                 | 開閉をまたいで描いたまま残し、`open` を props のダイアログの値から導く。`onOpenChange` で閉じる操作を受け、保存中なら `eventDetails.cancel()` を呼んで止め、そうでなければ `startVisit(router, <一覧の URL>, { preserveScroll: true })` で一覧へ戻る |
 | ダイアログの中身                                               | Root の子に置き、ダイアログの種類と値の id から作った `key` を渡す                                                                                                                                                                                   |
 | キャンセルの `DialogClose`                                     | 保存中は `disabled` を渡す                                                                                                                                                                                                                           |
-| `ActionDialogContent` (フォームを持たないなら `DialogContent`) | `finalFocus` に関数を渡す。開いた元のリンクを data 属性で `document.querySelector` して返し、無ければ `moveFocusToPageHeading()` (`src/lib/focus-page-heading.ts`) を呼んで `false` を返す。別のダイアログに替わるときは `false` を返す              |
+| `ActionDialogContent` (フォームを持たないなら `DialogContent`) | `finalFocus` に `finalFocusToOpener` (`src/lib/dialog-final-focus.ts`) の関数を渡す。引数には、開いた元のリンクを data 属性で `document.querySelector` して返す関数を渡す                                                                            |
 | 保存と削除の action                                            | `usePageAction` / `usePageActionForm` に `pageQuery` を渡し、一覧の条件を保った絶対 URL へ redirect する (`docs/guides/react/updates.md`「mutation の書き方」)                                                                                       |
 | 操作中 (削除中など) の行の開くリンク                           | `Button` の `focusableWhenDisabled` と `disabled` に描き替え、tab 順に残す。`ButtonLink` は無効の状態を持たない                                                                                                                                      |
 
@@ -126,7 +126,7 @@ ADR-0056 に沿って、一覧のページの query で開く追加と編集の�
   - 閉じる操作で閉じたら、開いた元のリンクへ focus が戻る (無ければページの見出しへ)
   - 保存したら、開いた元のリンクへ focus が戻る
   - 別のダイアログに替わったとき (別の値の URL へ、追加と編集の行き来)、開いた元のリンクが focus を受けない
-- 閉じたときの focus は、URL を直接開いた状態 (偽の router の初期の URL をダイアログの URL にして描く) から確かめ、開くリンクを押して開かない。リンクを押して開くと、探し方が誤っていても Base UI の既定の戻し先 (開く前に focus していた要素) でリンクへ戻り、テストが通る ([Base UI docs「Dialog」][])
+- `finalFocus` からリンクを返さない。Base UI は `finalFocus` を、閉じたのか別のダイアログに替わったのかが分かる前に呼ぶ。返したリンクは替わるときにも focus を受ける。`finalFocusToOpener` は Base UI に `false` を返し、commit の後に開いているダイアログが無いときだけ移す (ADR-0056)
 - 替わったときに開いた元のリンクが受ける focus は、すぐに替わる側の入力欄へ移るので、`toHaveFocus` の retry では捉えられない。替わる前に `recordFocusins` (`src/test/assert/focusin.ts`) で記録を始め、替わる側の入力欄の `toHaveFocus` を待ってから、記録に開いた元のリンクが無いことを見る。ダイアログが開いている間は背後の要素が `aria-hidden` になり、`getByRole` は既定で引かないので、記録の要素は可視の文字か `aria-label` で見分ける
 
 ### 入力欄の周りに要素を置く
