@@ -8,14 +8,14 @@
 
 一覧に、文字列の部分一致で絞り込む検索欄を置く。条件を URL に持てば、共有、再読み込み、戻る・進むで同じ一覧になる。
 
-| 出典                                              | 内容                                                                                                                                                                                                                  |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Void docs「Pages Routing」の How Navigation Works | "Later navigations run the loader and update the page without reloading the document." ページの props を入れ替える経路はこれだけで、client から別に取得するなら、`routes/` の API を叩く 2 本目の経路を足すことになる |
-| Void docs「Pages API」(`reference/api/pages.md`)  | `router.visit` は `replace` と `preserveScroll` を受ける。`useNavigation()` は `{ state, location, method }` を返す。route ごとの pending の表示を出す口は無い                                                        |
-| ADR-0050                                          | loader の throw は静的な 500 のページに、`c.notFound()` は静的な 404 のページになる。検索欄も一覧も消える                                                                                                             |
-| ADR-0017                                          | 後から始めた visit が、commit 前の visit を取り消す                                                                                                                                                                   |
-| ADR-0027                                          | ページは URL の変化で作り直されないので、入力欄の state は遷移をまたいで残る                                                                                                                                          |
-| nuqs の `history` option                          | URL の state の既定を `replace` にし、push はタブやモーダルのようにナビゲーションに当たるときだけにする                                                                                                               |
+| 出典                                                                                      | 内容                                                                                                                                                                                                                                           |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Void docs「Pages Routing」の How Navigation Works                                         | "Later navigations run the loader and update the page without reloading the document." ページの props を入れ替える経路はこれだけで、client から別に取得するなら、`routes/` の API を叩く 2 本目の経路を足すことになる                          |
+| Void docs「Pages API」(`reference/api/pages.md`) と「Pages Routing」の Scroll Restoration | `useNavigation()` は `{ state, location, method }` を返す。route ごとの pending の表示を出す口は docs に無い。`router.visit` は `preserveScroll` を受け、`replace` は `VisitOptions` の型 (`node_modules/void/dist/pages/client.d.mts`) が持つ |
+| ADR-0050                                                                                  | loader の throw は静的な 500 のページに、`c.notFound()` は静的な 404 のページになる。検索欄も一覧も消える                                                                                                                                      |
+| ADR-0017                                                                                  | 後から始めた visit が、commit 前の visit を取り消す                                                                                                                                                                                            |
+| ADR-0027                                                                                  | ページは URL の変化で作り直されないので、入力欄の state は遷移をまたいで残る                                                                                                                                                                   |
+| nuqs の `history` option                                                                  | URL の state の既定を `replace` にし、push はタブやモーダルのようにナビゲーションに当たるときだけにする                                                                                                                                        |
 
 ### 実測: 打鍵と遷移
 
