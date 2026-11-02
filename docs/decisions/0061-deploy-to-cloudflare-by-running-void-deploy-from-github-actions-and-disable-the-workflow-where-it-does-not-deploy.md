@@ -37,7 +37,7 @@ workflow のファイルはテンプレートから作った repository にそ�
 | `DATABASE_URL` を渡す                                               | 渡さない                                            | PostgreSQL と MySQL のためのもので、このアプリは D1 を使う (ADR-0052)                                                                                                          |
 | 英語のコメント                                                      | 日本語のコメント                                    | ほかの workflow とそろえる                                                                                                                                                     |
 
-ファイル名、trigger、`concurrency`、`permissions`、残りの環境変数 (`CLOUDFLARE_WORKERS_SUBDOMAIN`、`CF_ACCESS_*`) は生成物のままにする。`void init --github` は `void-deploy.yml` があれば生成を飛ばすので (Void 1.4.0 の `cli/init.ts` の `setupGithubActions`)、名前を変えると、打ち直したときに 2 本目の deploy の workflow ができる。
+ファイル名、trigger、`concurrency`、`permissions`、残りの環境変数 (`CLOUDFLARE_WORKERS_SUBDOMAIN`、`CF_ACCESS_*`) は生成物のままにする。`concurrency` の `cancel-in-progress: true` は、古い commit の deploy が新しい commit の deploy を後から上書きしないためのものである (Void 1.4.0 の `cli/init.ts` の Void platform 向けの分岐のコメント "Latest push wins")。取り消しは migration を当てたあとにも起こりうるが、deploy は当てる前に復元点を保存して `void db restore` の command をログに出し、次の push の deploy が未適用の migration を当てる (Void の docs「Deployment」の Migrations、Void 1.4.0 の `cli/deploy-migrations.ts` は当てる前にログへ出す)。`void init --github` は `void-deploy.yml` があれば生成を飛ばすので (Void 1.4.0 の `cli/init.ts` の `setupGithubActions`)、名前を変えると、打ち直したときに 2 本目の deploy の workflow ができる。
 
 ### 検討した選択肢
 
