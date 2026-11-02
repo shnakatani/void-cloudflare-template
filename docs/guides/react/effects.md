@@ -90,6 +90,7 @@ effect が読む値は、変わったら外の系に合わせ直す契機にな�
 3. 遷移の完了 (新しいページの title が入った後) を待つ処理は、`useNavigation()` が idle に戻った描画の effect で行う。path が変わった描画の時点では、`document.title` が前のページの値のことがある (ADR-0049 の調査結果)
 4. 開発時の二重実行で、送った回数が利用者に見える結果を変えるかを確かめる (「開発時の二重実行が示すもの」)。変えるなら、直前に扱った path を ref に持ち、同じなら何もしない (`src/components/route-announcer.tsx`)
 
+- そのページが出ている間だけ要る連携 (そのページの部品と外の widget を合わせる処理など) は、ページの component の effect に書いてよい。layout に置くのは、どのページへ移っても、失敗の表示の間も途切れてはいけない処理だけにする
 - 最初のページを数えない処理 (遷移の読み上げなど) は、ref の初期値を最初の path にして、mount の effect では何もしない
 - 遷移の途中の状態を画面に出すなら、effect で外へ写さず `useNavigation()` の値で描く (`src/components/navigation-progress.tsx`)
 
