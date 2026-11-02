@@ -46,7 +46,7 @@ patch を当てない 1.4.0 で、`ActionButton` の Action の `await run()` �
 `action()` は、受けた値に `_resolveOnShell` を足して `submitAction` (`void/pages-client`) に渡すだけである。`@void/react` 1.4.0 の `useForm` は、同じ値を `submitAction` に直に渡している (`packages/react/src/runtime/use-form.ts`)。
 `usePageAction` も `submitAction` に `_resolveOnShell: true` を直に渡す (ADR-0016「制約: Action の中の送信は `_resolveOnShell` を付けて決着させる」)。
 
-`_resolveOnShell` を付けて、2 秒待つ action を `ActionButton` の Action から送ると、次の順に決着した (2026-11-02、dev、30 ms ごとの標本、react 19.3.1。`action()` に 5fd23eb の変更を当てて測った)。
+`_resolveOnShell` を付けて、2 秒待つ action を `ActionButton` の Action から送ると、次の順に決着した (2026-11-02、dev、30 ms ごとの標本、react 19.3.1。5fd23eb の変更を当てた `action()` で測った。`usePageAction` が `submitAction` に渡す値と同じ)。
 
 | 時点 (送信の開始から) | 起きたこと                                       |
 | --------------------- | ------------------------------------------------ |
