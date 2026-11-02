@@ -27,7 +27,7 @@ Void 1.4.0 は、この要求を 2 か所で扱う。2026-11-02 に `vp preview`
 **別の origin からの書き込みを止める仕組みは足さず、Void の 2 か所 (page の action の origin の判定と、session の cookie を捨てる判定) に任せる。`routes/` の書き込みの handler は、`requireAuth(c)` で user を読んでから書く。**
 
 - cookie を捨てられた要求は user が無いので、`requireAuth(c)` が 401 で止める
-- user を読まずに書く handler と、Void の session でない cookie を読む handler は、Void の判定では守られない。作らないか、その handler に origin の判定を足す (`docs/guides/auth.md`「`routes/` に書き込みの handler を足す」)
+- Void の session でない cookie を読む handler は、Void の判定では守られない。その handler に origin の判定を足す (Void の docs「Authentication」の Behavior、`docs/guides/auth.md`「`routes/` に書き込みの handler を足す」)
 
 ### 検討した選択肢
 

@@ -28,13 +28,12 @@
 
 `routes/` の handler には、page の action のような origin の判定が掛からない。Void が別の origin からの書き込みの要求で session の cookie を捨てるので、user を読んで書く handler だけが守られる (ADR-0060、「別の origin からの書き込みが止まる仕組み」)。足す handler の形で守り方を選ぶ。
 
-| handler の形                                                      | 守り方                                                                                                                                               |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST`・`PUT`・`PATCH`・`DELETE` で、ログインした user の行を書く | 書く前に `requireAuth(c)` で user を読み、その user で絞って書く。別の origin からの要求は user が無く、401 で止まる                                 |
-| ログインしていなくても書く (問い合わせの受付など)                 | Void の判定が掛からない。handler に origin の判定を足す。Void の docs は Hono の `csrf()` を例に挙げる ([Void docs「Authentication」][] の Behavior) |
-| Void の session でない cookie を読む                              | 上の行と同じ。Void が捨てるのは session の cookie だけである                                                                                         |
-| `GET` で書く                                                      | 作らない。書き込みは `POST` などで受ける。`GET` は cookie を捨てる判定を通らず、別の origin から session のまま走る                                  |
-| 別の origin の frontend から呼ばせる                              | その origin を `auth.ts` の `trustedOrigins` に足す (「auth の設定を変える」)。足さないと、その frontend の書き込みはログインしていない要求になる    |
+| handler の形                                                      | 守り方                                                                                                                                                                      |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`・`PUT`・`PATCH`・`DELETE` で、ログインした user の行を書く | 書く前に `requireAuth(c)` で user を読み、その user で絞って書く。別の origin からの要求は user が無く、401 で止まる                                                        |
+| Void の session でない cookie を読む                              | Void が捨てるのは session の cookie だけである。handler に origin の判定を足す。Void の docs は Hono の `csrf()` を例に挙げる ([Void docs「Authentication」][] の Behavior) |
+| `GET` で書く                                                      | 作らない。書き込みは `POST` などで受ける。`GET` は cookie を捨てる判定を通らず、別の origin から session のまま走る                                                         |
+| 別の origin の frontend から呼ばせる                              | その origin を `auth.ts` の `trustedOrigins` に足す (「auth の設定を変える」)。足さないと、その frontend の書き込みはログインしていない要求になる                           |
 
 - handler の path が `PROTECTED_PATHS` の下にあれば、user の無い要求は middleware が `/login` へ redirect する。それでも handler の中で `requireAuth(c)` を読む。path の一覧から外れても、handler が自分で止まる
 - `Origin` も `Sec-Fetch-Site` も `Referer` も無い要求は、ブラウザの外の client として扱われ、session の cookie を持てば user が読める。ブラウザの外の client から呼ばせない API でも、user を読む判定は外さない
