@@ -385,7 +385,9 @@ describe("NotesPage の削除", () => {
     await expect.element(next).toBeDisabled();
     await userEvent.keyboard("{Enter}");
     await expect.element(next).toHaveFocus();
-    await expectAbsent(screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title)));
+    await expectAbsent(
+      screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title), { exact: false }),
+    );
     expect(submitAction).toHaveBeenCalledOnce();
 
     first.resolve({ ok: true, pageData: undefined });

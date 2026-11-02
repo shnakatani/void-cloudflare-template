@@ -288,7 +288,9 @@ describe("NoteActionsCell", () => {
     await userEvent.keyboard("{Enter}");
 
     await expect.element(trigger).toHaveFocus();
-    await expectAbsent(screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title)));
+    await expectAbsent(
+      screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title), { exact: false }),
+    );
 
     await update({ deletingIds: [] });
     await userEvent.keyboard("{Enter}");
