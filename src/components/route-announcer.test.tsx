@@ -1,5 +1,5 @@
 import { useRouter } from "@void/react";
-import { describe, expect, it, onTestFinished } from "vite-plus/test";
+import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { render } from "vitest-browser-react";
 import type { NavigationState } from "void/pages-client";
 
@@ -7,6 +7,13 @@ import { createFakeRouter, VoidRouterProvider, type FakeRouter } from "@/test/ap
 import { expectAnnouncements, readAnnouncements } from "@/test/assert/live-announcer";
 
 import { RouteAnnouncer } from "./route-announcer";
+
+// 待ちより早く終わった遷移に「読み込み中」を伝えないことは、待ちが過ぎる前にしか確かめられない。待ちを広げ、遅い runner でも
+// 遷移の途中で待ちが過ぎないようにする。待ちを縮めて伝えることを見るテストは route-announcer-pending.test.tsx に置く
+vi.mock(import("@/lib/pending-display"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  PENDING_DISPLAY_DELAY_MS: 60_000,
+}));
 
 /** 遷移中の状態。Void は遷移を始めるたびに新しい値を作るので、遷移の重なりは別の値を作って描き直す */
 function loadingTo(path: string): NavigationState {
@@ -80,6 +87,18 @@ describe("RouteAnnouncer", () => {
     router.navigate("/b");
     await expect.element(screen.getByRole("heading", { name: "/b" })).toHaveFocus();
     // Void は新しいページを描いた後、遷移を終える前に document.title を書き換える
+    setDocumentTitle("B — アプリ");
+    await screen.rerender(<Harness router={router} />);
+    await expectAnnouncements(["B — アプリ"]);
+  });
+
+  it("待ちより早く終わった遷移では、「読み込み中」を伝えず title だけを読み上げる", async () => {
+    const router = createFakeRouter("/a");
+    const screen = await render(<Harness router={router} />);
+    await screen.rerender(<Harness router={router} navigation={loading} />);
+    // 待ちを読まずに伝える実装なら、伝えたことが履歴に入るだけの時間を置く
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    router.navigate("/b");
     setDocumentTitle("B — アプリ");
     await screen.rerender(<Harness router={router} />);
     await expectAnnouncements(["B — アプリ"]);

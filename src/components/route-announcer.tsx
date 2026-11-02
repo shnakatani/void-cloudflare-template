@@ -1,8 +1,10 @@
 import { useNavigation, useRouter } from "@void/react";
 import { useEffect, useRef } from "react";
+import type { NavigationState } from "void/pages-client";
 
 import { focusPageHeading } from "@/lib/focus-page-heading";
 import { announce } from "@/lib/live-announcer";
+import { PENDING_DISPLAY_DELAY_MS } from "@/lib/pending-display";
 
 type FocusChangeRecord = {
   /** 記録を始めてから、利用者かアプリが focus を動かしたか */
@@ -35,8 +37,32 @@ function recordFocusChanges(): FocusChangeRecord {
 }
 
 /**
- * path の変わる遷移を利用者に伝える。新しいページの見出し (`focusPageHeading` が選ぶ) へ focus を移し、
- * `document.title` を読み上げる (ADR-0049)。root の layout に置き、DOM を描かない。
+ * 別のページへの遷移の読み込みが `PENDING_DISPLAY_DELAY_MS` を超えたら、「読み込み中」を 1 回読み上げる (ADR-0049「待ちの読み上げ」)。
+ * 依存は遷移の値ではなく、別のページを待っているかに置く。待ちの途中で次の遷移が始まっても測り直さず、重ねて読み上げない。
+ * 新しいページが描かれて path が行き先に揃うか、遷移が終わると、待ちは終わる
+ */
+function useAnnounceNavigationWait(path: string, navigation: NavigationState) {
+  const waiting =
+    navigation.state === "loading" &&
+    navigation.location !== null &&
+    navigation.location.pathname !== path;
+
+  useEffect(() => {
+    if (!waiting) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      announce("読み込み中");
+    }, PENDING_DISPLAY_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [waiting]);
+}
+
+/**
+ * path の変わる遷移を利用者に伝える。読み込みが続けば「読み込み中」を読み上げ、新しいページの見出し
+ * (`focusPageHeading` が選ぶ) へ focus を移し、`document.title` を読み上げる (ADR-0049)。root の layout に置き、DOM を描かない。
  *
  * Void は遷移の開始と完了を購読させないので、`useNavigation()` が idle 以外の新しい値になった描画から focus の記録を始め、
  * `useRouter().path` が変わった描画 (新しいページの描画) の effect で見出しへ focus を移し、`useNavigation()` が
@@ -51,6 +77,7 @@ export function RouteAnnouncer(): null {
   const focusChanges = useRef<FocusChangeRecord | null>(null);
   const handledPath = useRef(path);
   const titlePending = useRef(false);
+  useAnnounceNavigationWait(path, navigation);
 
   // 依存は state ではなく値そのものに置く。Void は遷移を始めるたびに新しい値を作り、ページの描画では同じ値を保つ
   // (pages-client.ts の appReducer)。state で見ると、遷移が重なったときに前の遷移の記録が残る
