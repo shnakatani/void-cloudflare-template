@@ -177,7 +177,7 @@ idle に戻った effect で読み上げる形では、続けてブラウザの�
 
 - `titleTemplate` を `%s — <アプリ名>` にすると、ホームの server の HTML の `<title>` は `<アプリ名> — <アプリ名>` になった
 
-### 待ちの読み上げ
+### 実測: 待ちの読み上げ
 
 2026-11-03、Void 1.4.0 の dev server を playwright-cli 0.1.19 の headless の Chromium 156.0.8078.74 で操作した。ページのデータの要求 (`x-voidpages: true` の GET) を Playwright の route で遅らせ、live region に足されたノードを時刻つきで記録した。時刻は最初の操作からの経過である。
 
