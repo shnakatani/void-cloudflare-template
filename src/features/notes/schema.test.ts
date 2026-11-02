@@ -329,7 +329,7 @@ describe("noteListFilterSchema", () => {
     });
   });
 
-  // loader の `c.req.query` は文字列しか渡さないが、schema はほかの呼び出し元からも通る。既定の英語文言を出さない
+  // 文字列以外は日本語の文言で落とし、valibot の既定の英語文言を出さない
   it("文字列以外の q は日本語の文言で落ちる", () => {
     const result = v.safeParse(noteListFilterSchema, { q: 1 });
     expect(result.success).toBe(false);
