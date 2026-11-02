@@ -245,7 +245,7 @@ describe("notes の query", () => {
       });
     });
 
-    it("存在しない id では undefined を返す (not found の判定は server function が持つ)", async () => {
+    it("存在しない id では undefined を返す (not found の判定は loader の読み出し notes-page-data.server.ts が持つ)", async () => {
       expect(await get({ id: 999 })).toBeUndefined();
     });
   });

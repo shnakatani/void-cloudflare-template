@@ -94,6 +94,9 @@ export function QueryDialog<TDialog>({
   if (!isSameShown(previous, shown)) {
     setPrevious(shown);
     if (shown !== null) {
+      // 外してもテストは通る。closing を読むのは `shown ?? closing` だけで、shown が null に戻るときは
+      // 下の分岐が必ず上書きするため、ここで捨てても外から見える差が無い。捨てるのは、開いている間に
+      // 閉じ中の中身を持ち越さないという意図を読み手に見せるため
       setClosing(null);
     } else if (previous !== null) {
       setClosing(previous);

@@ -16,7 +16,7 @@ export const APP_ERROR_MESSAGE = "ページを表示できませんでした。�
 
 /**
  * 全画面のエラー表示 (ADR-0050)。例外の文言は出さない。production の Void は server の例外の中身を client へ渡さず、
- * 開発中の原因は Void の overlay と console で追う。
+ * 開発中の原因は console で追う。Void の dev の overlay は server が返す 500 の HTML に付くもので、境界が受ける client の描画の失敗には出ない。
  *
  * 出している間は `document.title` の前に「エラー: 」を付け、タブと遷移の読み上げ (ADR-0049) にも失敗を出す。
  * 外れたときは、title が付けたときのままなら戻す。再試行や遷移で Void が書き換えていたら、その値を残す。

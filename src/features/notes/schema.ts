@@ -46,7 +46,7 @@ function trimmedCheck(label: string) {
 }
 
 /**
- * 入力の 1 件。server function の validator とフォームのフィールド検証が同じ定義を使う。
+ * 入力の 1 件。page の action の validator (`withValidator`) とフォームのフィールド検証が同じ定義を使う。
  *
  * メッセージを明示するのは、フォームの FieldError がこの文言をそのまま描画するため。
  * 既定に任せると "Invalid length: Expected >=1 but received 0" のような英語の技術文言が

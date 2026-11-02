@@ -11,6 +11,11 @@ type ReactPluginOptions = { compiler: false } | { compiler: true; reportDiagnost
  * `reportDiagnostics` はアプリだけが立てる。bail out はビルドログで読み (ADR-0014)、テストで出すと
  * ブラウザで走る project ごとに同じ bail out を出し直す
  * (`docs/guides/testing/configuration.md`「テストでも React Compiler を通す理由」)
+ *
+ * 2 つの plugin 本体は同じ実体とは限らない。アプリの `voidReact()` は `@void/react` が依存する
+ * `@vitejs/plugin-react` を、テストは `package.json` の `@vitejs/plugin-react` を読む。
+ * 範囲が食い違うと pnpm が 2 つの版を入れ、変換が黙ってずれる。Void か `@vitejs/plugin-react` を上げたら `vp why @vitejs/plugin-react` で
+ * 版が 1 つかを見る (`docs/guides/dependencies-and-toolchain.md`)
  */
 export function reactPluginOptions(options: ReactPluginOptions): Parameters<typeof viteReact>[0] {
   return {
