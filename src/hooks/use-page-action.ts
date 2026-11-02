@@ -17,7 +17,7 @@ type ActionRest<U extends ActionUrl> = typeof action<U> extends (
 /** `action()` に渡す `method` と `params` に、action の URL に載せるページの query を足したもの */
 type ActionCallOptions<U extends ActionUrl> = Omit<NonNullable<ActionRest<U>[0]>, "data"> & {
   /**
-   * action を呼ぶページの URL の query を、`?` を除いて渡す (`new&q=%E4%BC%9A`)。action の URL の後ろに載せる。
+   * action を呼ぶページの URL の query を、`?` を除いて渡す (`tab=profile&page=2`)。action の URL の後ろに載せる。
    *
    * Void は検証の失敗 (422) を、action の URL から action の名前を除いた URL のページとして描き直し、その props を commit する。
    * query を載せないと、ページは query の無い URL で描き直され、query で開いていたダイアログや絞り込みが消え、
