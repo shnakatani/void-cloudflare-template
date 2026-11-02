@@ -36,6 +36,7 @@ loader で DB を読む一覧のページで確かめた (2026-11-02、dev、Voi
 - debounce は入力欄の onChange から呼ぶ (`@tanstack/react-pacer` の `useDebouncer`)。URL を書く原因は打鍵なので、debounce した値を effect で見張って visit しない
 - visit は `src/lib/start-visit.ts` の `startVisit` で始め、決着を待たない
 - 入力欄は、ページ自身が求めた条件の commit では値を戻さない。外からの条件の変化 (戻る・進む・直に開く) でだけ、props の条件に揃える。求めた条件の commit で戻すと、応答を待つ間に打ち足した文字が消える
+- ほかの visit (ダイアログを開くリンク、閉じる操作) を始めるときは、debounce の待ちを捨て、入力欄を props の条件に戻す。待ちを残すと、後から発火した検索の visit が先に始めた visit を取り消す (ADR-0017)。入力欄を戻さないと、どの visit も始まらないまま前の一覧が半透明で残る
 - 入力と props の条件がずれている間 (debounce の待ちと読み込み中) は、前の一覧を半透明で残す
 - 条件の上限は reject せず、schema が code point の境界で切り詰める (ADR-0036)
 - 結果の入れ替わりの読み上げは、ページの effect が props の条件の変化で出す (ADR-0027)
