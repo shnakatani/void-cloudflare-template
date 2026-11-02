@@ -38,6 +38,19 @@ Void では action の応答と loader の再実行が 1 回の往復で済む�
 | サーバーの action は、2 つとも最後まで走った                                                    |
 
 1 つ目のボタンが残るのは、React が走っている Transition を束ねる挙動 (`useTransition` リファレンスの Caveats「If there are multiple ongoing Transitions, React currently batches them together」) と合う (推論)。
+この観測では、1 つ目の要求は取り消しの前にサーバーへ届いていた。
+
+### 取り消された送信がサーバーで走るか
+
+確認ダイアログの確定の直後に閉じ、行を楽観値で削除中にする一覧で、2 行を続けて削除した (2026-11-02、dev、Void 1.4.0、Chromium)。1 件目の削除の要求を、Playwright の `page.route` で 1500ms 止めた。止める所を 2 通りにした。
+
+| 1 件目を止めた所                  | 1 件目の要求                                                       | 結果                                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| サーバーへ送る前                  | 2 件目を送った 4ms 後に `net::ERR_ABORTED`。サーバーに届いていない | 2 件目の props で 2 件目の行だけが消え、同じ描画で 1 件目の行の削除中の表示が外れて残った。toast も読み上げも出なかった |
+| サーバーの応答 (302) を受けたあと | サーバーは 302 を返し、client の側で `net::ERR_ABORTED`            | 2 件目の props で 2 行が同じ描画で消えた                                                                                |
+
+- 取り消しは、要求がサーバーへ届く前なら、要求そのものを止める。ブラウザが要求をすぐに送れず待たせる場面 (遅い回線、HTTP/1.1 で同じ origin への同時接続が上限に達したとき) で起きうる (推論。実際の回線での頻度は測っていない)
+- 届いたあとの取り消しは、dev ではサーバーの action が最後まで走った。Cloudflare Workers の docs「Limits」の Duration は "When the client disconnects or the response is complete, tasks associated with that request may be canceled." と書く。production の Workers で、取り消しによる切断が action を途中で止めるかは確かめていない
 
 ## Decision
 
@@ -67,12 +80,15 @@ Void では action の応答と loader の再実行が 1 回の往復で済む�
 ## Consequences
 
 - 同じ page の別の送信、`Link` の遷移、`router.refresh()` は、走っている送信を取り消す。取り消された `run` は何も出さずに `false` を返し、`onSuccess` も走らない。その操作の完了の通知 (ADR-0026) は出ない
-- 取り消された送信も、サーバーでは最後まで走る。前の送信の書き込みが後の送信の loader より後にサーバーで済むと、画面はその書き込みを含まない props のまま残り、client からは気付けない。次の遷移か `router.refresh()` で新しい props が届くまでそのまま残る (推論)
+- 取り消した時点で要求がサーバーに届いていなければ、その操作は起きない (「取り消された送信がサーバーで走るか」)。確定操作の直後を完了点にした操作では、対象の項目の楽観値が後の送信の Action の終わりで消えて元の表示に戻り、toast も読み上げも出ない。利用者が確定した操作が、知らされずに起きない
+- 届いたあとの取り消しは、dev ではサーバーで最後まで走った。production の Workers で同じかは確かめていない。走ったとき、前の送信の書き込みが後の送信の loader より後にサーバーで済むと、画面はその書き込みを含まない props のまま残り、client からは気付けない。次の遷移か `router.refresh()` で新しい props が届くまでそのまま残る (推論)
+- 確定した操作が知らされずに起きないのを防ぐ候補は、確定操作の直後を完了点にした操作の間、同じ種類のほかの起点 (ほかの行の削除のトリガー) を止めることである。止める状態は、ページの楽観値から描画に出せる。Decision の「ほかの項目の起点は止めない」を変えることになる
 - 取り消された操作のボタンは、後の送信の Action が終わるまで pending のまま残る (「送信中に 2 つ目の送信を始めたときの見え方」)
 - 楽観値を出さずに確定操作の直後に閉じると、対象の項目が pending の表示なしで古いまま見える。確定操作の直後を選ぶ機能では、対象の項目に楽観値の busy の表現を付ける
 - 再評価条件
   - Void を上げて、visit が前の visit を abort しなくなったら (action だけ並行に走らせる口ができたら)、取り消しの扱いを決め直す
   - `useNavigation()` が Action から始めた送信の間に `"submitting"` を描くようになったら、ほかの起点を止める案を比べ直す
+  - 確定した操作が知らされずに起きなかったことが報告されたら、同じ種類のほかの起点を止める案を比べ直す
 
 ## 出典
 
@@ -84,3 +100,4 @@ Void では action の応答と loader の再実行が 1 回の往復で済む�
 - React Router「Pending UI」: https://reactrouter.com/start/framework/pending-ui
 - Remix `useFetcher`: https://v2.remix.run/docs/hooks/use-fetcher
 - NN/g「Response Times: The 3 Important Limits」: https://www.nngroup.com/articles/response-times-3-important-limits/
+- Cloudflare Workers の docs「Limits」の Duration: https://developers.cloudflare.com/workers/platform/limits/ (2026-11-02 に確認)

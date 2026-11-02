@@ -112,7 +112,7 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 
 - `usePageAction` を通さずに `action()` を呼ぶと、`ok: false` が通知の無い失敗になり、throw は境界に届くか消える。lint で検出できないため、レビューで見る
 - 401・403・500 も toast で伝わり、画面は差し替わらない。Error Boundary (ADR-0050) が `usePageAction` の送信から受けるのは `onSuccess` の throw だけになる。画面ごと差し替えたい失敗 (認証切れでログインへ送るなど) を扱うときは、`run` の失敗の分岐に足す
-- 取り消された送信も、サーバーでは最後まで走る (2026-11-02 に dev で確認)。後の送信が前を取り消すときの見え方は ADR-0017 が持つ
+- 取り消された送信がサーバーで走るかは、取り消した時点で要求がサーバーに届いていたかで分かれる。分かれ方と、後の送信が前を取り消すときの見え方は ADR-0017 が持つ
 - 後続作業
   - 値を持つ部品の `changeAction` 版 (`checkbox` / `select` / `toggle` / `toggle-group` / `radio-group` / `combobox`)。`useOptimistic` で表示を先に進める設計が要り、Button 系とは別に扱う
   - React Aria への基盤変更の ADR。発火条件は「React Aria (adobe/react-spectrum#9894) の実装が出荷した」か「a11y 要件で Base UI に不足が出た」のどちらか

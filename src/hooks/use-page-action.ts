@@ -75,7 +75,7 @@ function actionUrlWithPageQuery<U extends ActionUrl>(url: U, pageQuery: string |
  * throw を error boundary へ渡さないのは、Action の reject は `useTransition` を呼んだ部品から境界へ投げられ、
  * その部品が送信中に unmount すると (閉じたダイアログ、消した行) どこにも出ずに消えるため (2026-11-02 に dev で観測)。
  * toast は unmount の後も出る。取り消しは後から始めた遷移や送信が前の送信を置き換えた結果なので、失敗として知らせない。
- * 取り消されても、サーバーの action は最後まで走る。
+ * 取り消した時点で要求がサーバーに届いていなければ、サーバーの action は走らず、操作は黙って起きない (ADR-0017)。
  *
  * TanStack Form から送るときは `usePageActionForm` を使う。
  */
