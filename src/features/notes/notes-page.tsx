@@ -76,10 +76,19 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     startVisit(router, notesListUrl(next), { replace: true, preserveScroll: true });
   }
 
+  // 入力欄を props の q に戻し、まだ届いていない検索の visit を捨てる
+  function resetSearchField() {
+    if (field.text !== q || field.requestedQ !== null) {
+      setField({ text: q, syncedQ: q, requestedQ: null });
+    }
+  }
+
   function handleDebouncedSearch(next: string) {
-    // 待ちの間に外からダイアログが開いた (戻る・進む)。開いている間は入力欄に打てないので、待っていた語は古い
+    // 待ちの間に外からダイアログが開いた (戻る・進む)。開いている間は入力欄に打てないので、待っていた語は古い。
+    // 発火した後なので待ちは残っておらず、cancel は要らない。abandonSearch を呼ぶと、useDebouncer に渡す関数が
+    // 後で宣言する searchDebouncer を読む形になり、React Compiler がこの部品を最適化しない
     if (dialog.kind !== "closed") {
-      abandonSearch();
+      resetSearchField();
       return;
     }
     // 待ちの間に外から q が変わり、入力欄が描画の中で q に揃った。待っていた語は古い
@@ -97,9 +106,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
   // 入力欄を戻さないと、どの visit も始まらないまま、一覧が半透明で残る
   function abandonSearch() {
     searchDebouncer.cancel();
-    if (field.text !== q || field.requestedQ !== null) {
-      setField({ text: q, syncedQ: q, requestedQ: null });
-    }
+    resetSearchField();
   }
 
   function handleTextChange(text: string) {
