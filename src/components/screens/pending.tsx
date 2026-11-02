@@ -1,8 +1,7 @@
 import { Spinner } from "@/components/ui/spinner";
 
 /**
- * 読み込み中の表示。Suspense の受け皿に置く。置かれる位置 (ページ全体 / レイアウトの内側) が
- * 場所ごとに違うので、レイアウトを模倣しない。
+ * 読み込み中の表示。Suspense の受け皿に置く。置かれる位置が場所ごとに違うので、レイアウトを模倣しない。
  *
  * status に名前は与えない。一部のスクリーンリーダーは status の名前を中身の前に読むので、中身と同じ
  * 名前を与えると同じ文言を 2 度読ませる (`docs/guides/accessibility.md`「accessible name を与える」)。
