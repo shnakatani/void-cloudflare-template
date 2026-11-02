@@ -155,6 +155,14 @@ describe("NotesPage の一覧", () => {
     );
   });
 
+  it("空状態の描画に a11y 違反が無い", { tags: ["a11y", "axe"] }, async (context) => {
+    const { screen } = await renderNotesPage({ notes: [] });
+    await expect
+      .element(screen.getByText(`${NOTE_ENTITY_LABEL}が登録されていません`))
+      .toBeInTheDocument();
+    await expectNoA11yViolations(document.body, context);
+  });
+
   it("一覧の描画に a11y 違反が無い", { tags: ["a11y", "axe"] }, async (context) => {
     const { screen } = await renderNotesPage({ notes: [NOTE_VIEW, OTHER_NOTE_VIEW] });
     await expect.element(screen.getByRole("table", { name: NOTES_PAGE_TITLE })).toBeInTheDocument();
