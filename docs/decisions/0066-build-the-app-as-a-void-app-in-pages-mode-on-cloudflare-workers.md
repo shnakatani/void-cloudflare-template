@@ -1,8 +1,8 @@
-# ADR-0063: アプリは Void app の pages mode で組み、Cloudflare Workers で動かす
+# ADR-0066: アプリは Void app の pages mode で組み、Cloudflare Workers で動かす
 
 - Status: Accepted
 - Date: 2026-11-01
-- 関連: ADR-0052 (D1 と migration)、ADR-0053 (認証)、ADR-0061 (デプロイ)
+- 関連: ADR-0052 (D1 と migration)、ADR-0053 (認証)、ADR-0061 (デプロイ)、ADR-0063 (ページのデータの読み方)、ADR-0064 (規約のディレクトリの置き場所)
 
 ## Context
 

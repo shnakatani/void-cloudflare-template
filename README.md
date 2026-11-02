@@ -6,7 +6,7 @@ DB は D1、認証は Void が管理する Better Auth の email とパスワー
 
 ## 技術スタック
 
-- Void (Cloudflare Workers) の pages mode + React 19 (ADR-0063)
+- Void (Cloudflare Workers) の pages mode + React 19 (ADR-0066)
 - D1 + Drizzle ORM (`void/db`)、Better Auth (`void/auth`) (`docs/guides/database.md`、`docs/guides/auth.md`)
 - TanStack Form / Table
 - shadcn/ui (Base UI) + Tailwind CSS v4
@@ -14,7 +14,7 @@ DB は D1、認証は Void が管理する Better Auth の email とパスワー
 
 ## ディレクトリ
 
-Void が名前で読むディレクトリをルートに置き、アプリのコードは `src/` に置く。名前と役割は Void の docs「Project Structure」(`node_modules/void/docs/reference/structure.md`) が持つ。
+Void が名前で読むディレクトリをルートに置き、アプリのコードは `src/` に置く (ADR-0064)。名前と役割は Void の docs「Project Structure」(`node_modules/void/docs/reference/structure.md`) が持つ。
 
 | パス          | 中身                                                                                   |
 | ------------- | -------------------------------------------------------------------------------------- |
