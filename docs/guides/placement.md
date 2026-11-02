@@ -26,7 +26,7 @@
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | valibot の schema と、そこから導出する型     | `src/features/<domain>/` の `.ts`。client からも import できる                                                                                          |
 | `db` と `userId` を引数で受ける query の関数 | `src/features/<domain>/` の `*.server.ts`。DB を読む module は必ず `.server` で終える。lint はこの名前で、client で動くコードからの値の import を止める |
-| loader・action・`head`                       | `pages/<path>.server.ts`。`getUser()` と `db` を query の関数へ渡すだけにする                                                                           |
+| loader・action・`head`                       | `pages/<path>.server.ts`。`getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡すだけにする                                         |
 
 - `src/features/<domain>/*.server.ts` は `tsconfig.app.json` の program に入る。`void/env` を import すると Workers の型が app に入るので、import しない (ADR-0047)
 - query の関数の書き方とテストは `docs/guides/database.md`「query を書く」「テストで D1 を使う」にある

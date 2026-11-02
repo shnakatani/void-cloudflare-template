@@ -21,6 +21,8 @@ type Expectation = {
 const EXPECTATIONS: readonly Expectation[] = [
   { path: "/", status: 302, location: "/login" },
   { path: "/?q=x", status: 302, location: "/login" },
+  { path: "/notes", status: 302, location: "/login" },
+  { path: "/notes?edit=1&q=x", status: 302, location: "/login" },
   { path: "/login", status: 200 },
 ];
 

@@ -25,7 +25,7 @@
 ### 全ページで user を読む
 
 - 画面では `const { user } = useShared<AppShared>().auth;` で読む。`user` は `SharedUser` (`id`・`email`・`name`) か `null` である。型引数は省けない。`CloudContextVariables` の augmentation (`middleware/01.auth.ts`) は worker の program にだけあり、省くと app の program で `.auth` が `unknown` になる (ADR-0047)
-- server (`pages/*.server.ts` など) では `void/auth` の `getUser()` で読む ([Void docs「Authentication」][] の Server Usage)
+- server (`pages/*.server.ts` など) では `void/auth` で読む。守る path の loader と action は `requireAuth(c)` で読み、未ログインでも開く path は `getUser()` で読んで `null` を分岐する ([Void docs「Authentication」][] の Server Usage)。`requireAuth(c)` は user が無ければ 401 を throw するので、middleware の守りを抜けた要求も loader と action の手前で止まる
 - 画面に出す項目を足すときは、`src/features/auth/shared.ts` の `SharedUser` と、`middleware/01.auth.ts` の詰め替えの両方に足す。`Date` の項目はそのまま入れず、文字列か数値にする。page data の JSON を通ると browser で文字列になり、型と食い違う (voidzero-dev/void#606)
 - story とブラウザテストでは、`VoidRouterProvider` に `shared` を渡す。渡さないと `useShared()` が throw する (ADR-0048)
 - `shared` を入れるのは middleware だけで、middleware を通らずに描かれたページでは `pages/layout.tsx` が描画の先頭で throw し、受ける境界が無い (ADR-0053)。middleware の外で描かれるページ (prerender するページ) を足すときは、layout の読み方を先に直す

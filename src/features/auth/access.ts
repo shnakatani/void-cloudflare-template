@@ -3,7 +3,7 @@ export const LOGIN_PATH = "/login";
 export const SIGNUP_PATH = "/signup";
 
 /** ログインしていないと開けない path。下位の path (`/x/1`) も含む。`/` だけは `/` そのものに限る */
-const PROTECTED_PATHS: readonly string[] = [HOME_PATH];
+const PROTECTED_PATHS: readonly string[] = [HOME_PATH, "/notes"];
 /** ログインしていると開く意味の無い path。ログイン済みなら HOME_PATH へ送る */
 const GUEST_ONLY_PATHS: readonly string[] = [LOGIN_PATH, SIGNUP_PATH];
 

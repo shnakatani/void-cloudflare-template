@@ -46,7 +46,7 @@ paths:
 
 - `src/features/<domain>/` の中の import は相対パスで書く。ディレクトリごと移せる形を保つ (`docs/guides/placement.md`「features か lib・hooks か」)
 - ドメインの valibot の schema と、`db` と `userId` を引数で受ける query の関数は `src/features/<domain>/` に置く。DB を読む module はファイル名を `*.server.ts` にする。lint は名前で client からの import を止めるので、名前が無いと止まらない (ADR-0055)
-- `pages/<path>.server.ts` は `getUser()` と `db` を query の関数へ渡すだけにする。分岐を足すと、preview を HTTP で叩く検査でしか確かめられなくなる (ADR-0055)
+- `pages/<path>.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡すだけにする。分岐を足すと、preview を HTTP で叩く検査でしか確かめられなくなる (ADR-0055)
 
 ## テストとスクリプトの配置
 

@@ -42,7 +42,7 @@ D1 の schema・migration・query を変える手順と、テストで D1 を使
 
 ### query を書く
 
-- query の関数は `src/features/<domain>/` の `*.server.ts` に置き、`db` と `userId` を引数で受ける。`pages/*.server.ts` は `getUser()` と `db` を渡すだけにする (ADR-0055)
+- query の関数は `src/features/<domain>/` の `*.server.ts` に置き、`db` と `userId` を引数で受ける。`pages/*.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を渡すだけにする (ADR-0055)
 - `db` と operator (`eq`・`and` など) は `void/db` から import する。`drizzle-orm` を直接 import しない ([Void docs「Database」][] の Querying)
 - 列の SQL の名前は schema で明示する (`text("user_id")`)。`database.casing` に頼らない。テストの `db` には casing が効かない (「`db.query.*` と casing に頼らない理由」)
 - `db.query.*` (relational query) を使わず、`db.select()`・`db.insert()`・`db.update()`・`db.delete()` で書く。`db` の型も実体も schema を持たない

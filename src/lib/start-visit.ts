@@ -1,9 +1,9 @@
-import type { VoidRouter } from "void/pages-client";
+import type { VisitOptions, VoidRouter } from "void/pages-client";
 
 import { toastMutationError } from "./mutation-error";
 
 /**
- * Action (`startTransition` に渡す非同期関数) の中から遷移を始める。visit の Promise を待たずに返す。
+ * Action (`startTransition` に渡す非同期関数) の中か、待たずに遷移を始めたい箇所から遷移を始める。visit の Promise を待たずに返す。
  *
  * GET の `router.visit` の Promise は、新しいページの描画が commit されてから決着する (`@void/react` 1.4.0 の
  * `runtime/pages-client.ts` の `finishNavigation`)。その描画は Void が Transition で予約し、React は進行中の
@@ -14,8 +14,12 @@ import { toastMutationError } from "./mutation-error";
  * 待たないので、Action の pending は遷移の commit より先に解ける。後から始めた遷移に取り消された GET は
  * `undefined` で決着するので何も出さず、それ以外の失敗は toast に出す。
  */
-export function startVisit(router: Pick<VoidRouter, "visit">, url: string): void {
-  router.visit(url).catch((error: unknown) => {
+export function startVisit(
+  router: Pick<VoidRouter, "visit">,
+  url: string,
+  options?: VisitOptions,
+): void {
+  router.visit(url, options).catch((error: unknown) => {
     toastMutationError(error);
   });
 }

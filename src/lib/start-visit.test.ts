@@ -9,7 +9,13 @@ describe("startVisit", () => {
   it("決着しない visit でも、呼んだ時点で返る", () => {
     const visit = vi.fn(() => new Promise<unknown>(() => {}));
     startVisit({ visit }, "/next");
-    expect(visit).toHaveBeenCalledWith("/next");
+    expect(visit).toHaveBeenCalledWith("/next", undefined);
+  });
+
+  it("options を router.visit へそのまま渡す", () => {
+    const visit = vi.fn(() => Promise.resolve(undefined));
+    startVisit({ visit }, "/notes?q=a", { replace: true, preserveScroll: true });
+    expect(visit).toHaveBeenCalledWith("/notes?q=a", { replace: true, preserveScroll: true });
   });
 
   it("visit が reject したら toast に出す", async () => {

@@ -33,13 +33,13 @@ server で起きた例外の文言は、production の Void が client へ運ば
 
 ## Decision
 
-**1 つのドメインの schema と query は `src/features/<domain>/` に置く。`pages/*.server.ts` は `getUser()` と `db` を渡すだけにする。client で動くコードから `.server` の module の値を import するのを lint で止める。server のエラーの文言には仕組みを足さない。**
+**1 つのドメインの schema と query は `src/features/<domain>/` に置く。`pages/*.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を渡すだけにする。client で動くコードから `.server` の module の値を import するのを lint で止める。server のエラーの文言には仕組みを足さない。**
 
-| 置くもの                                            | 置き場所                                                                                  |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| valibot の schema と、そこから導出する型 (ADR-0013) | `src/features/<domain>/`                                                                  |
-| `db` と `userId` を引数で受ける query の関数        | `src/features/<domain>/` の `*.server.ts`                                                 |
-| loader・action・`head`                              | `pages/<path>.server.ts`。`getUser()` と `db` を query の関数へ渡し、結果を返すだけにする |
+| 置くもの                                            | 置き場所                                                                                                                    |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| valibot の schema と、そこから導出する型 (ADR-0013) | `src/features/<domain>/`                                                                                                    |
+| `db` と `userId` を引数で受ける query の関数        | `src/features/<domain>/` の `*.server.ts`                                                                                   |
+| loader・action・`head`                              | `pages/<path>.server.ts`。`getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡し、結果を返すだけにする |
 
 - DB を読む module はファイル名を `*.server.ts` にする。lint はファイル名で server の module を見分ける
 - `tooling/lint/config.ts` の `no-restricted-imports` が、`src/**` と `pages/**` から `\.server(\.ts)?$` に当たる specifier の値の import を止める。`*.server.ts` 自身、テストと story の付随ファイル、`src/test/**` は範囲の外にする。`import type` は `allowTypeImports` で通す。発火は `scripts/checks/integrity/server-import-lint.test.ts` が実際のファイルで確かめる
