@@ -15,6 +15,7 @@ vp run verify    # マージ前に通す。手順は vite.config.ts の verifySt
 - dev の起動ログに `Local database already has application tables but no Void migration history` が出たら `vp exec void db reset` で dev の D1 を作り直す。dev は ready になるが migration が当たっていない。reset は dev で登録したユーザーも消す (`docs/guides/database.md`「dev の D1 を作り直す」)
 - dev server と Storybook を background で動かすときは `mise daemons start serve` (`storybook`) で起動し、`mise daemons stop <同じ名前>` で止める。起動した pid にだけ SIGTERM を送ると、port を持つ子孫の node が残り、次の `mise run serve` が port を取れずに終わる (`docs/guides/dependencies-and-toolchain.md`「dev server と Storybook を止める」)
 - 依存は `vp add` / `vp remove` で足し外し、pnpm / npm / yarn で足し外さない。入口を `vp` にそろえる (`npm` はこのリポジトリの `catalog:` を読めず `EUNSUPPORTEDPROTOCOL` で止まる)。`vp` が中継しないサブコマンドは素の `pnpm` で打つ (`pnpm peers check`)。出典は `docs/guides/dependencies-and-toolchain.md`「依存を足す・外す」。一回限りの実行は `vp dlx`、devDependency 済みなら `vp exec`。Vitest / Oxlint / Oxfmt は Vite+ が内包するので install しない
+- Void の CLI は `vp exec void <コマンド>` で打つ。末尾の Void の節が案内する `node_modules/void/docs/` と skill の `void …` にも `vp exec` を付ける。Cloudflare の本番に触れるコマンドは、`void deploy` に `--platform cloudflare` を付け、`.void/project.json` の無い作業ツリーでは `void secret` の前に `void connect --platform cloudflare` を打つ (`docs/guides/deployment.md`「本番の秘密を足す」)
 - Node.js の版は `package.json` の `devEngines.runtime` を直接書き換えて変え、`vp env pin` で書かない。`vp env pin` は範囲を渡しても exact の版に解決して書く (ADR-0004)
 - **worktree のパスに `+` を含めない**。story の project が、事前バンドルのキャッシュが無い初回の実行で落ちる (`docs/guides/testing/configuration.md`「テストを走らせる」)
 - `EnterWorktree` は名前の `/` を `+` へ変換するので、`/` を含まない名前を渡す
