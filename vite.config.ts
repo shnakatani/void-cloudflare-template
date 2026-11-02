@@ -1,4 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
+import { devtools } from "@tanstack/devtools-vite";
 import { voidReact } from "@void/react/plugin";
 import { defineConfig, lazyPlugins } from "vite-plus";
 import { voidPlugin } from "void";
@@ -73,6 +74,10 @@ export default defineConfig({
     // docs/guides/testing/configuration.md「テストの分岐で plugin を外す理由」「判定を `process.env.VITEST` で書く理由」
     if (process.env.VITEST === "true") return [];
     return [
+      // devtools のサーバ (既定の port は 4206) を起こさない。認証の無いメッセージで、dev server の上で
+      // パッケージの install をシェル越しに走らせる (TanStack/devtools#464)。画面はこのサーバにつながない
+      // (<TanStackDevtools> の eventBusConfig.connectToServerBus は既定で false) ので、止めても失う機能は無い
+      devtools({ eventBusConfig: { enabled: false } }),
       tailwindcss(),
       voidPlugin(),
       // bail out はビルドログへ出す (ADR-0014)
