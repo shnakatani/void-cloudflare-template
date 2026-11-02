@@ -1,8 +1,7 @@
-import type { Row, RowData, TableOptions } from "@tanstack/react-table";
+import type { ReactTable, Row, RowData, TableOptions } from "@tanstack/react-table";
 import { useTable } from "@tanstack/react-table";
-import { useTanStackTableDevtools } from "@tanstack/react-table-devtools";
 import type { ReactNode } from "react";
-import { Fragment } from "react";
+import { Fragment, Suspense, use } from "react";
 
 import {
   Table,
@@ -17,6 +16,23 @@ import {
 import { columnWidthFrom } from "./data-table-columns";
 import type { DataTableFeatures, DataTableMeta } from "./data-table-features";
 import { dataTableFeatures } from "./data-table-features";
+
+// Table Devtools への登録は dev だけで読み、`import()` を DEV の三項に入れる (理由は app-devtools.tsx と同じ)。
+// 静的に import すると、production で hook が NoOp に替わっても、その先の devtools の UI が参照する font が
+// `dist/client/assets` に出力される (2026-11-02、`@tanstack/react-table-devtools` 9.3.1)。
+// `lazy` は部品の型引数を落とし、行の型ごとの table を渡せないので、module を `use` で読む
+const tableDevtools = import.meta.env.DEV ? import("./data-table-devtools") : null;
+
+function TableDevtools<TData extends RowData>({
+  loading,
+  table,
+}: {
+  loading: NonNullable<typeof tableDevtools>;
+  table: ReactTable<DataTableFeatures, TData>;
+}) {
+  const { TableDevtoolsRegistration } = use(loading);
+  return <TableDevtoolsRegistration table={table} />;
+}
 
 /** 転送する option の型は `useTable` の options から導出する (再宣言すると転送先の型変更に追随しない) */
 interface DataTableBaseProps<TData extends RowData> extends Pick<
@@ -90,7 +106,6 @@ export function DataTable<TData extends RowData>({
     // 戻さない (TanStack Table の guide「Expanding」の Auto Reset Expanded State)
     autoResetExpanded: false,
   });
-  useTanStackTableDevtools(table);
   const rows = table.getRowModel().rows;
 
   return (
@@ -98,6 +113,11 @@ export function DataTable<TData extends RowData>({
     // table に付くので、器と同じ幅の外側の div を container にする。container は自分の中身の幅を 0 として扱うので、
     // flex row の親の中でも潰れないよう w-full を当てる
     <div className="@container w-full">
+      {tableDevtools !== null && (
+        <Suspense fallback={null}>
+          <TableDevtools loading={tableDevtools} table={table} />
+        </Suspense>
+      )}
       {/* 列の幅は列定義の size で決め、中身で変えない。操作中の表示で中身の幅が変わっても列が動かない (ADR-0042)。
           fixed layout は最初の行の cell から列幅を採るので、幅は列見出しにだけ当てる */}
       <Table className="table-fixed">
