@@ -145,8 +145,9 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
       details.cancel();
       return;
     }
-    // 閉じる操作 (キャンセル・Escape・外側・X) は一覧の URL へ移る。新しい props でダイアログが閉じる
-    startVisit(router, notesListUrl(q));
+    // 閉じる操作 (キャンセル・Escape・外側・X) は一覧の URL へ移る。新しい props でダイアログが閉じる。
+    // 同じ一覧に戻るので scroll を保つ。Void は新しい遷移で先頭へ scroll し、開いた元の行のリンクへ戻した focus が画面の外へ出る
+    startVisit(router, notesListUrl(q), { preserveScroll: true });
   };
 
   // ダイアログの開閉の title の読み上げ。query だけの遷移は遷移の読み上げの部品 (ADR-0049) が読まないので、
@@ -175,8 +176,8 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
               onValueChange={handleTextChange}
               onSubmit={handleSubmit}
             />
-            {/* 一覧の絞り込みを保ったまま開き、閉じたら同じ一覧へ戻る */}
-            <ButtonLink href={noteCreateUrl(q)} {...noteCreateLinkProps()}>
+            {/* 一覧の絞り込みと scroll を保ったまま開き、閉じたら同じ一覧へ戻る */}
+            <ButtonLink href={noteCreateUrl(q)} preserveScroll {...noteCreateLinkProps()}>
               ＋ {NOTE_ENTITY_LABEL}を追加
             </ButtonLink>
           </>

@@ -101,8 +101,10 @@ export function NoteActionsCell({ row }: NoteCellContext) {
           編集
         </Button>
       ) : (
+        // ダイアログは一覧の上に開くので、一覧の scroll を保つ。Void の Link は既定で先頭へ scroll する
         <ButtonLink
           href={editHref}
+          preserveScroll
           variant="outline"
           size="sm"
           {...noteEditLinkProps(note.id)}
