@@ -1,16 +1,17 @@
 import { spawnSync } from "node:child_process";
 
+import { type CspSample, findCspNonceViolations } from "../../lib/csp-nonce.ts";
 import { CheckFailure, startPreview } from "../../lib/preview-server.ts";
 import { REPO_ROOT } from "../../lib/repo-root.ts";
 import { type ExpectedHeader, findHeaderViolations } from "../../lib/response-headers.ts";
-import { findScriptSrcSelfViolations } from "../../lib/script-src-violations.ts";
 
 /**
- * `void.config.ts` の `routing.headers` で付けたセキュリティヘッダが、実際の応答に乗っている
- * ことを、ビルド成果物を `vp preview` で起動して確かめる。
+ * `void.config.ts` の `routing.headers` で付けたセキュリティヘッダと、`middleware/00.csp.ts` が HTML の応答に付ける
+ * nonce の CSP が、実際の応答に乗っていることを、ビルド成果物を `vp preview` で起動して確かめる。
  *
  * 設定値の検査では代替できない。`routing.headers` は URL の pattern に一致した応答にだけ
- * 付くので、pattern を書き違えても、設定にもビルドにもエラーは出ない。
+ * 付くので、pattern を書き違えても、設定にもビルドにもエラーは出ない。nonce は middleware が応答ごとに作るので、
+ * HTML のすべての `<script>` に届くことと、応答ごとに変わることは、応答を読まないと分からない。
  *
  * 整合検査 (`scripts/checks/integrity/`) に置かないのは、`vp build` の成果物が要るため。
  *
@@ -19,15 +20,13 @@ import { findScriptSrcSelfViolations } from "../../lib/script-src-violations.ts"
  * Void の docs「Custom Headers」の Scope は、ヘッダの rule が静的な asset・SSR の page・API の
  * 応答に掛かると書く。ログインの要らない 3 つ (`/login`、`/robots.txt`、404) は、その応答の種類を 1 つずつ代表する。
  * 2026-11-01 に Void 1.4.0 (`@cloudflare/vite-plugin` 1.66.0) の `vp preview` で、この 3 つとビルド出力の hash 付きの
- * CSS の応答に、`EXPECTED_HEADERS` のうち CSP 以外の 6 件が乗ることを確かめた。hash 付きの asset を検査に入れないのは、
+ * CSS の応答に、`EXPECTED_HEADERS` の 6 件が乗ることを確かめた。hash 付きの asset を検査に入れないのは、
  * ファイル名がビルドごとに変わり、検査する path をビルド出力から探すことになるため。
  * ログインが要るページは、未ログインでは 302 になり、302 の応答は検査の対象の種類に入っていないので、検査のユーザーで
- * ログインしてから読む
+ * ログインしてから読む。ページが足す script (deferred props の値など) は、ログインが要るページで使われやすい
  *
- * HTML の応答は、本文の script が CSP の `script-src 'self'` で止まらないことも見る (ADR-0051)。
- * dev は `script-src` に `'unsafe-inline'` を足すので、inline の script を足しても dev では動き、本番の成果物で
- * だけ hydration が止まる。script を足す機能 (deferred props など) はログインが要るページで使われやすいので、
- * ログインが要るページも読む
+ * nonce の CSP は、200 の HTML の応答を 2 回ずつ取って比べる (ADR-0051)。404 の HTML (`public/404.html`) は
+ * `<script>` を持たず、nonce が届くかを確かめる対象が無いので比べない
  */
 
 /**
@@ -43,11 +42,14 @@ const EXPECTED_HEADERS: readonly ExpectedHeader[] = [
   { name: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { name: "Cross-Origin-Resource-Policy", value: "same-origin" },
   { name: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
-  {
-    name: "Content-Security-Policy",
-    value: "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-  },
 ];
+
+/**
+ * 期待する CSP。`src/lib/csp-nonce.server.ts` の `contentSecurityPolicy` と対で持つ。`{nonce}` には応答ごとの
+ * nonce が入る。写しで持つ理由は `EXPECTED_HEADERS` と同じ
+ */
+const EXPECTED_CSP =
+  "script-src 'nonce-{nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
 
 /** 検査する path と、その path が返すはずの status と、ログインして読むか */
 const CHECKED_RESPONSES = [
@@ -145,6 +147,40 @@ async function signInCheckUser(origin: string): Promise<string> {
   return cookieOf(signIn);
 }
 
+/** 検査の 1 件の応答を取る。期待と違う status なら、その path の経路を確かめたことにならないので落とす */
+async function fetchChecked(
+  origin: string,
+  { path, status, signedIn }: (typeof CHECKED_RESPONSES)[number],
+  cookie: string,
+): Promise<Response> {
+  // redirect を追うと、移り先の応答を検査してしまう
+  const response = await fetch(`${origin}${path}`, {
+    redirect: "manual",
+    headers: signedIn ? { Cookie: cookie } : {},
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  }).catch((error: unknown) => {
+    throw new CheckFailure(
+      `${path} の応答を得られない: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  });
+  if (signedIn && response.status === 302) {
+    // 守る path は、session が効いていないと login へ redirect する。path ではなくログインを疑う
+    throw new CheckFailure(
+      `${path} が 302 を返した。検査のユーザーのログインが効いていない (session の cookie が preview の origin に合わないなど)`,
+    );
+  }
+  if (response.status !== status) {
+    throw new CheckFailure(
+      `${path} の status が ${response.status.toString()} で、${status.toString()} ではない。検査する path を見直す`,
+    );
+  }
+  return response;
+}
+
+async function cspSampleOf(response: Response): Promise<CspSample> {
+  return { policy: response.headers.get("Content-Security-Policy"), html: await response.text() };
+}
+
 async function run(): Promise<void> {
   migrateLocalD1();
   const server = await startPreview("security-headers");
@@ -152,54 +188,38 @@ async function run(): Promise<void> {
   try {
     cookie = await signInCheckUser(server.origin);
     const violations: string[] = [];
-    const scriptViolations: string[] = [];
-    const scannedHtmlPaths: string[] = [];
-    for (const { path, status, signedIn } of CHECKED_RESPONSES) {
-      // redirect を追うと、移り先の応答を検査してしまう
+    const cspViolations: string[] = [];
+    const cspCheckedPaths: string[] = [];
+    for (const checked of CHECKED_RESPONSES) {
+      const { path, status } = checked;
       // oxlint-disable-next-line eslint/no-await-in-loop -- 1 つのサーバへ数件を順に聞くだけで、並列にしても得るものが無い
-      const response = await fetch(`${server.origin}${path}`, {
-        redirect: "manual",
-        headers: signedIn ? { Cookie: cookie } : {},
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      }).catch((error: unknown) => {
-        throw new CheckFailure(
-          `${path} の応答を得られない: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      });
-      if (signedIn && response.status === 302) {
-        // 守る path は、session が効いていないと login へ redirect する。path ではなくログインを疑う
-        throw new CheckFailure(
-          `${path} が 302 を返した。検査のユーザーのログインが効いていない (session の cookie が preview の origin に合わないなど)`,
-        );
-      }
-      if (response.status !== status) {
-        // 期待と違う status の応答を検査しても、その path の経路を確かめたことにならない
-        throw new CheckFailure(
-          `${path} の status が ${response.status.toString()} で、${status.toString()} ではない。検査する path を見直す`,
-        );
-      }
+      const response = await fetchChecked(server.origin, checked, cookie);
       violations.push(
         ...findHeaderViolations(
           Object.fromEntries(response.headers.entries()),
           EXPECTED_HEADERS,
         ).map((violation) => `${path} (${status.toString()}) ${violation}`),
       );
-      if (response.headers.get("Content-Type")?.startsWith("text/html")) {
+      if (status === 200 && response.headers.get("Content-Type")?.startsWith("text/html")) {
+        // nonce が応答ごとに変わるかは、同じ path の 2 回目の応答と比べないと分からない
         // oxlint-disable-next-line eslint/no-await-in-loop -- 上の fetch と同じく、数件を順に読むだけ
-        const html = await response.text();
-        scannedHtmlPaths.push(path);
-        scriptViolations.push(
-          ...findScriptSrcSelfViolations(html, response.url).map(
+        const samples = await Promise.all([
+          cspSampleOf(response),
+          fetchChecked(server.origin, checked, cookie).then(cspSampleOf),
+        ]);
+        cspCheckedPaths.push(path);
+        cspViolations.push(
+          ...findCspNonceViolations(samples, EXPECTED_CSP).map(
             (violation) => `${path} (${status.toString()}) ${violation}`,
           ),
         );
       }
     }
     server.assertStillRunning();
-    if (scannedHtmlPaths.length === 0) {
-      // 0 件を通すと、Content-Type が変わったときに script の検査が黙って空になる
+    if (cspCheckedPaths.length === 0) {
+      // 0 件を通すと、Content-Type が変わったときに CSP の検査が黙って空になる
       throw new CheckFailure(
-        "HTML の応答が 1 つも無く、script を確かめられない。検査する path を見直す",
+        "200 の HTML の応答が 1 つも無く、nonce の CSP を確かめられない。検査する path を見直す",
       );
     }
     if (violations.length > 0) {
@@ -211,12 +231,12 @@ async function run(): Promise<void> {
         ].join("\n"),
       );
     }
-    if (scriptViolations.length > 0) {
+    if (cspViolations.length > 0) {
       throw new CheckFailure(
         [
-          "HTML に、CSP の script-src 'self' で止まる script がある (ADR-0051)。",
-          "inline の script・イベントハンドラの属性・javascript: の URL を、同じ origin の src を持つ module の script に移す。",
-          ...scriptViolations.map((violation) => `  - ${violation}`),
+          "HTML の応答の nonce の CSP が崩れている (ADR-0051)。",
+          "middleware/00.csp.ts が応答ごとに nonce を作り、CSP の header と HTML のすべての <script> に同じ値を付けているかを見る。",
+          ...cspViolations.map((violation) => `  - ${violation}`),
         ].join("\n"),
       );
     }
@@ -234,7 +254,7 @@ async function run(): Promise<void> {
   }
 
   console.log(
-    `[security-headers] ${EXPECTED_HEADERS.length.toString()} 件すべてが ${CHECKED_RESPONSES.map(({ path, status }) => `${path} (${status.toString()})`).join("、")} の応答に乗っていて、HTML の応答に CSP で止まる script が無い`,
+    `[security-headers] ${EXPECTED_HEADERS.length.toString()} 件すべてが ${CHECKED_RESPONSES.map(({ path, status }) => `${path} (${status.toString()})`).join("、")} の応答に乗っていて、200 の HTML の応答の nonce の CSP がすべての <script> に届き、応答ごとに変わる`,
   );
 }
 

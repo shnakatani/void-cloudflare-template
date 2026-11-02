@@ -2,15 +2,6 @@ import { defineConfig } from "void/config";
 
 import { APP_NAME } from "./src/lib/app-name";
 
-// nonce を発行しない Void では、inline の script を許さない形にする (ADR-0051)。
-// dev の HTML だけは React Refresh の preamble が inline の script で、止めると描画の hydration が
-// 落ちる。Void の docs「Custom Headers」に環境ごとに分ける口は無いので、この設定を読む時点の
-// NODE_ENV で分ける。`vp dev` は development、`vp build` は production で読む (Void 1.4.0、
-// 2026-11-02 に実測)。development のときだけ緩め、それ以外は strict に倒す。緩めるのは
-// script-src だけで、残りの directive は dev でも効く
-const SCRIPT_SRC = process.env.NODE_ENV === "development" ? "'self' 'unsafe-inline'" : "'self'";
-const CSP = `script-src ${SCRIPT_SRC}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`;
-
 export default defineConfig({
   worker: {
     // Cloudflare Workers の compatibility date。void init が書く値 (Void の docs「Configuration」の `worker`)。
@@ -30,6 +21,7 @@ export default defineConfig({
     ],
   },
   routing: {
+    // CSP は応答ごとの nonce を持つので、静的な値しか取れないここではなく middleware/00.csp.ts が付ける (ADR-0051)
     headers: {
       "/*": [
         "X-Content-Type-Options: nosniff",
@@ -38,7 +30,6 @@ export default defineConfig({
         "Cross-Origin-Opener-Policy: same-origin",
         "Cross-Origin-Resource-Policy: same-origin",
         "Strict-Transport-Security: max-age=31536000; includeSubDomains",
-        `Content-Security-Policy: ${CSP}`,
       ],
     },
   },
