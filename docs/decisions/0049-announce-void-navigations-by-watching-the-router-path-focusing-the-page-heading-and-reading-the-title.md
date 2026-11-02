@@ -54,7 +54,17 @@ skip link を置かないのは、繰り返すブロックが layout の `<heade
 
 ### モーダルのダイアログが開いている遷移では見出しへ移さない
 
-モーダルのダイアログは focus を中に留め、外側を支援技術から隠す (WAI-ARIA APG の Dialog (Modal) Pattern)。その間に見出しへ focus を移すと、隠された要素が focus を持ち (axe の `aria-hidden-focus`)、スクリーンリーダーには読まれず、利用者はダイアログの中の位置を失う。ダイアログを開いたときの読み上げと focus はダイアログの側が持つ (ADR-0056)。判定は、`role="dialog"` か `role="alertdialog"` で `aria-modal="true"` を持つ要素が表示されているかで行う (`src/lib/focus-page-heading.ts`)。Base UI 1.9.0 の Popup は `aria-modal` を付けないので、この判定には当たらない。一覧のページの query で開くダイアログ (ADR-0056) は path が変わらないので見出しへ移す経路を通らず、path の遷移で開くダイアログを足すと見落として見出しへ移す (ADR-0056 の Consequences)。
+モーダルのダイアログは focus を中に留め、外側を支援技術から隠す (WAI-ARIA APG の Dialog (Modal) Pattern)。その間に見出しへ focus を移すと、隠された要素が focus を持ち (axe の `aria-hidden-focus`)、スクリーンリーダーには読まれず、利用者はダイアログの中の位置を失う。ダイアログを開いたときの読み上げと focus はダイアログの側が持つ (ADR-0056)。
+
+`src/lib/focus-page-heading.ts` の `focusPageHeading` は、次の 2 つの判定をこの順に見て、どちらかに当たれば移さない。
+
+| 順  | 判定                                                                                      | 当たるダイアログ                                                                                                           |
+| --- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 1   | 移し先の見出しの祖先か見出し自身が `aria-hidden="true"` か `inert` を持つ                 | 開いている間、外側に `aria-hidden="true"` を付けるダイアログ。Base UI 1.9.0 のモーダルの Dialog はこれに当たる             |
+| 2   | `role="dialog"` か `role="alertdialog"` で `aria-modal="true"` を持つ要素が表示されている | 外側を隠さず、`aria-modal` だけでモーダルを表すダイアログ。Base UI 1.9.0 の Popup は `aria-modal` を付けないので当たらない |
+
+- 一覧のページの query で開くダイアログ (ADR-0056) は、path が変わらないので見出しへ移す経路を通らない
+- path の遷移と同じ描画で開くダイアログは、判定 1 に当たらないことがある。Base UI が外側に `aria-hidden` を付けるのは、Popup を描いたあとの `useEffect` (`FloatingFocusManager`) である。別のページから一覧の query の URL へ移ると見出しへ focus が 1 回移り、そのあとダイアログの中へ移った (ADR-0056 の Context の実測)。path の遷移でダイアログを開くページを足すと、開くときに見出しを経由する (ADR-0056 の Consequences)
 
 ### 見出しに枠を出さない理由
 
