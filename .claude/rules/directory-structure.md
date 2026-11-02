@@ -51,7 +51,7 @@ paths:
 ## Void の規約のディレクトリ
 
 - 規約のディレクトリ (`pages/`・`routes/`・`middleware/`・`db/` など) はルートに置き、`void.config.ts` に `sourceDir` を書かない。アプリのコードは `src/` に置く (ADR-0064)
-- 部品・hook・純粋関数を `pages/` の中に置かない。`pages/<path>.tsx` は `src/features/<domain>/` のページ本体に props を渡すだけにする。`pages/` の下はページの木として丸ごと読まれる (`docs/guides/placement.md`「Void の規約のディレクトリと `src/` を分ける」)
+- 部品・hook・純粋関数を `pages/` の中に置かない。loader の props を受けて描くページでは、`pages/<path>.tsx` は `src/features/<domain>/` のページ本体に props を渡すだけにする。loader を持たないページは `pages/<path>.tsx` に直に書いてよい。`pages/` の下はページの木として丸ごと読まれる (`docs/guides/placement.md`「Void の規約のディレクトリと `src/` を分ける」)
 - 規約のディレクトリを足したら、`scripts/lib/void-source-dirs.ts` の一覧と、その docstring が挙げる字面で持つ箇所にも足す。足し忘れた箇所は、そのディレクトリのコードだけが検査から無言で外れる (`docs/guides/placement.md`「Void の規約のディレクトリと `src/` を分ける」)
 
 ## テストとスクリプトの配置

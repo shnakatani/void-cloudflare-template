@@ -41,7 +41,7 @@ Void は、ページ・API・middleware・DB などを、名前の決まった�
 
 ## Consequences
 
-- ルートに規約のディレクトリが並び、`src/` と 2 系統になる。`pages/<path>.tsx` は `src/features/<domain>/` の部品に props を渡すだけの薄いファイルになる (ADR-0055)
+- ルートに規約のディレクトリが並び、`src/` と 2 系統になる。loader の props を受けて描くページの `pages/<path>.tsx` は、`src/features/<domain>/` の部品に props を渡すだけの薄いファイルになる (ADR-0055)
 - 規約のディレクトリを名前で持つ箇所が複数ある。`scripts/lib/void-source-dirs.ts` の一覧を変えたら、docstring が挙げる箇所を手で揃える。揃え忘れた箇所は、そのディレクトリのコードだけが検査から無言で外れる
 - Void を上げたら、`void init` の出力の構成と比べ、規約のディレクトリが増えていないかを見る
 - 再評価の条件: Void が `durable-objects/` を含めて `sourceDir` の下から読むようになり、docs と `void init` が `sourceDir` の形を既定にしたら、`sourceDir` を比べ直す

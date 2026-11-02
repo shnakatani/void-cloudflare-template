@@ -38,15 +38,16 @@ server で起きた例外の文言は、production の Void が client へ運ば
 
 ## Decision
 
-**1 つのドメインの schema と query と、その画面の部品・hook・純粋関数は、1 つの画面だけで使うものも `src/features/<domain>/` に置く。`pages/<path>.tsx` はページ本体の部品に props を渡すだけ、`pages/*.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を渡すだけにする。client で動くコードから `.server` の module の値を import するのを lint で止める。server のエラーの文言には仕組みを足さない。**
+**1 つのドメインの schema と query と、その画面の部品・hook・純粋関数は、1 つの画面だけで使うものも `src/features/<domain>/` に置く。loader の props を受けて描くページでは、`pages/<path>.tsx` はページ本体の部品に props を渡すだけ、`pages/*.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を渡すだけにする。client で動くコードから `.server` の module の値を import するのを lint で止める。server のエラーの文言には仕組みを足さない。**
 
-| 置くもの                                                                                    | 置き場所                                                                                                                    |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| valibot の schema と、そこから導出する型 (ADR-0013)                                         | `src/features/<domain>/`                                                                                                    |
-| `db` と `userId` を引数で受ける query の関数                                                | `src/features/<domain>/` の `*.server.ts`                                                                                   |
-| 画面の部品、hook、純粋関数、列定義、定数 (複数の画面から使うものも、1 つの画面だけのものも) | `src/features/<domain>/`。どのドメインにも属さない画面のものは `src/components/screens/`・`src/hooks/`・`src/lib/`          |
-| ページ本体                                                                                  | `src/features/<domain>/` の部品。`pages/<path>.tsx` はそれを描いて props を渡すだけにする                                   |
-| loader・action・`head`                                                                      | `pages/<path>.server.ts`。`getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡し、結果を返すだけにする |
+| 置くもの                                                                                    | 置き場所                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| valibot の schema と、そこから導出する型 (ADR-0013)                                         | `src/features/<domain>/`                                                                                                                                       |
+| `db` と `userId` を引数で受ける query の関数                                                | `src/features/<domain>/` の `*.server.ts`                                                                                                                      |
+| 画面の部品、hook、純粋関数、列定義、定数 (複数の画面から使うものも、1 つの画面だけのものも) | `src/features/<domain>/`。どのドメインにも属さない画面のものは `src/components/screens/`・`src/hooks/`・`src/lib/`                                             |
+| loader の props を受けて描くページの本体                                                    | `src/features/<domain>/` の部品。`pages/<path>.tsx` はそれを描いて props を渡すだけにする。props を渡せば描けるので、テストと story は loader を持たずに描ける |
+| loader を持たないページ (ログイン、登録、ホームなど)                                        | `pages/<path>.tsx` に直に書いてよい。使う部品と schema は `src/components/` と `src/features/<domain>/` から import する                                       |
+| loader・action・`head`                                                                      | `pages/<path>.server.ts`。`getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡し、結果を返すだけにする                                    |
 
 - DB を読む module はファイル名を `*.server.ts` にする。lint はファイル名で server の module を見分ける
 - `tooling/lint/config.ts` の `no-restricted-imports` が、`src/**` と `pages/**` から `\.server(\.[cm]?[jt]sx?)?$` に当たる specifier の値の import を止める。Void は `.server.tsx` なども companion として読む (Void の docs「Pages Routing」の Directory Structure)。`*.server.*` 自身、テストと story の付随ファイル、`src/test/**` は範囲の外にする。`import type` は `allowTypeImports` で通す。発火は `scripts/checks/integrity/server-import-lint.test.ts` が実際のファイルで確かめる

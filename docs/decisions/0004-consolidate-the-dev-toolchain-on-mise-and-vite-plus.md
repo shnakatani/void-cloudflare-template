@@ -312,6 +312,7 @@ Vite+ の `docs/guide/local-cli.md`「Best Practices」は、`vp` を呼ぶ scri
 
 ## 出典
 
+- Void の docs「Deployment」の Other runtimes (`node` で動く成果物は `target` を Node.js・Bun・Deno にしたときだけ): `node_modules/void/docs/guide/deployment.md`
 - Vite+ の runtime 解決順と `packageManager` による package manager shim、`vp env pin` の書き込み先: `node_modules/vite-plus/docs/guide/env.md`
 - `vp env pin` が範囲を exact の版に解決して書くこと: `node_modules/vite-plus/docs/guide/env.md`「Manage」の `vp env pin` の項と Examples (`vp env pin node@26  # Pin Node.js 26 to an exact version`)、Vite+ の `rfcs/dev-engines.md`「2.4 `vp env pin` write target」(https://github.com/voidzero-dev/vite-plus/blob/102fe8edad2c45690f24830feee30bfe242817ee/rfcs/dev-engines.md)、`resolve_version_for_pin` (https://github.com/voidzero-dev/vite-plus/blob/102fe8edad2c45690f24830feee30bfe242817ee/crates/vp_global_cli/src/commands/env/pin.rs)
 - pnpm に Node.js と pnpm の版を管理させない設定: Vite+ の `docs/guide/env.md`「Node.js Selection」の tip と「Package-Manager Selection」(https://github.com/voidzero-dev/vite-plus/blob/v1.4.0/docs/guide/env.md)

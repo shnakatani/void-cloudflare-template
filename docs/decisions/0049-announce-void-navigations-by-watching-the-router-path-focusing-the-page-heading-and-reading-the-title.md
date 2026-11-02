@@ -54,7 +54,7 @@ skip link を置かないのは、繰り返すブロックが layout の `<heade
 
 ### モーダルのダイアログが開いている遷移では見出しへ移さない
 
-モーダルのダイアログは focus を中に留め、外側を支援技術から隠す (WAI-ARIA APG の Dialog (Modal) Pattern)。その間に見出しへ focus を移すと、隠された要素が focus を持ち (axe の `aria-hidden-focus`)、スクリーンリーダーには読まれず、利用者はダイアログの中の位置を失う。ダイアログを開いたときの読み上げと focus はダイアログの側が持つ (ADR-0056)。Base UI 1.9.0 の Popup は `aria-modal` を付けないので、判定は `role="dialog"` の Popup の `data-open` で行う (ADR-0056 の Context)。
+モーダルのダイアログは focus を中に留め、外側を支援技術から隠す (WAI-ARIA APG の Dialog (Modal) Pattern)。その間に見出しへ focus を移すと、隠された要素が focus を持ち (axe の `aria-hidden-focus`)、スクリーンリーダーには読まれず、利用者はダイアログの中の位置を失う。ダイアログを開いたときの読み上げと focus はダイアログの側が持つ (ADR-0056)。判定は、`role="dialog"` か `role="alertdialog"` で `aria-modal="true"` を持つ要素が表示されているかで行う (`src/lib/focus-page-heading.ts`)。Base UI 1.9.0 の Popup は `aria-modal` を付けないので、この判定には当たらない。一覧のページの query で開くダイアログ (ADR-0056) は path が変わらないので見出しへ移す経路を通らず、path の遷移で開くダイアログを足すと見落として見出しへ移す (ADR-0056 の Consequences)。
 
 ### 見出しに枠を出さない理由
 
