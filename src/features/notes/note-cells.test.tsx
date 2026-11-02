@@ -1,10 +1,15 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import type { Locator } from "vite-plus/test/browser/context";
 import { render } from "vitest-browser-react";
 
 import { DataTable } from "@/components/parts/data-table";
 import { cellInColumn } from "@/components/parts/data-table.test-helpers";
+import { DeleteConfirmDialog, type DeleteTarget } from "@/components/parts/delete-confirm-dialog";
+import {
+  confirmDeleteButton,
+  deleteConfirmDescription,
+} from "@/components/parts/delete-confirm-dialog.test-helpers";
 import { formatDateTime } from "@/lib/format-date-time";
 import { expectNoA11yViolations } from "@/test/a11y/a11y";
 import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
@@ -12,28 +17,44 @@ import { expectAbsent, expectRemoved } from "@/test/assert/absent";
 import type { Screen } from "@/test/assert/screen-assertions";
 
 import { NoteBodyDetail } from "./note-cells";
+import {
+  noteBodyDetailRow,
+  noteDeleteTriggerName,
+  noteEditTriggerName,
+  noteExpandTriggerName,
+  noteRow,
+  rowDeleteButton,
+} from "./note-cells.test-helpers";
 import { noteColumns } from "./note-columns";
+import { noteDeleteDialogHandle } from "./note-delete-dialog-handle";
 import { canExpandNoteRow, getNoteRowId, toNoteRows } from "./note-rows";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
 import type { NoteView } from "./notes-page-data";
 import { NOTE_VIEW, OTHER_NOTE_VIEW, UPDATED_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { noteEditUrl } from "./notes-url";
-import { NOTE_FIELD_LABELS } from "./schema";
+import { NOTE_ENTITY_LABEL, NOTE_FIELD_LABELS, type Note } from "./schema";
 
 interface CellsOptions {
   notes?: NoteView[];
   deletingIds?: number[];
   q?: string;
+  onConfirm?: (target: DeleteTarget<Note["id"]>) => void;
 }
 
 /**
  * ページを載せず、列定義 (`noteColumns`) と行の組み立て (`toNoteRows`) を実配線のまま `DataTable` に渡して
- * cell を描く。編集のリンクは Void の `Link` で router を要るので、偽の router の中で描く。props を差し替える
+ * cell を描く。編集のリンクは Void の `Link` で router を要るので、偽の router の中で描く。確認ダイアログの Root は
+ * `NoteActionsCell` のトリガーと同じ handle で同居させる (Root は 1 handle につき 1 つ)。props を差し替える
  * テストは `update` で渡し直す
  */
 async function renderCells(options: CellsOptions = {}) {
   const router = createFakeRouter("/notes");
-  function ui({ notes = [NOTE_VIEW, OTHER_NOTE_VIEW], deletingIds = [], q = "" }: CellsOptions) {
+  function ui({
+    notes = [NOTE_VIEW, OTHER_NOTE_VIEW],
+    deletingIds = [],
+    q = "",
+    onConfirm = vi.fn(),
+  }: CellsOptions) {
     return (
       <VoidRouterProvider router={router}>
         <DataTable
@@ -45,37 +66,17 @@ async function renderCells(options: CellsOptions = {}) {
           getRowCanExpand={({ original }) => canExpandNoteRow(original)}
           renderSubComponent={NoteBodyDetail}
         />
+        <DeleteConfirmDialog
+          handle={noteDeleteDialogHandle}
+          entityLabel={NOTE_ENTITY_LABEL}
+          onConfirm={onConfirm}
+          fallbackFocusRef={{ current: null }}
+        />
       </VoidRouterProvider>
     );
   }
   const screen = await render(ui(options));
   return { screen, update: (next: CellsOptions) => screen.rerender(ui(next)) };
-}
-
-/** 正規表現の特殊文字を escape する (MDN「正規表現」の Escaping) */
-function escapeRegExp(text: string) {
-  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-}
-
-/**
- * メモの行。行の名前は中身を文書順に並べたもので、行を開くボタンの名前もタイトルの cell もタイトルで始まる。
- * 名前の先頭で引き、開いた詳細の行 (名前は本文) に当たらないようにする
- */
-function noteRow(screen: Screen, note: Pick<NoteView, "title">) {
-  return screen.getByRole("row", { name: new RegExp(`^${escapeRegExp(note.title)}`) });
-}
-
-/** 行を開いて出した詳細の行 (`NoteBodyDetail`)。名前は本文だけなので、本文を含む本体の行は外れる */
-function noteBodyDetailRow(screen: Screen, note: Pick<NoteView, "body">) {
-  return screen.getByRole("row", { name: note.body, exact: true });
-}
-
-function noteExpandTriggerName(note: Pick<NoteView, "title">) {
-  return `${note.title}の本文を表示`;
-}
-
-function noteEditTriggerName(note: Pick<NoteView, "title">) {
-  return `${note.title}を編集`;
 }
 
 /** 行を開くボタン (`NoteExpandCell`)。開閉の状態で絞る */
@@ -235,13 +236,100 @@ describe("NoteActionsCell", () => {
     await expect
       .element(screen.getByRole("link", { name: noteEditTriggerName(OTHER_NOTE_VIEW) }))
       .toBeInTheDocument();
-    // 並びは先頭の列の「本文を表示」のあとに「編集」。行の中のリンクとボタンを文書順で読む
+    // 並びは先頭の列の「本文を表示」のあとに「編集」「削除」の順。行の中のリンクとボタンを文書順で読む
     await expect
       .poll(() =>
         [...noteRow(screen, NOTE_VIEW).element().querySelectorAll("a, button")].map((element) =>
           element.getAttribute("aria-label"),
         ),
       )
-      .toEqual([noteExpandTriggerName(NOTE_VIEW), noteEditTriggerName(NOTE_VIEW)]);
+      .toEqual([
+        noteExpandTriggerName(NOTE_VIEW),
+        noteEditTriggerName(NOTE_VIEW),
+        noteDeleteTriggerName(NOTE_VIEW),
+      ]);
+  });
+
+  it("確定行は対象を名前に含む有効な削除トリガーを出し、状態テキストは出さない", async () => {
+    const { screen } = await renderCells();
+
+    await expect.element(rowDeleteButton(screen, NOTE_VIEW)).toBeEnabled();
+    await expect.element(rowDeleteButton(screen, OTHER_NOTE_VIEW)).toBeInTheDocument();
+    await expectAbsent(noteRow(screen, NOTE_VIEW).getByText("削除中", { exact: false }));
+  });
+
+  it("削除中の行だけトリガーを無効にし、読み上げ用の「削除中」を足す", async () => {
+    const { screen } = await renderCells({ deletingIds: [NOTE_VIEW.id] });
+
+    await expect.element(rowDeleteButton(screen, NOTE_VIEW)).toBeDisabled();
+    await expect.element(noteRow(screen, NOTE_VIEW).getByText("削除中")).toBeInTheDocument();
+    // 止めるのは削除中の行だけ (ADR-0017「ブロック範囲」)
+    await expect.element(rowDeleteButton(screen, OTHER_NOTE_VIEW)).toBeEnabled();
+    await expectAbsent(noteRow(screen, OTHER_NOTE_VIEW).getByText("削除中", { exact: false }));
+  });
+
+  it("削除中の行は編集を、focus できる無効のボタンに描き替える", async () => {
+    const { screen } = await renderCells({ deletingIds: [NOTE_VIEW.id] });
+
+    const edit = screen.getByRole("button", { name: noteEditTriggerName(NOTE_VIEW) });
+    await expect.element(edit).toBeDisabled();
+    // native の disabled は tab 順から外す。focusableWhenDisabled は aria-disabled で無効にし、tab 順に残す (Base UI の Button)
+    await expect.element(edit).toHaveAttribute("aria-disabled", "true");
+    await expect.poll(() => edit.element().hasAttribute("disabled")).toBe(false);
+    await expectAbsent(screen.getByRole("link", { name: noteEditTriggerName(NOTE_VIEW) }));
+    // 止めるのは削除中の行だけ
+    await expect
+      .element(screen.getByRole("link", { name: noteEditTriggerName(OTHER_NOTE_VIEW) }))
+      .toBeInTheDocument();
+  });
+
+  it("トリガーを押すと同じ handle の確認ダイアログが開き、確定で行の id と title が渡る", async () => {
+    const onConfirm = vi.fn();
+    const { screen } = await renderCells({ onConfirm });
+
+    await rowDeleteButton(screen, OTHER_NOTE_VIEW).click();
+
+    await expect
+      .element(screen.getByText(deleteConfirmDescription(OTHER_NOTE_VIEW.title)))
+      .toBeInTheDocument();
+    await confirmDeleteButton(screen).click();
+    expect(onConfirm).toHaveBeenCalledWith({ id: OTHER_NOTE_VIEW.id, name: OTHER_NOTE_VIEW.title });
+  });
+
+  it("確定の時点で決めた移し先の行が閉じる前に消えたら、フォーカスは body へ落ちない", async () => {
+    // onConfirm は閉じないので、確定のあとも開いたまま残る
+    const onConfirm = vi.fn();
+    const { screen, update } = await renderCells({ onConfirm });
+    await rowDeleteButton(screen, NOTE_VIEW).click();
+    await confirmDeleteButton(screen).click();
+    // 移し先 (次の行) が、閉じる前に別の理由で消える
+    await update({ notes: [NOTE_VIEW], onConfirm });
+
+    await screen.getByRole("button", { name: "キャンセル" }).click();
+
+    // fallbackFocusRef も空なので、Base UI の既定 (開いたトリガー) へ戻る
+    await expect.element(rowDeleteButton(screen, NOTE_VIEW)).toHaveFocus();
+  });
+
+  it("確定したときに移し先が無ければ warn に残す", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { screen } = await renderCells({ notes: [NOTE_VIEW] });
+    await rowDeleteButton(screen, NOTE_VIEW).click();
+    await confirmDeleteButton(screen).click();
+
+    expect(warn).toHaveBeenCalledWith("[DeleteConfirmDialog] no focus target after confirm", {
+      entityLabel: NOTE_ENTITY_LABEL,
+    });
+  });
+
+  it("確定のあとにキャンセルで閉じても、確定の時点で決めた次の行へフォーカスが移る", async () => {
+    // onConfirm は閉じないので、確定のあとも開いたまま残る (完了点「action の決着」の処理中か失敗)
+    const { screen } = await renderCells();
+    await rowDeleteButton(screen, NOTE_VIEW).click();
+    await confirmDeleteButton(screen).click();
+
+    await screen.getByRole("button", { name: "キャンセル" }).click();
+
+    await expect.element(rowDeleteButton(screen, OTHER_NOTE_VIEW)).toHaveFocus();
   });
 });

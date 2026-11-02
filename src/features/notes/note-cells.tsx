@@ -7,10 +7,12 @@ import type {
   DataTableCellContext,
   DataTableFeatures,
 } from "@/components/parts/data-table-features";
+import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { formatCalendarDateLabel } from "@/lib/format-calendar-date-label";
 import { formatDateTime } from "@/lib/format-date-time";
 
+import { noteDeleteDialogHandle } from "./note-delete-dialog-handle";
 import { noteEditLinkProps } from "./note-dialog-focus";
 import type { NoteRow } from "./note-rows";
 
@@ -80,21 +82,44 @@ export function NoteUpdatedAtCell({ row }: NoteCellContext) {
   return formatDateTime(new Date(row.original.note.updatedAt));
 }
 
-/** 操作の cell。編集のダイアログを開く、一覧の q を保った URL へのリンクを出す */
+/**
+ * 操作の cell。編集のダイアログを開く、一覧の q を保った URL へのリンクと、削除の確認ダイアログを開くトリガーを出す。
+ * 確認ダイアログの Root はページが 1 つだけ描き、トリガーとは handle で結ぶ
+ */
 export function NoteActionsCell({ row }: NoteCellContext) {
-  const { note, editHref } = row.original;
+  const { note, isDeleting, editHref } = row.original;
+  // 可視ラベル「編集」「削除」を含めて WCAG 2.5.3 (Label in Name) を満たし、行が増えても対象が読み上げで分かる
+  const editLabel = `${note.title}を編集`;
   return (
     <div className="flex gap-2">
-      <ButtonLink
-        href={editHref}
-        variant="outline"
-        size="sm"
-        {...noteEditLinkProps(note.id)}
-        // 可視ラベル「編集」を含めて WCAG 2.5.3 (Label in Name) を満たす
-        aria-label={`${note.title}を編集`}
+      {/* 削除中は行から可視の手掛かりが半透明しか出ないので、読み上げ用のテキストを足す (ADR-0026) */}
+      {isDeleting && <span className="sr-only">削除中</span>}
+      {isDeleting ? (
+        // 削除中は開かせない (ADR-0017「ブロック範囲」)。ButtonLink は無効の状態を持たないので、focus できる
+        // 無効のボタンに描き替え、tab 順に残す
+        <Button variant="outline" size="sm" focusableWhenDisabled disabled aria-label={editLabel}>
+          編集
+        </Button>
+      ) : (
+        <ButtonLink
+          href={editHref}
+          variant="outline"
+          size="sm"
+          {...noteEditLinkProps(note.id)}
+          aria-label={editLabel}
+        >
+          編集
+        </ButtonLink>
+      )}
+      <AlertDialogTrigger
+        handle={noteDeleteDialogHandle}
+        payload={{ id: note.id, name: note.title }}
+        render={<Button variant="destructive" size="sm" />}
+        aria-label={`${note.title}を削除`}
+        disabled={isDeleting}
       >
-        編集
-      </ButtonLink>
+        削除
+      </AlertDialogTrigger>
     </div>
   );
 }

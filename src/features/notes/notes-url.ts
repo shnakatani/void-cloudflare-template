@@ -46,8 +46,13 @@ function qParts(q: string): string[] {
   return q === "" ? [] : [`${QUERY_KEY}=${encodeURIComponent(q)}`];
 }
 
+/** 一覧の query (`?` を除く)。一覧から送る削除の action の URL にも載せる */
+export function notesListQuery(q: string): string {
+  return qParts(q).join("&");
+}
+
 export function notesListUrl(q: string): string {
-  return urlWith(qParts(q).join("&"));
+  return urlWith(notesListQuery(q));
 }
 
 /** 追加のダイアログを開いた一覧の query (`?` を除く)。保存の action の URL にも載せる */

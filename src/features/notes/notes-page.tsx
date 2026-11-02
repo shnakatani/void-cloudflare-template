@@ -11,14 +11,17 @@ import {
 import * as v from "valibot";
 
 import { ButtonLink } from "@/components/parts/button-link";
+import { DeleteConfirmDialog, type DeleteTarget } from "@/components/parts/delete-confirm-dialog";
 import { PageHeader } from "@/components/parts/page-header";
 import { StaleContent } from "@/components/parts/stale-content";
 import { Dialog } from "@/components/ui/dialog";
+import { usePageAction } from "@/hooks/use-page-action";
 import { announce } from "@/lib/live-announcer";
 import { startVisit } from "@/lib/start-visit";
 
+import { noteDeleteDialogHandle } from "./note-delete-dialog-handle";
 import { NoteDialogContent } from "./note-dialog";
-import { noteCreateLinkProps } from "./note-dialog-focus";
+import { noteCreateLinkProps, noteCreateLinkRef } from "./note-dialog-focus";
 import {
   NOTE_SEARCH_DEBOUNCE_MS,
   NOTES_RESULTS_ERROR_ANNOUNCEMENT,
@@ -28,11 +31,8 @@ import { NoteSearchField } from "./note-search-field";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
 import { noteDialogKey, notesDocumentTitle, type NotesPageData } from "./notes-page-data";
 import { NotesResults } from "./notes-results";
-import { noteCreateUrl, notesListUrl } from "./notes-url";
+import { noteCreateUrl, notesListQuery, notesListUrl } from "./notes-url";
 import { NOTE_ENTITY_LABEL, noteListFilterSchema, type Note } from "./schema";
-
-/** 削除中の行が無いときの値 */
-const NO_DELETING_IDS: readonly Note["id"][] = [];
 
 type SearchField = {
   readonly text: string;
@@ -112,6 +112,28 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
   // 保存に失敗したときに入力が残らない (完了点「サーバー応答」、ADR-0017)
   const [saving, markSaving] = useOptimistic(false);
 
+  // 削除中の行の id。確定の Action が終わると空に戻り、行は新しい props で消える。reducer は同じ id を 2 度足さない
+  // (新しい props が Action の途中で commit されても同じ結果になる。`docs/guides/react/updates.md`「楽観表示を出す」)
+  const [deletingIds, markDeleting] = useOptimistic<readonly Note["id"][], Note["id"]>(
+    [],
+    (ids, id) => (ids.includes(id) ? ids : [...ids, id]),
+  );
+  const { run: runDelete } = usePageAction("/notes?delete", { pageQuery: notesListQuery(q) });
+
+  // 完了点「確定操作の直後」: 閉じてから楽観値を立て、run の決着まで Action を続ける。失敗しても行は残っていて、
+  // やり直せる (ADR-0017)
+  async function confirmDelete(target: DeleteTarget<Note["id"]>) {
+    noteDeleteDialogHandle.close();
+    markDeleting(target.id);
+    // 開始は確定を押した直後なので、対象名を載せない (ADR-0026)
+    announce("削除しています");
+    // 完了の通知に対象名が要る。onSuccess は hook ごとに 1 つで、送った値を受けないので、run の true を見て通知する。
+    // run が true を返すのは onSuccess のあとなので、通知の時点は onSuccess に書いたときと同じ
+    if (await runDelete({ id: target.id })) {
+      announce(`『${target.name}』を削除しました`);
+    }
+  }
+
   const handleDialogOpenChange: NonNullable<ComponentProps<typeof Dialog>["onOpenChange"]> = (
     open,
     details,
@@ -163,9 +185,15 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
       <div className="flex flex-1 flex-col p-4">
         {/* 入力と props の q がずれている間 (debounce の待ちと読み込み中) は、前の一覧を半透明で残す */}
         <StaleContent stale={draftQ !== q}>
-          <NotesResults q={q} notes={notes} deletingIds={NO_DELETING_IDS} />
+          <NotesResults q={q} notes={notes} deletingIds={deletingIds} />
         </StaleContent>
       </div>
+      <DeleteConfirmDialog
+        handle={noteDeleteDialogHandle}
+        entityLabel={NOTE_ENTITY_LABEL}
+        onConfirm={confirmDelete}
+        fallbackFocusRef={noteCreateLinkRef}
+      />
       {/* Root は開閉をまたいで残し、open を URL の query から導く。中身は種類と id で作り直す */}
       <Dialog open={dialog.kind !== "closed"} onOpenChange={handleDialogOpenChange}>
         <NoteDialogContent
