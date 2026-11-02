@@ -87,7 +87,7 @@ lint では見ないのでレビューで見る。
 
 型検査も lint も行き先を見ないのでレビューで見る (ADR-0059)。
 
-- `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。Void 1.4.0 では在らない path を書いても、押すまで 404 に気付けない (ADR-0059)
+- アプリのページへ遷移する `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。Void 1.4.0 では在らない path を書いても、押すまで 404 に気付けない (ADR-0059)
 - `c.redirect` には、path の定数か URL を組む関数の値を `new URL(<値>, c.req.url).href` で絶対 URL にして渡す。相対の path は要求の query を行き先に混ぜる (`docs/guides/auth.md`「redirect を絶対 URL で書く理由」)
 - query を持つ URL は、query の組み方を持つ関数で組み、呼び出し側で `?` と `&` を連結しない (ADR-0059)
 - path の定数は URL を組む関数と別のモジュールに置き、そのモジュールは path の定数のほかを import しない。同じモジュールに置くと、リンクだけを描くページの client の chunk に検証のスキーマが入る (ADR-0059)
