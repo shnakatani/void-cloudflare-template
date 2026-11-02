@@ -38,7 +38,7 @@ function recordFocusChanges(): FocusChangeRecord {
 
 /**
  * 別のページへの遷移の読み込みが `PENDING_DISPLAY_DELAY_MS` を超えたら、「読み込み中」を 1 回読み上げる (ADR-0049「待ちの読み上げ」)。
- * 依存は遷移の値ではなく、別のページを待っているかに置く。待ちの途中で次の遷移が始まっても測り直さず、重ねて読み上げない。
+ * 依存は遷移の値ではなく、別のページを待っているかに置く。待ちの途中で次の別のページへの遷移が始まっても測り直さず、重ねて読み上げない。
  * 新しいページが描かれて path が行き先に揃うか、遷移が終わると、待ちは終わる
  */
 function useAnnounceNavigationWait(path: string, navigation: NavigationState) {
