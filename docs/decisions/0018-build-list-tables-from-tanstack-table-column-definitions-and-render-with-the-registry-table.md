@@ -26,27 +26,28 @@
 
 **一覧テーブルは TanStack Table v9 の列定義 (`createColumnHelper`) を SSOT にし、shadcn「Data Table」と同じ構成の `DataTable` 部品 (`src/components/parts/data-table.tsx`) が registry の `Table` に `FlexRender` で描く。楽観表示の設計は ADR-0017 のままで、data 配列を組み立てる側に閉じる。**
 
-| 対象             | 形                                                                                                                                                                                                                                                                                                                            |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DataTable` 部品 | `src/components/parts/data-table.tsx` (registry ではない自作の共有部品の置き場)。`columns` / `data` / `getRowId` / `rowProps` / `emptyText` を受け、`useTable` と `FlexRender`、見出しの `scope="col"`、空行を持つ。features は `src/components/parts/data-table-features.ts` (shadcn の `data-table-features.ts` と同じ役割) |
-| 楽観的更新       | Table は機構を持たない。variables 方式 (ADR-0017) は data の組み立てで、キャッシュ書き換え方式はキャッシュ配列で、どちらも Table 側は変わらない。楽観的更新を扱う画面が増えたら TanStack DB への寄せ替えを ADR-0017 の再評価で扱う                                                                                            |
+| 対象             | 形                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataTable` 部品 | `src/components/parts/data-table.tsx` (registry ではない自作の共有部品の置き場)。`columns` / `data` / `tableKey` / `getRowId` / `rowProps` / `emptyText` を受け、`useTable` と `FlexRender`、見出しの `scope="col"`、dev だけの devtools 登録、空行を持つ。features は `src/components/parts/data-table-features.ts` (shadcn の `data-table-features.ts` と同じ役割) |
+| 楽観的更新       | Table は機構を持たない。variables 方式 (ADR-0017) は data の組み立てで、キャッシュ書き換え方式はキャッシュ配列で、どちらも Table 側は変わらない。楽観的更新を扱う画面が増えたら TanStack DB への寄せ替えを ADR-0017 の再評価で扱う                                                                                                                                   |
 
-列定義の置き場、型、行の型、data の組み立て、描画、features、cell への関数、skill の組み方は `docs/guides/lists-and-search.md`「一覧テーブルを組む」にある。
+列定義の置き場、型、行の型、data の組み立て、描画、features、cell への関数、devtools、skill の組み方は `docs/guides/lists-and-search.md`「一覧テーブルを組む」にある。
 
 ### 検討した選択肢
 
-| 案                                             | 評価                                                                                                                                                                                                                                                  | 採否     |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| TanStack Table v9 の列定義 + registry の Table | 公式 (shadcn Data Table) と同じ形。見出しとセルが 1 つの定義に載る。sorting / filtering を足すときも feature の登録で済む。同梱 skill が実装の規範を持つ                                                                                              | **採用** |
-| 自前の `{ header, cell }` 配列                 | 型では結べるが、並び替えや表示切替を足すたびに自作が増える。公式の先行例が無い                                                                                                                                                                        | 却下     |
-| 現状維持 (見出し配列とセルを別々に書く)        | 列を足すときに片方だけ書き忘れても検査で落ちない。楽観行の列構造が 2 箇所                                                                                                                                                                             | 却下     |
-| shadcn の `DataTable` 部品を持つ               | 描画の骨組み (`FlexRender`、`scope="col"`、空行) が 1 箇所に集まり、ページは列定義と data を渡すだけになる。置き場は registry ではない自作部品の `src/components/parts/` (ADR-0020 で `components/ui/` は registry 専用、ADR-0011 で `parts/` に分離) | **採用** |
-| `createTableHook` で app 共通の factory を作る | 同梱 skill `getting-started` の reference `create-table-hook` が「Keep one-off tables on `useTable`」と書く。2 つ目の table で共通の規約が要るようになったら再評価                                                                                    | 再評価   |
-| TanStack DB で楽観状態ごと置き換える           | 楽観的更新を扱う画面が 1 つのうちは ADR-0017 の variables 方式で足りる。Query の collection 化は画面横断の変更になる                                                                                                                                  | 再評価   |
+| 案                                             | 評価                                                                                                                                                                                                                                                            | 採否     |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| TanStack Table v9 の列定義 + registry の Table | 公式 (shadcn Data Table) と同じ形。見出しとセルが 1 つの定義に載る。sorting / filtering を足すときも feature の登録で済む。同梱 skill が実装の規範を持つ                                                                                                        | **採用** |
+| 自前の `{ header, cell }` 配列                 | 型では結べるが、並び替えや表示切替を足すたびに自作が増える。公式の先行例が無い                                                                                                                                                                                  | 却下     |
+| 現状維持 (見出し配列とセルを別々に書く)        | 列を足すときに片方だけ書き忘れても検査で落ちない。楽観行の列構造が 2 箇所                                                                                                                                                                                       | 却下     |
+| shadcn の `DataTable` 部品を持つ               | 描画の骨組み (`FlexRender`、`scope="col"`、devtools、空行) が 1 箇所に集まり、ページは列定義と data を渡すだけになる。置き場は registry ではない自作部品の `src/components/parts/` (ADR-0020 で `components/ui/` は registry 専用、ADR-0011 で `parts/` に分離) | **採用** |
+| `createTableHook` で app 共通の factory を作る | 同梱 skill `getting-started` の reference `create-table-hook` が「Keep one-off tables on `useTable`」と書く。2 つ目の table で共通の規約が要るようになったら再評価                                                                                              | 再評価   |
+| TanStack DB で楽観状態ごと置き換える           | 楽観的更新を扱う画面が 1 つのうちは ADR-0017 の variables 方式で足りる。Query の collection 化は画面横断の変更になる                                                                                                                                            | 再評価   |
 
 ## Consequences
 
 - 依存に `@tanstack/react-table` が入る (ADR-0005 の待機 3 日は経過)。`@tanstack/table-core` と `@tanstack/react-store` が同梱で入る
+- 開発の依存に `@tanstack/react-table-devtools` が入る。アプリのコードは dev だけで読むので、TanStack Devtools の docs「Production」の dev だけで使う場合の置き場 (dev dependency) に従う
 - features に置くかの基準は `docs/guides/placement.md`「features か lib・hooks か」にある
 - 再評価条件: 2 つ目の一覧画面が出たとき (`createTableHook` の factory)、sorting / pagination を足すとき (`autoResetPageIndex`)、楽観的更新を扱う画面が増えたとき (TanStack DB)
 
@@ -59,5 +60,6 @@
 - TanStack Table「Table and Column Meta」: https://tanstack.com/table/latest/docs/guide/table-and-column-meta
 - TanStack Table「Agent Skills」: https://tanstack.com/table/latest/docs/agent-skills
 - TanStack/table#5670: https://github.com/TanStack/table/discussions/5670
+- TanStack Devtools「Production」: https://tanstack.com/devtools/latest/docs/production
 - TanStack DB「Overview」: https://tanstack.com/db/latest/docs/overview
 - WAI「Tables with one header」: https://www.w3.org/WAI/tutorials/tables/one-header/
