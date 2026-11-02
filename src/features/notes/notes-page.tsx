@@ -69,13 +69,37 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     if (field.requestedQ === null && next === q) {
       return;
     }
-    setField((current) => ({ ...current, requestedQ: next }));
+    // 表示中の q へ戻す visit は、commit しても props の q が変わらず消費されないので、求めた q に持たない
+    setField((current) => ({ ...current, requestedQ: next === q ? null : next }));
     // 検索のたびに履歴を積まない。後の visit が前を取り消すので、途中の語の結果は commit されない (ADR-0017)
     startVisit(router, notesListUrl(next), { replace: true, preserveScroll: true });
   }
+
+  function handleDebouncedSearch(next: string) {
+    // 待ちの間に外からダイアログが開いた (戻る・進む)。開いている間は入力欄に打てないので、待っていた語は古い
+    if (dialog.kind !== "closed") {
+      abandonSearch();
+      return;
+    }
+    // 待ちの間に外から q が変わり、入力欄が描画の中で q に揃った。待っていた語は古い
+    if (next !== normalizeQuery(field.text)) {
+      return;
+    }
+    visitSearch(next);
+  }
   // debounce の発火は打鍵の結果なので、effect で debounce 済みの値を見張らず、onChange から呼ぶ。
-  // useDebouncer は描画ごとに関数を最新に替えるので、visitSearch は発火の時点の q と field を読む
-  const searchDebouncer = useDebouncer(visitSearch, { wait: NOTE_SEARCH_DEBOUNCE_MS });
+  // useDebouncer は描画ごとに関数を最新に替えるので、発火した関数は発火の時点の q と dialog と field を読む
+  const searchDebouncer = useDebouncer(handleDebouncedSearch, { wait: NOTE_SEARCH_DEBOUNCE_MS });
+
+  // ほかの visit (ダイアログの開閉) を始める直前に呼ぶ。検索の待ちと、まだ届いていない検索の visit を捨て、
+  // 入力欄を props の q に戻す。後から発火した検索の visit は、先に始めた visit を取り消す (ADR-0017)。
+  // 入力欄を戻さないと、どの visit も始まらないまま、一覧が半透明で残る
+  function abandonSearch() {
+    searchDebouncer.cancel();
+    if (field.text !== q || field.requestedQ !== null) {
+      setField({ text: q, syncedQ: q, requestedQ: null });
+    }
+  }
 
   function handleTextChange(text: string) {
     setField((current) => ({ ...current, text }));
@@ -151,6 +175,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     }
     // 閉じる操作 (キャンセル・Escape・外側・X) は一覧の URL へ移る。新しい props でダイアログが閉じる。
     // 同じ一覧に戻るので scroll を保つ。Void は新しい遷移で先頭へ scroll し、開いた元の行のリンクへ戻した focus が画面の外へ出る
+    abandonSearch();
     startVisit(router, notesListUrl(q), { preserveScroll: true });
   };
 
@@ -181,7 +206,12 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
               onSubmit={handleSubmit}
             />
             {/* 一覧の絞り込みと scroll を保ったまま開き、閉じたら同じ一覧へ戻る */}
-            <ButtonLink href={noteCreateUrl(q)} preserveScroll {...noteCreateLinkProps()}>
+            <ButtonLink
+              href={noteCreateUrl(q)}
+              preserveScroll
+              onNavigate={abandonSearch}
+              {...noteCreateLinkProps()}
+            >
               ＋ {NOTE_ENTITY_LABEL}を追加
             </ButtonLink>
           </>
@@ -190,7 +220,12 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
       <div className="flex flex-1 flex-col p-4">
         {/* 入力と props の q がずれている間 (debounce の待ちと読み込み中) は、前の一覧を半透明で残す */}
         <StaleContent stale={draftQ !== q}>
-          <NotesResults q={q} notes={notes} deletingIds={deletingIds} />
+          <NotesResults
+            q={q}
+            notes={notes}
+            deletingIds={deletingIds}
+            onRowNavigate={abandonSearch}
+          />
         </StaleContent>
       </div>
       <DeleteConfirmDialog

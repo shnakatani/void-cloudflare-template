@@ -24,10 +24,13 @@ export function NotesResults({
   q,
   notes,
   deletingIds,
+  onRowNavigate,
 }: {
   q: string;
   notes: readonly NoteView[] | null;
   deletingIds: readonly Note["id"][];
+  /** 行の編集のリンクが遷移を始める直前に呼ぶ */
+  onRowNavigate: () => void;
 }) {
   if (notes === null) {
     return <NotesLoadFailed />;
@@ -64,6 +67,7 @@ export function NotesResults({
       rowProps={({ original }) => ({ "data-busy": original.isDeleting })}
       getRowCanExpand={({ original }) => canExpandNoteRow(original)}
       renderSubComponent={NoteBodyDetail}
+      meta={{ onRowNavigate }}
     />
   );
 }

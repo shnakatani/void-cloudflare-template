@@ -86,7 +86,7 @@ export function NoteUpdatedAtCell({ row }: NoteCellContext) {
  * 操作の cell。編集のダイアログを開く、一覧の q を保った URL へのリンクと、削除の確認ダイアログを開くトリガーを出す。
  * 確認ダイアログの Root はページが 1 つだけ描き、トリガーとは handle で結ぶ
  */
-export function NoteActionsCell({ row }: NoteCellContext) {
+export function NoteActionsCell({ row, table }: NoteCellContext) {
   const { note, isDeleting, editHref } = row.original;
   // 可視ラベル「編集」「削除」を含めて WCAG 2.5.3 (Label in Name) を満たし、行が増えても対象が読み上げで分かる
   const editLabel = `${note.title}を編集`;
@@ -105,6 +105,9 @@ export function NoteActionsCell({ row }: NoteCellContext) {
         <ButtonLink
           href={editHref}
           preserveScroll
+          // meta は押した時点で読む。cell の部品は props の row が同じなら描き直されず、描いた時点の callback は
+          // ページの古い state を読む
+          onNavigate={() => table.options.meta?.onRowNavigate?.()}
           variant="outline"
           size="sm"
           {...noteEditLinkProps(note.id)}
