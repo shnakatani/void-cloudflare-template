@@ -56,7 +56,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 - `docs/guides/database.md`「schema を変える」のとおりに migration を生成して commit する (ADR-0052)。deploy は `db/migrations/` の未適用の分を当て、schema に migration の無い変更があると止まる ([Void docs「Deployment」][] の Migrations)
 - deploy は migration を当てる前に D1 の復元点を保存し、`void db restore` の command を表示する。CI では Deploy の step のログに出る。Workers Free では 7 日、Workers Paid では 30 日で失効する ([Void docs「Deployment」][] の Migrations)
-- 当てた migration は rollback で戻らない。戻すときは、`vp exec void project rollback --platform cloudflare` でコードを戻し、表示された `void db restore --platform cloudflare --bookmark=<bookmark>` を `vp exec` を付けて打って D1 を戻し、migration を直してから出し直す。restore は復元点より後の書き込みをすべて捨てる ([Void docs「Deployment」][] の Migrations)
+- 当てた migration は rollback で戻らない。戻すときは、`vp exec void project rollback --platform cloudflare` でコードを戻し、deploy が表示した `void db restore` の command を `vp exec` を付けて打って D1 を戻し、migration を直してから出し直す。restore は復元点より後の書き込みをすべて捨てる ([Void docs「Deployment」][] の Migrations)
 
 ### Void を上げたら workflow を生成物と比べる
 
