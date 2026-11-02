@@ -157,6 +157,9 @@ importers:
       eslint-plugin-testing-library:
         specifier: ^7.16.2
         version: 7.16.2(eslint@10.10.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      miniflare:
+        specifier: 5.20261023.1-beta
+        version: 5.20261023.1-beta(@types/node@24.19.2)
       oxc-transform-react:
         specifier: ^0.152.0
         version: 0.152.0

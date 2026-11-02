@@ -2,16 +2,30 @@ import { useRouter } from "@void/react";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
+import { auth } from "void/client";
 
 import { toast } from "@/components/ui/toast";
+import type { AppShared, SharedUser } from "@/features/auth/shared";
 import { LIVE_REGION_IDS } from "@/lib/live-announcer";
+import { MUTATION_ERROR_FALLBACK_MESSAGE } from "@/lib/mutation-error";
 import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
+import { expectAbsent } from "@/test/assert/absent";
 
 import Layout from "./layout";
 
-async function renderLayout(children: React.ReactNode, router = createFakeRouter("/")) {
+vi.mock("void/client", () => ({ auth: { signOut: vi.fn() } }));
+
+const SIGNED_OUT: AppShared = { auth: { user: null } };
+const USER: SharedUser = { id: "u1", email: "a@example.com", name: "a" };
+const SIGNED_IN: AppShared = { auth: { user: USER } };
+
+async function renderLayout(
+  children: React.ReactNode,
+  router = createFakeRouter("/"),
+  shared: AppShared = SIGNED_OUT,
+) {
   return render(
-    <VoidRouterProvider router={router}>
+    <VoidRouterProvider router={router} shared={shared}>
       <Layout>{children}</Layout>
     </VoidRouterProvider>,
   );
@@ -79,6 +93,38 @@ describe("root layout", () => {
     await expect
       .element(screen.getByRole("heading", { name: "エラーが発生しました" }))
       .toHaveFocus();
+  });
+
+  it("ログイン中は、メールアドレスとログアウトのボタンを出す", async () => {
+    const screen = await renderLayout(<p>x</p>, createFakeRouter("/"), SIGNED_IN);
+    await expect.element(screen.getByRole("banner").getByText(USER.email)).toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("banner").getByRole("button", { name: "ログアウト" }))
+      .toBeInTheDocument();
+  });
+
+  it("ログアウトしたらログインの画面へ遷移する", async () => {
+    vi.mocked(auth.signOut).mockResolvedValue({ data: { success: true }, error: null });
+    const router = createFakeRouter("/");
+    const screen = await renderLayout(<p>x</p>, router, SIGNED_IN);
+    await screen.getByRole("button", { name: "ログアウト" }).click();
+    await expect.poll(() => router.visits.map((visit) => visit.url)).toEqual(["/login"]);
+  });
+
+  it("ログアウトに失敗したら toast に出し、遷移しない", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(auth.signOut).mockRejectedValue(new TypeError("Failed to fetch"));
+    const router = createFakeRouter("/");
+    const screen = await renderLayout(<p>x</p>, router, SIGNED_IN);
+    await screen.getByRole("button", { name: "ログアウト" }).click();
+    await expect.element(screen.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeInTheDocument();
+    expect(router.visits).toEqual([]);
+  });
+
+  it("ログインしていなければ banner を出さない", async () => {
+    const screen = await renderLayout(<h1>見出し</h1>);
+    await expect.element(screen.getByRole("heading", { name: "見出し" })).toBeInTheDocument();
+    await expectAbsent(screen.getByRole("banner"));
   });
 });
 

@@ -158,6 +158,13 @@ const EXPECTED_OVERRIDES = [
     excludeFiles: ["src/test/**"],
     rules: { "no-restricted-imports": "deny" },
   },
+  {
+    // client で動くコードから .server の module の値を import させない (ADR-0055)。
+    // *.server.ts は server で動くので外す
+    files: ["src/**", "pages/**"],
+    excludeFiles: ["**/*.server.ts", "src/test/**"],
+    rules: { "no-restricted-imports": "deny" },
+  },
 ];
 
 /** 期待値から差し引く付随ファイルの glob。唯一の定義は scripts/lib/companion-files.ts */
@@ -317,12 +324,15 @@ describe("書いた設定が解決後も残っている", () => {
         "email/**",
         "durable-objects/**",
       ],
+      ["src/**", "pages/**"],
     ]);
-    expect(
-      holders[0]?.excludeFiles?.filter((glob) => COMPANION_GLOBS.has(glob)),
-      "付随ファイルの除外が欠けた。その種別のファイルが自分の helper を import できなくなる " +
-        "(ADR-0008)",
-    ).toEqual(companionGlobs("**/"));
+    for (const holder of holders) {
+      expect(
+        holder.excludeFiles?.filter((glob) => COMPANION_GLOBS.has(glob)),
+        "付随ファイルの除外が欠けた。その種別のファイルが自分の helper を import できなくなる " +
+          "(ADR-0008)",
+      ).toEqual(companionGlobs("**/"));
+    }
   });
 });
 

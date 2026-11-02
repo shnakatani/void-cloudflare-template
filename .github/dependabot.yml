@@ -56,10 +56,15 @@ updates:
         patterns:
           - "tailwindcss"
           - "@tailwindcss/*"
+      # miniflare は exact で持ち、版は Void が引く @cloudflare/vite-plugin が解決する版に揃える (src/test/app/d1.ts が直接 import する)。
+      # 別の版が入ると、テストの workerd と dev の workerd が食い違う。Void を上げたら vp why miniflare で
+      # @cloudflare/vite-plugin の下の版を確かめ、package.json の miniflare を同じ版に書き換える。
+      # 撤去条件: Void が Miniflare の D1 を返すテスト用の入口を公開し、src/test/app/d1.ts が miniflare を import しなくなったとき (ADR-0005)
       void:
         patterns:
           - "void"
           - "@void/*"
+          - "miniflare"
       # patterns を持つほかのグループの依存をすべて除き、グループを変えたらここも変える。写さないと、組の依存が
       # 組のグループから外れてこの PR に入るか、両方のグループに入る (dependabot/dependabot-core#14576。
       # docs/guides/dependencies-and-toolchain.md「Vite+ を上げる」)
@@ -86,3 +91,4 @@ updates:
           - "@tailwindcss/*"
           - "void"
           - "@void/*"
+          - "miniflare"

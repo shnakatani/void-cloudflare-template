@@ -1,7 +1,7 @@
 # ADR-0004: 開発環境のツールチェーンは mise と Vite+ に寄せる
 
 - Status: Accepted
-- Date: 2026-10-30
+- Date: 2026-11-02
 - 関連: ADR-0005 (依存更新の待機)
 
 ## Context
@@ -102,11 +102,11 @@ CI は mise を要さず、同じタスクを同じ順に、1 つずつ別の st
 
 ### 値の置き場所を 3 つに分ける
 
-| 種別                       | 置き場所                         | 例                    |
-| -------------------------- | -------------------------------- | --------------------- |
-| 環境で変わらない値         | モジュール定数                   | `src/lib/app-name.ts` |
-| 環境で変わるが秘密でない値 | `.mise.toml` の `[env]`          | 現時点で該当なし      |
-| 秘密                       | 暗号化して commit + 実行時に復号 | 現時点で該当なし      |
+| 種別                       | 置き場所                                                  | 例                    |
+| -------------------------- | --------------------------------------------------------- | --------------------- |
+| 環境で変わらない値         | モジュール定数                                            | `src/lib/app-name.ts` |
+| 環境で変わるが秘密でない値 | `.mise.toml` の `[env]`                                   | 現時点で該当なし      |
+| 秘密                       | ローカルは ignore 済みの `.env`、本番は `void secret put` | `BETTER_AUTH_SECRET`  |
 
 アプリ名のように環境ごとに値が変わらないものは環境変数にしない。
 `VITE_APP_NAME` を `.mise.toml` の `[env]` に置くと、値の定義・型宣言・未設定の検出・CI への受け渡しが芋づるで要り、CI が mise に依存する原因になる。
@@ -160,12 +160,11 @@ Vite は使用中なら次の空き port へずらし (Vite docs の `server.por
 
 ### `envDir: false` で Vite の `.env` 読み込みを切る
 
-秘密を扱う段になったときの前提を先に固定する。
-Vite 公式は「`VITE_*` variables should _not_ contain sensitive information」と明記しており、client へ出る値は暗号化しても意味がない。秘密は server 側にしか存在し得ない。
+秘密は server 側にしか存在し得ない。Vite 公式は「`VITE_*` variables should _not_ contain sensitive information」と明記しており、client へ出る値は秘密にならない。
 
-暗号化した `.env` をそのまま commit する方式 (dotenvx は暗号文を `.env` 自身へ書き戻し、秘密鍵だけを `.env.keys` へ出す) は、Vite が `.env` を native に読むと衝突する。暗号文が復号されないまま `import.meta.env` と `process.env` へ流れ込むためで、vitejs/vite#19373 がその報告である。`envDir: false` はその解として Vite へ追加された。
+秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す (Void docs「Environment variables」: "Use `.env` for local values and `void secret put` for production server values")。`.env` 以外の dotenv ファイルを Void は扱わない。
 
-読み込む `.env` が現時点で無いので、いま切っても失うものは無い。逆に、後から `.env` を置いた人が「Vite が勝手に読む」前提でコードを書くのを防げる。
+Void はルートの `.env` を読み、build が `dist/ssr/.dev.vars` へ写す。`vp preview` の Worker が secret を受けるのはこの経路だけである (Void 1.4.0 の観測)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
 
 `envDir: false` は `vite.config.ts` に 1 つだけ書く。
 テストの project は `vite.config.ts` の設定を継承するので (ADR-0037)、ビルドとテストで値が割れない。

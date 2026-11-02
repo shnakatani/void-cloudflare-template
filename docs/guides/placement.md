@@ -2,9 +2,11 @@
 
 新しいファイルをどのディレクトリに置くかの手順と落とし穴と、その理由を持つ。
 
-| 決定                                                          | ADR      |
-| ------------------------------------------------------------- | -------- |
-| テスト専用コードの import は `no-restricted-imports` で止める | ADR-0008 |
+| 決定                                                                                                                                | ADR      |
+| ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| テスト専用コードの import は `no-restricted-imports` で止める                                                                       | ADR-0008 |
+| tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ            | ADR-0047 |
+| ドメインの schema と query は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
 
 ## how-to
 
@@ -17,6 +19,17 @@
 | 複数の画面から使う                         | `src/features/<domain>/`                                                                                                         |
 | ドメインの形 (schema) と同じ場所に居るべき | `src/features/<domain>/`                                                                                                         |
 | どのドメインにも属さない                   | React に依存しない汎用ロジックと型は `src/lib/`、React の hook と、複数のファイルから使う React の context の定義は `src/hooks/` |
+
+1 つのドメインの schema と query の関数は `src/features/<domain>/` に置く (ADR-0055)。
+
+| 置くもの                                     | ファイル                                                                                                                                                |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| valibot の schema と、そこから導出する型     | `src/features/<domain>/` の `.ts`。client からも import できる                                                                                          |
+| `db` と `userId` を引数で受ける query の関数 | `src/features/<domain>/` の `*.server.ts`。DB を読む module は必ず `.server` で終える。lint はこの名前で、client で動くコードからの値の import を止める |
+| loader・action・`head`                       | `pages/<path>.server.ts`。`getUser()` と `db` を query の関数へ渡すだけにする                                                                           |
+
+- `src/features/<domain>/*.server.ts` は `tsconfig.app.json` の program に入る。`void/env` を import すると Workers の型が app に入るので、import しない (ADR-0047)
+- query の関数の書き方とテストは `docs/guides/database.md`「query を書く」「テストで D1 を使う」にある
 
 1 つの部品のファイルの中だけで使う context は、`src/hooks/` へ出さずにそのファイルに置く (`src/components/action/form.tsx`)。
 `src/features/<domain>/` の中の import も相対パスで書き、ディレクトリごと移せる形を保つ。
