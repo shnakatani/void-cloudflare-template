@@ -8,11 +8,11 @@
 
 このテンプレートのコードは、次の 3 つの実行環境で動く。
 
-| 実行環境           | 置き場所                                                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| ブラウザ           | `src/` のアプリのコード、`pages/*.tsx` (Worker の SSR でも動く)、ブラウザテストと story                                         |
-| Cloudflare Workers | `routes/`、`middleware/`、`crons/`、`queues/`、`db/`、`email/`、`durable-objects/`、`pages/**/*.server.ts`、`auth.ts`、`env.ts` |
-| Node.js            | `scripts/`、`tooling/`、`vite.config.ts`、`void.config.ts`、`.storybook/main.ts`、unit のテスト                                 |
+| 実行環境           | 置き場所                                                                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| ブラウザ           | `src/` のアプリのコード、`pages/*.tsx` (Worker の SSR でも動く)、ブラウザテストと story                                                         |
+| Cloudflare Workers | `routes/`、`middleware/`、`crons/`、`queues/`、`db/`、`email/`、`durable-objects/`、`pages/**/*.server.ts`・`*.server.tsx`、`auth.ts`、`env.ts` |
+| Node.js            | `scripts/`、`tooling/`、`vite.config.ts`、`void.config.ts`、`.storybook/main.ts`、unit のテスト                                                 |
 
 この表は動く場所の区分で、tsconfig の区分とは一致しない。テストと story は、ブラウザと Node.js のどちらで走るものも 1 つの tsconfig にまとめる。ただし Worker のディレクトリと `scripts/`・`tooling/` に置いたテストは、テストする対象のコードと同じ tsconfig に入れる (Decision の境界の判断)。
 
@@ -29,7 +29,7 @@
 
 | tsconfig               | 入れるファイル                                                                                                                                                                         | `lib`                                                                                                                                     | `types`                                                         | `extends` の並び                                                   |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `tsconfig.app.json`    | `src/` と `pages/` の、付随ファイルと `src/test/` と `*.server.ts` 以外                                                                                                                | DOM あり                                                                                                                                  | `vite-plus/client`                                              | `tsconfig.base.json`、`.void/tsconfig.json`、`tsconfig.paths.json` |
+| `tsconfig.app.json`    | `src/` と `pages/` の、付随ファイルと `src/test/` と `*.server.ts`・`*.server.tsx` 以外                                                                                                | DOM あり                                                                                                                                  | `vite-plus/client`                                              | `tsconfig.base.json`、`.void/tsconfig.json`、`tsconfig.paths.json` |
 | `tsconfig.test.json`   | 付随ファイル (`**/*.<種別>.<拡張子>`。種別は `scripts/lib/companion-files.ts`) のうち Worker のディレクトリと `scripts/`・`tooling/` の外のもの、`src/test/`、`.storybook/preview.tsx` | DOM あり                                                                                                                                  | `vite-plus/client`、`vite-plus/test/browser-playwright`、`node` | `tsconfig.base.json`、`.void/tsconfig.json`、`tsconfig.paths.json` |
 | `tsconfig.worker.json` | 上の表の Cloudflare Workers の行と、そのディレクトリに置いたテスト。ディレクトリは `.ts` と `.tsx` の両方を入れる                                                                      | DOM なし                                                                                                                                  | `void/env`                                                      | `tsconfig.base.json`、`.void/tsconfig.json`、`tsconfig.paths.json` |
 | `tsconfig.node.json`   | `scripts/`、`tooling/`、`vite.config.ts`、`void.config.ts`、`.storybook/main.ts`                                                                                                       | `lib` には DOM を書かない。依存の型から DOM が入る (`scripts/contrast/` が import する `colorjs.io` の型の `/// <reference lib="dom" />`) | `node`                                                          | `tsconfig.base.json` だけ                                          |
