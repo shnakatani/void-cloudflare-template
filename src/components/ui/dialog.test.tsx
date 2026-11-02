@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { recordEndKeyScroll } from "@/test/assert/end-key-scroll";
+import { animatedPseudoElements } from "@/test/assert/view-transition";
 import {
   expectWithinViewport,
   restoreDefaultViewport,
@@ -105,20 +106,6 @@ describe("DialogContent（viewport 溢れ backstop）", () => {
     );
   });
 });
-
-/** View Transition を始め、animation の付いた擬似要素を返す */
-async function animatedPseudoElements(): Promise<string[]> {
-  const transition = document.startViewTransition(() => {});
-  await transition.ready;
-  const pseudoElements = document
-    .getAnimations()
-    .map((animation) =>
-      animation.effect instanceof KeyframeEffect ? animation.effect.pseudoElement : null,
-    )
-    .filter((pseudoElement) => pseudoElement !== null);
-  await transition.finished;
-  return pseudoElements;
-}
 
 /**
  * `src/styles.css` の Popup の規則 (ADR-0058「ダイアログの Popup」)。擬似要素の名前は読めないので、Popup の computed style で

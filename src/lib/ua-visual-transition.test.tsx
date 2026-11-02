@@ -1,6 +1,8 @@
 import { describe, expect, it, onTestFinished } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 
+import { animatedPseudoElements } from "@/test/assert/view-transition";
+
 import { mirrorUAVisualTransition, UA_VISUAL_TRANSITION_ATTRIBUTE } from "./ua-visual-transition";
 
 /**
@@ -18,20 +20,6 @@ function mirror() {
       window.dispatchEvent(new PopStateEvent("popstate", { hasUAVisualTransition })),
     dispose,
   };
-}
-
-/** View Transition を始め、擬似要素に付いた animation の名前を数える */
-async function pseudoElementAnimationCount(): Promise<number> {
-  const transition = document.startViewTransition(() => {});
-  await transition.ready;
-  const count = document
-    .getAnimations()
-    .filter(
-      (animation) =>
-        animation.effect instanceof KeyframeEffect && animation.effect.pseudoElement !== null,
-    ).length;
-  await transition.finished;
-  return count;
 }
 
 describe("mirrorUAVisualTransition", () => {
@@ -81,12 +69,12 @@ describe("mirrorUAVisualTransition", () => {
 describe("属性と styles.css", () => {
   it("属性がある間、View Transition の擬似要素はアニメーションしない", async () => {
     const root = document.documentElement;
-    expect(await pseudoElementAnimationCount()).toBeGreaterThan(0);
+    expect(await animatedPseudoElements()).toContain("::view-transition-group(root)");
 
     root.setAttribute(UA_VISUAL_TRANSITION_ATTRIBUTE, "");
     onTestFinished(() => {
       root.removeAttribute(UA_VISUAL_TRANSITION_ATTRIBUTE);
     });
-    expect(await pseudoElementAnimationCount()).toBe(0);
+    expect(await animatedPseudoElements()).toEqual([]);
   });
 });
