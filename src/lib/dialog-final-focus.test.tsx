@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -26,19 +27,31 @@ describe("finalFocusToOpener", () => {
     await expect.element(screen.getByRole("link", { name: "開いた元" })).toHaveFocus();
   });
 
-  it("キーボードで閉じたときは、開いた元に枠を出す", async () => {
-    const screen = await render(
-      <a href="/x" data-opener="">
-        開いた元
-      </a>,
-    );
-    const link = screen.getByRole("link", { name: "開いた元" });
+  // 操作の前の programmatic な focus は、option が無くても :focus-visible になる。先にボタンを pointer で押して
+  // focus を移し、focus の option だけで枠の有無が決まる状態にする
+  it.each([
+    { closeType: "keyboard", focusVisible: true },
+    { closeType: "mouse", focusVisible: false },
+  ] as const)(
+    "$closeType で閉じたとき、開いた元の :focus-visible は $focusVisible",
+    async ({ closeType, focusVisible }) => {
+      const screen = await render(
+        <>
+          <button type="button">キャンセル</button>
+          <a href="/x" data-opener="">
+            開いた元
+          </a>
+        </>,
+      );
+      await userEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+      const link = screen.getByRole("link", { name: "開いた元" });
 
-    finalFocusToOpener(findLink)("keyboard");
+      finalFocusToOpener(findLink)(closeType);
 
-    await expect.element(link).toHaveFocus();
-    await expect.poll(() => link.element().matches(":focus-visible")).toBe(true);
-  });
+      await expect.element(link).toHaveFocus();
+      await expect.poll(() => link.element().matches(":focus-visible")).toBe(focusVisible);
+    },
+  );
 
   it("開いた元が無ければ、ページの見出しへ移す", async () => {
     const screen = await render(<h1>ページ</h1>);
