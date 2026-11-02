@@ -67,6 +67,11 @@ const CHECK_USER = {
   email: "security-headers-check@example.invalid",
   password: "security-headers-check",
 };
+/**
+ * 既に在る email で sign up したときに Better Auth が返す code (better-auth 1.7.14 の `api/routes/sign-up` が投げる
+ * `BASE_ERROR_CODES.USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`)。code が変わったら、ログインに進まずに本文ごと落ちる
+ */
+const USER_ALREADY_EXISTS_CODE = "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL";
 /** 1 回の要求を待つ上限。接続を受けて何も返さない相手だと、上限の無い fetch は返らない */
 const REQUEST_TIMEOUT_MS = 2000;
 
@@ -123,7 +128,7 @@ async function signInCheckUser(origin: string): Promise<string> {
   const signUp = await postAuth(origin, "/sign-up/email", CHECK_USER);
   if (signUp.ok) return cookieOf(signUp);
   const signUpBody = await signUp.text();
-  if (signUp.status !== 422 || !signUpBody.includes("USER_ALREADY_EXISTS")) {
+  if (signUp.status !== 422 || !signUpBody.includes(`"${USER_ALREADY_EXISTS_CODE}"`)) {
     throw new CheckFailure(
       `検査のユーザーを作れない (status ${signUp.status.toString()}): ${signUpBody}`,
     );
