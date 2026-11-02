@@ -2,7 +2,7 @@ import { expectTypeOf } from "vite-plus/test";
 
 import type { PageActionOptions, usePageAction } from "./use-page-action";
 
-// テンプレートにはまだ action を持つ page が無いので、型の検査のためだけに足す
+// params を持つ動的な segment の page が、テンプレートの pages/ にはまだ無いので、型の検査のためだけに足す
 declare module "void/routes" {
   interface PageActionMap {
     "/page-action-type-test/:id": { body: { title: string }; params: { id: string } };
