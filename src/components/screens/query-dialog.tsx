@@ -147,7 +147,7 @@ export function QueryDialog<TDialog>({
           {rendered.kind === "dialog" ? (
             renderDialog(rendered.dialog)
           ) : (
-            <StatusDialogContent
+            <DialogStatusContent
               status="pending"
               title={rendered.pending.title}
               openerId={rendered.pending.openerId}
@@ -205,20 +205,25 @@ function useRevealedPending(pending: PendingQueryDialog | null): PendingQueryDia
 /** 開いたダイアログの代わりに出す状態。loader が開く 1 件を返せないとき (`not-found`、`load-failed`) と、読み込み中 */
 type DialogStatus = "pending" | "not-found" | "load-failed";
 
-/**
- * 開いたダイアログのフォームを出せない間に、同じ Root の中へ描く中身。閉じると `openerId` の開いた元へ focus を戻す
- * (`finalFocusToOpener`)。`load-failed` の再試行は loader を読み直し、例外の文言は出さない
- */
-export function StatusDialogContent({
-  status,
-  title,
-  openerId,
-}: {
-  status: DialogStatus;
+type DialogStatusContentProps<TStatus extends DialogStatus> = {
+  status: TStatus;
   /** 開こうとしたダイアログの見出しか、状態の見出し (「<対象>が見つかりません」) */
   title: string;
   openerId: string | null;
-}) {
+};
+
+/**
+ * loader が開く 1 件を返せなかったときに、`renderDialog` から描く中身。閉じると `openerId` の開いた元へ focus を戻す
+ * (`finalFocusToOpener`)。`load-failed` の再試行は loader を読み直し、例外の文言は出さない
+ */
+export function StatusDialogContent(
+  props: DialogStatusContentProps<Exclude<DialogStatus, "pending">>,
+) {
+  return <DialogStatusContent {...props} />;
+}
+
+/** 開いたダイアログのフォームを出せない間に、同じ Root の中へ描く中身 */
+function DialogStatusContent({ status, title, openerId }: DialogStatusContentProps<DialogStatus>) {
   return (
     <DialogContent finalFocus={finalFocusToOpener(openerId)}>
       <DialogHeader>
