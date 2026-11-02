@@ -90,6 +90,7 @@ lint では見ないのでレビューで見る。
 - 失敗の値を返したら、server の `console.error` に残す。応答は 200 で届き、ほかに気付く手掛かりが無い (ADR-0057)
 - 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)
 - loader が失敗の値を返した区画の再試行は、`router.refresh()` を `Button` の `onClick` から呼ぶ。`SectionErrorBoundary` の再試行は loader を読み直さない (`docs/guides/data-loading.md`「失敗した画面から再試行する」)
+- 再試行の `router.refresh()` には `{ viewTransition: false }` を渡す。渡さないと、Void の既定で失敗の表示と読み直した画面がクロスフェードで重なる (ADR-0058)
 
 ## 一覧の上のフォームのダイアログは一覧のページの query で開く
 

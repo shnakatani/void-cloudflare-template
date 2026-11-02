@@ -41,13 +41,14 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 
 ### 失敗した画面から再試行する
 
-| 失敗を受けた場所                    | 再試行で呼ぶもの                                                                                                                                           |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| loader が失敗の値を返した区画       | `router.refresh()` で loader を読み直す。`Button` の `onClick` から呼び、reject は `.catch()` で `toastMutationError` (`src/lib/mutation-error.ts`) に渡す |
-| 全画面の境界                        | `AppErrorBoundary` の再試行が持つ。足さない (ADR-0050)                                                                                                     |
-| 区画の境界 (`SectionErrorBoundary`) | 境界の再試行のボタンが持つ。子を描き直すだけで、loader を読み直さない (ADR-0050)                                                                           |
+| 失敗を受けた場所                    | 再試行で呼ぶもの                                                                                                                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| loader が失敗の値を返した区画       | `router.refresh({ viewTransition: false })` で loader を読み直す。`Button` の `onClick` から呼び、reject は `.catch()` で `toastMutationError` (`src/lib/mutation-error.ts`) に渡す |
+| 全画面の境界                        | `AppErrorBoundary` の再試行が持つ。足さない (ADR-0050)                                                                                                                              |
+| 区画の境界 (`SectionErrorBoundary`) | 境界の再試行のボタンが持つ。子を描き直すだけで、loader を読み直さない (ADR-0050)                                                                                                    |
 
 - `router.refresh()` を Action の中で待たない。`ActionButton` の `action` に渡すと、読み直しの応答が返っても表示が替わらず、ボタンが押せないまま残る (ADR-0050)
+- 再試行の `router.refresh()` には `{ viewTransition: false }` を渡す。渡さないと、Void の既定で失敗の表示と読み直した画面がクロスフェードで重なる (ADR-0058)
 - loader が失敗の値を返した区画を、`SectionErrorBoundary` の再試行に任せない。境界が受けるのは描画の throw だけで、子を描き直しても loader は読み直されない (「区画の境界と loader の失敗を分ける理由」)
 
 ## explanation

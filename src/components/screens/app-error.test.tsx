@@ -68,7 +68,7 @@ describe("AppError", () => {
       </VoidRouterProvider>,
     );
     await screen.getByRole("button", { name: "再試行" }).click();
-    expect(router.refreshCount).toBe(1);
+    expect(router.refreshes).toHaveLength(1);
   });
 
   it("出している間は title の前に「エラー: 」を付け、外れたら戻す", async () => {
@@ -142,7 +142,7 @@ describe("AppErrorBoundary", () => {
     await expectAbsent(screen.getByText("描画の失敗", { exact: false }));
   });
 
-  it("再試行で router.refresh を呼び、再読み込みが終わってから子を描き直す", async () => {
+  it("再試行で、クロスフェードにせずに router.refresh を呼び、再読み込みが終わってから子を描き直す", async () => {
     const { screen, state, router } = await renderBoundary();
     const refresh = vi.spyOn(router, "refresh");
     const reload = deferMock(refresh);
@@ -150,7 +150,7 @@ describe("AppErrorBoundary", () => {
 
     await screen.getByRole("button", { name: "再試行" }).click();
 
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledExactlyOnceWith({ viewTransition: false });
     // 再読み込みの前に描き直すと、古い props のまま同じ失敗を繰り返す
     await expect
       .element(screen.getByRole("heading", { name: "エラーが発生しました" }))

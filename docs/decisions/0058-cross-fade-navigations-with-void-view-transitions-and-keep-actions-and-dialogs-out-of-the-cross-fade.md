@@ -47,11 +47,13 @@ Void は `voidReact({ viewTransitions: true })` で、遷移を `document.startV
 | -------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
 | リンク、`router.visit()` (検索の `replace` を含む) | する                                                         | `vite.config.ts`                                          |
 | 戻る・進む                                         | する。ブラウザが遷移のアニメーションを出したときは動かさない | `src/lib/ua-visual-transition.ts` と `src/styles.css`     |
-| `router.refresh()` (再試行)                        | する (Void の既定)                                           | `vite.config.ts`                                          |
+| `router.refresh()` (再試行)                        | しない                                                       | 呼ぶ側の `router.refresh({ viewTransition: false })`      |
 | page の action の送信 (redirect の先の描画を含む)  | しない                                                       | `src/hooks/use-page-action.ts` の `viewTransition: false` |
 | 一覧の上のダイアログを閉じる操作                   | しない                                                       | ADR-0056「閉じる見せ方」                                  |
 
 送信は遷移ではない。同じページを描き直すか redirect の先を描くかは action が決め、送信の側から見分けられない。送信は `usePageAction` だけを通る (ADR-0016) ので、そこで切る。
+
+再試行も遷移ではない。同じ URL の loader を読み直し、失敗の表示を読み直した中身に替える。Void の既定のままだと、失敗の表示と読み直した中身が 250ms クロスフェードで重なる (Context の実測)。`router.refresh()` は送信と違って 1 つの hook に集まっていないので、呼ぶ側で `viewTransition: false` を渡す。`router.refresh(options)` は options を `router.visit()` へそのまま渡す (`packages/void/src/pages/client.ts` の `refreshPage`)。
 
 | 案                                                                    | 評価                                                                                                                     | 採否     |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------- |
@@ -92,7 +94,7 @@ Safari のスワイプのように、ブラウザが自分で遷移のアニメ�
 - `prefers-reduced-motion: reduce` でもクロスフェードは止まらない (2026-11-02、dev で `reducedMotion: "reduce"` を偽装して、root の animation が 250ms のままだった)。クロスフェードは opacity の変化で、WCAG 2.3.3 の motion animation に当たらない。ダイアログの開閉は registry の部品の閉じ方のままで、reduced motion の扱いも registry の部品に従う
 - 遷移が続けて始まると、飛ばされた View Transition の `AbortError` が unhandled rejection になる (Context の実測)。遷移は完了し、`src/` には `unhandledrejection` を受ける処理が無いので、本番では console に出るだけである。ブラウザテストは偽の router で描き、Void の View Transition を始めないので、テストの設定で `AbortError` を外す処理は持たない。テストで View Transition を自分で始めるときは、前の遷移の `finished` を待ってから次を始める
 - 遷移の読み上げ (ADR-0049) はクロスフェードの間も働く。リンクで別のページへ移ると、focus は新しいページの `h1` へ移った (2026-11-02、dev)
-- ブラウザテストは偽の router で描く (ADR-0048) ので、Void の View Transition は走らない。テストは `router.visit` と送信に渡る `viewTransition` と、`data-ua-visual-transition` のある間に擬似要素の animation が無いことを見る。Popup を切り出す規則は、擬似要素の名前を読む API が無く、テストで見分けられない。dev で確かめる
+- ブラウザテストは偽の router で描く (ADR-0048) ので、Void の View Transition は走らない。テストは `router.visit`・`router.refresh()`・送信に渡る `viewTransition` と、`data-ua-visual-transition` のある間に擬似要素の animation が無いことを見る。Popup を切り出す規則は、擬似要素の名前を読む API が無く、テストで見分けられない。dev で確かめる
 - 再評価条件
   - Void が遷移の `ViewTransition` の `ready` を拾うようになったら、unhandled rejection の Consequences を外す
   - Void が戻る・進むの遷移に `viewTransition` を渡す口か、View Transition の `types` を持ったら、`data-ua-visual-transition` と閉じる遷移の Overlay を比べ直す

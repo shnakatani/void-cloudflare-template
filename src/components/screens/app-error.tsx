@@ -83,7 +83,7 @@ function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
 
   async function retry() {
     try {
-      await router.refresh();
+      await router.refresh({ viewTransition: false });
     } catch (refreshError) {
       // 読み直せなくても境界は戻し、描き直せるかを試す。描き直しも失敗すれば、この表示に戻る
       console.warn("[AppErrorBoundary] 再読み込みに失敗した", { error: refreshError });

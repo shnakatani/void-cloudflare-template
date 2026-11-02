@@ -83,10 +83,10 @@ describe("NotesPage の一覧", () => {
     );
   });
 
-  it("一覧を読めなかったら区画に失敗を出し、再試行で router.refresh() を呼ぶ", async () => {
+  it("一覧を読めなかったら区画に失敗を出し、再試行で、クロスフェードにせずに router.refresh() を呼ぶ", async () => {
     const { screen, router } = await renderNotesPage({ notes: null });
     await screen.getByRole("button", { name: "再試行" }).click();
-    await expect.poll(() => router.refreshCount).toBe(1);
+    await expect.poll(() => router.refreshes).toEqual([{ viewTransition: false }]);
   });
 
   it("一覧を読めなかったら、ページ名の h1 を残して失敗の見出しを h2 で描く", async () => {

@@ -578,7 +578,7 @@ describe("編集の状態のダイアログ", () => {
     await expect.poll(() => router.visits.map((visit) => visit.url)).toEqual(["/notes"]);
   });
 
-  it("読み込めなかったメモはダイアログで伝え、再試行で router.refresh() を呼ぶ", async () => {
+  it("読み込めなかったメモはダイアログで伝え、再試行で、クロスフェードにせずに router.refresh() を呼ぶ", async () => {
     const { screen, router } = await renderNotesPage({ dialog: { kind: "edit-failed", id: 9 } });
 
     await expect
@@ -586,7 +586,7 @@ describe("編集の状態のダイアログ", () => {
       .toBeInTheDocument();
     await screen.getByRole("button", { name: "再試行" }).click();
 
-    await expect.poll(() => router.refreshCount).toBe(1);
+    await expect.poll(() => router.refreshes).toEqual([{ viewTransition: false }]);
   });
 });
 
