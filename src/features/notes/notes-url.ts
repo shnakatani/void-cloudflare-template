@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import type { NavigationState } from "void/pages-client";
 
 import { noteIdSchema, noteListFilterSchema, type Note } from "./schema";
 
@@ -71,4 +72,17 @@ export function noteEditQuery(id: Note["id"], q: string): string {
 
 export function noteEditUrl(id: Note["id"], q: string): string {
   return urlWith(noteEditQuery(id, q));
+}
+
+/**
+ * 読み込み中の遷移が編集のダイアログを開く一覧へ向かうなら、その id。押したリンクの Spinner に使う。
+ * 行き先は loader と同じ読み方で読み、URL の文字列では比べない (query の順と percent-encoding が揃わない)
+ */
+export function pendingNoteEditId(navigation: NavigationState): Note["id"] | null {
+  const { state, location } = navigation;
+  if (state !== "loading" || location === null || location.pathname !== NOTES_PATH) {
+    return null;
+  }
+  const { dialog } = parseNotesPageQuery(Object.fromEntries(location.searchParams));
+  return dialog.kind === "edit" ? dialog.id : null;
 }

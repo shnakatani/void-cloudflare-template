@@ -2,26 +2,33 @@ import type { NoteView } from "./notes-page-data";
 import { noteEditUrl } from "./notes-url";
 import type { Note } from "./schema";
 
-/** 一覧の 1 行。`isDeleting` は削除の Action の楽観値 (useOptimistic) から、`editHref` は一覧の q から決まる */
+/**
+ * 一覧の 1 行。`isDeleting` は削除の Action の楽観値 (useOptimistic) から、`editHref` は一覧の q から、
+ * `isEditPending` は読み込み中の遷移 (`pendingNoteEditId`) から決まる
+ */
 export type NoteRow = {
   readonly note: NoteView;
   readonly isDeleting: boolean;
   readonly editHref: string;
+  readonly isEditPending: boolean;
 };
 
 export function toNoteRows({
   notes,
   deletingIds,
   q,
+  pendingEditId = null,
 }: {
   notes: readonly NoteView[];
   deletingIds: readonly Note["id"][];
   q: string;
+  pendingEditId?: Note["id"] | null;
 }): NoteRow[] {
   return notes.map((note) => ({
     note,
     isDeleting: deletingIds.includes(note.id),
     editHref: noteEditUrl(note.id, q),
+    isEditPending: note.id === pendingEditId,
   }));
 }
 

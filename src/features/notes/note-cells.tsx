@@ -87,7 +87,7 @@ export function NoteUpdatedAtCell({ row }: NoteCellContext) {
  * 確認ダイアログの Root はページが 1 つだけ描き、トリガーとは handle で結ぶ
  */
 export function NoteActionsCell({ row, table }: NoteCellContext) {
-  const { note, isDeleting, editHref } = row.original;
+  const { note, isDeleting, editHref, isEditPending } = row.original;
   // 可視ラベル「編集」「削除」を含めて WCAG 2.5.3 (Label in Name) を満たし、行が増えても対象が読み上げで分かる
   const editLabel = `${note.title}を編集`;
   return (
@@ -112,6 +112,8 @@ export function NoteActionsCell({ row, table }: NoteCellContext) {
           size="sm"
           {...noteEditLinkProps(note.id)}
           aria-label={editLabel}
+          // 押した行のダイアログを読み込む間 (ADR-0042)。読み上げは開いたときのダイアログの title が持つ
+          isPending={isEditPending}
         >
           編集
         </ButtonLink>

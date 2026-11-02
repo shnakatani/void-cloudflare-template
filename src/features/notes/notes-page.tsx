@@ -1,5 +1,5 @@
 import { useDebouncer } from "@tanstack/react-pacer";
-import { useRouter } from "@void/react";
+import { useNavigation, useRouter } from "@void/react";
 import {
   useEffect,
   useEffectEvent,
@@ -31,7 +31,7 @@ import { NoteSearchField } from "./note-search-field";
 import { NOTES_PAGE_TITLE } from "./notes-page-constants";
 import { noteDialogKey, notesDocumentTitle, type NotesPageData } from "./notes-page-data";
 import { NotesResults } from "./notes-results";
-import { noteCreateUrl, notesListQuery, notesListUrl } from "./notes-url";
+import { noteCreateUrl, notesListQuery, notesListUrl, pendingNoteEditId } from "./notes-url";
 import { NOTE_ENTITY_LABEL, noteListFilterSchema, type Note } from "./schema";
 
 type SearchField = {
@@ -53,6 +53,7 @@ function normalizeQuery(text: string): string {
  */
 export function NotesPage({ q, notes, dialog }: NotesPageData) {
   const router = useRouter();
+  const pendingEditId = pendingNoteEditId(useNavigation());
 
   // q が外 (戻る・進む・リンク) から変わったときだけ入力欄を q に戻し、このページが求めた q の commit では戻さない。
   // debounce の visit から commit までの間に打った文字を消さないため。求めた q は commit で消費する。残すと、
@@ -224,6 +225,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
             q={q}
             notes={notes}
             deletingIds={deletingIds}
+            pendingEditId={pendingEditId}
             onRowNavigate={abandonSearch}
           />
         </StaleContent>

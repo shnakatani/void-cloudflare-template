@@ -24,18 +24,21 @@ export function NotesResults({
   q,
   notes,
   deletingIds,
+  pendingEditId,
   onRowNavigate,
 }: {
   q: string;
   notes: readonly NoteView[] | null;
   deletingIds: readonly Note["id"][];
+  /** 編集のダイアログを読み込み中の行の id */
+  pendingEditId: Note["id"] | null;
   /** 行の編集のリンクが遷移を始める直前に呼ぶ */
   onRowNavigate: () => void;
 }) {
   if (notes === null) {
     return <NotesLoadFailed />;
   }
-  const rows = toNoteRows({ notes, deletingIds, q });
+  const rows = toNoteRows({ notes, deletingIds, q, pendingEditId });
   if (rows.length === 0) {
     return (
       <Empty>

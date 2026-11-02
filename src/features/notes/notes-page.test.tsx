@@ -26,6 +26,7 @@ import { NOTES_PAGE_TITLE } from "./notes-page-constants";
 import type { NoteView } from "./notes-page-data";
 import { NOTE_VIEW, OTHER_NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
+import { noteEditUrl } from "./notes-url";
 import { NOTE_ENTITY_LABEL } from "./schema";
 
 vi.mock(import("void/pages-client"), async (importOriginal) => ({
@@ -85,6 +86,26 @@ describe("NotesPage の一覧", () => {
     const { screen, router } = await renderNotesPage({ notes: null });
     await screen.getByRole("button", { name: "再試行" }).click();
     await expect.poll(() => router.refreshCount).toBe(1);
+  });
+
+  it("押した行の編集のダイアログを読み込む間、その行の編集のリンクにだけ Spinner を出す", async () => {
+    const { screen } = await renderNotesPage(
+      { q: "x", notes: [NOTE_VIEW, OTHER_NOTE_VIEW] },
+      undefined,
+      {
+        state: "loading",
+        location: new URL(noteEditUrl(NOTE_VIEW.id, "x"), "http://localhost"),
+        method: "GET",
+      },
+    );
+    const pending = screen.getByRole("link", { name: `${NOTE_VIEW.title}を編集` });
+    await expect.element(pending.getBySlot("spinner")).toBeVisible();
+    await expect
+      .element(screen.getByRole("link", { name: `${OTHER_NOTE_VIEW.title}を編集` }))
+      .toBeVisible();
+    await expectAbsent(
+      screen.getByRole("link", { name: `${OTHER_NOTE_VIEW.title}を編集` }).getBySlot("spinner"),
+    );
   });
 
   it("一覧の描画に a11y 違反が無い", { tags: ["a11y", "axe"] }, async (context) => {
