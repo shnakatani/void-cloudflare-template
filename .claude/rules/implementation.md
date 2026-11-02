@@ -58,6 +58,7 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 - pending 表示は Action 層の `isPending` から取る。項目の busy は `useOptimistic` の楽観値から取る (ADR-0015)
 - mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通す。`run` は `action()` の `ok: false` を toast かフィールドのエラーに、throw (401・403・500 など) を toast に出し、reject しない。取り消し (`AbortError`) は何も出さない。呼び出し側が通知を書き忘れても無通知にならない (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から page の action へ送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`docs/guides/react/updates.md`「mutation の書き方」)
+- ページの URL が query (ダイアログを開く key、絞り込みの語) を持つときは、`usePageAction` / `usePageActionForm` の `pageQuery` に `?` を除いて渡す。載せないと、server の検証の失敗 (422) でページが query の無い URL で描き直され、ダイアログと絞り込みが消えてエラーも出ない。その action の redirect は絶対 URL で返す (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から Better Auth の client (`void/client` の `auth`) で送るときは、`requestAuth` で呼び、`ActionForm` の `submitAction` に `submitClearingServerFieldErrors(form)` を渡す。理由は上の行と同じ (`docs/guides/auth.md`「Better Auth の client から送る」)
 - Action の中から遷移するときは `startVisit(router, path)` で始め、`router.visit` を await しない。Action と遷移の commit が互いを待ち、ボタンが pending のまま止まる (`docs/guides/auth.md`「Better Auth の client から送る」)
 - `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
