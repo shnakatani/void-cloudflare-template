@@ -8,3 +8,5 @@ CREATE TABLE `notes` (
 	`updated_at` integer DEFAULT (unixepoch('subsecond') * 1000) NOT NULL,
 	CONSTRAINT "notes_due_date_is_calendar_date" CHECK("notes"."due_date" IS date("notes"."due_date") AND length("notes"."due_date") = 10)
 );
+--> statement-breakpoint
+CREATE INDEX `notes_user_id_idx` ON `notes` (`user_id`);
