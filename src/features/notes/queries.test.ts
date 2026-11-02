@@ -209,8 +209,10 @@ describe("notes の query", () => {
     // 入力スキーマの検証は、それを通らない書き込み (手書きの SQL など) に効かない。DB の CHECK が受ける
     // (docs/guides/dates-and-time-zones.md「日付の入力を扱う」)。drizzle を迂回して直接入れる
     it("DB は暦にある 0000〜9999 年の YYYY-MM-DD か NULL だけを受け入れる", async () => {
+      // testD1.d1 から直に呼ぶと、vp test list の静的な収集がこの呼び出しを 1 件のテストに数える (2026-11-02 に確認)
+      const { d1 } = testD1;
       const insert = (dueDate: string | null) =>
-        testD1.d1
+        d1
           .prepare("insert into notes (user_id, title, body, due_date) values (?, '見出し', '', ?)")
           .bind(USER_A, dueDate)
           .run();
