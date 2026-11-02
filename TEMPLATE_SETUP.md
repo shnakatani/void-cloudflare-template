@@ -9,6 +9,8 @@
 vp dlx gitpick shnakatani/void-cloudflare-template my-app && cd my-app && git init
 ```
 
+非公開の repository は、git の認証が通らないと取れない。通らないときは、読める token を環境変数 `GITHUB_TOKEN` (または `GH_TOKEN`) で渡す (2026-11-03、gitpick 6.1.1 の README「Private Repos」)。
+
 続けて `README.md`「セットアップ」を済ませる。`vp run verify` は最初の commit のあとに打つ。整合検査の一部が、git に記録したファイルと `git status` を読む。
 
 <details>
@@ -43,9 +45,11 @@ grep -rn "void-cloudflare-template" --exclude-dir=node_modules --exclude-dir=.gi
 | `scripts/checks/runtime/auth-redirect.ts`、`scripts/checks/runtime/security-headers.ts` | `/notes` の path の行を消す。`security-headers.ts` は docstring の `/notes` も消す                                                                                                        |
 | `db/schema.ts`                                                                          | `notes` の table と、使わなくなった import を消す。table が 1 つも残らないときは `export {};` だけを残す。`db/seed.ts` が `typeof import("./schema")` で型を読むので、module のままにする |
 | `db/seed.ts`                                                                            | `note-seeds` の import と、`context.schema.notes` に入れる行を消す。ログインに使うユーザーの行は残す                                                                                      |
-| `db/migrations/`                                                                        | ディレクトリごと消し、`vp exec void db generate` で作り直す。auth の table だけの migration が 1 本できる。どの D1 にもまだ当てていないので、消して作り直してよい                         |
+| `db/migrations/`                                                                        | ディレクトリごと消し、`vp exec void db generate` で作り直す。auth の table だけの migration が 1 本できる。本番の D1 にはまだ当てていないので、消して作り直してよい                       |
 
-済んだら、dev の D1 を作り直した migration で作り直し、format と lint を通して commit する。そのあと `vp run verify` を打つ。commit の前は、作り直した migration と消したファイルを整合検査が差分として落とす。
+表に無いものは残す。部品の story とテストが例の値に使う `/notes`・「メモ」・「ノート」はどのページも指さず、`@tanstack/react-pacer` は検索欄の debounce の道具として ADR-0057 が選んでいる。
+
+済んだら、dev の D1 を作り直した migration で作り直し、format と lint を通して commit する。そのあと `vp run verify` を打つ。
 
 ```bash
 vp exec void db seed --yes
