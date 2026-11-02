@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-02
-- 関連: ADR-0008 (テスト専用コードの import を同じ lint で止める)、ADR-0013 (ドメイン型は valibot スキーマから導出する)、ADR-0047 (tsconfig の program の分け方)、ADR-0054 (query を Miniflare の D1 で試す)、ADR-0063 (規約のディレクトリはルート、アプリのコードは `src/`)
+- 関連: ADR-0008 (テスト専用コードの import を同じ lint で止める)、ADR-0013 (ドメイン型は valibot スキーマから導出する)、ADR-0047 (tsconfig の program の分け方)、ADR-0054 (query を Miniflare の D1 で試す)、ADR-0064 (規約のディレクトリはルート、アプリのコードは `src/`)
 
 ## Context
 
@@ -60,7 +60,7 @@ server で起きた例外の文言は、production の Void が client へ運ば
 | schema と query を `src/features/<domain>/` に置き、`pages/*.server.ts` を薄くする           | query を DB と user を引数で受ける関数にでき、Miniflare の D1 で試せる (ADR-0054)。1 つのドメインが 1 つのディレクトリに収まる                                                                                                                                                                                                                                   | **採用** |
 | query を `pages/*.server.ts` の loader と action に直に書く                                  | Void の docs の例の形。loader を試すには HTTP の層が要り、ユーザーの絞り込みを速く試せない                                                                                                                                                                                                                                                                       | 却下     |
 | server のコードを `src/server/<domain>/` に分ける                                            | 1 つのドメインが client 側と server 側の 2 つのツリーに割れる。Void は止める仕組みを持たないので、ディレクトリで分けても import は止まらない                                                                                                                                                                                                                     | 却下     |
-| 1 つの画面だけで使う部品・hook・純粋関数を、その画面のファイルの隣 (`pages/_<画面>/`) に置く | `pages/` の下は事前バンドルの entry として丸ごと読まれ、`_` で始まるパスをページから外すのは docs に無いソースの挙動 (ADR-0063)。lint と tsconfig の `pages/` の範囲は `*.server.ts` を前提に組んであり、部品を混ぜると範囲を分け直すことになる。1 つの画面だけのものも features に置けば、ドメインを消すときに 1 つのディレクトリと `pages/<path>.*` だけで済む | 却下     |
+| 1 つの画面だけで使う部品・hook・純粋関数を、その画面のファイルの隣 (`pages/_<画面>/`) に置く | `pages/` の下は事前バンドルの entry として丸ごと読まれ、`_` で始まるパスをページから外すのは docs に無いソースの挙動 (ADR-0064)。lint と tsconfig の `pages/` の範囲は `*.server.ts` を前提に組んであり、部品を混ぜると範囲を分け直すことになる。1 つの画面だけのものも features に置けば、ドメインを消すときに 1 つのディレクトリと `pages/<path>.*` だけで済む | 却下     |
 | 1 つの画面だけで使うものを `src/components/screens/` に置く                                  | 画面の部品がドメインの schema と離れ、ドメインを消すときに grep で拾うことになる。`screens/` はどのドメインにも属さない画面のものに限る                                                                                                                                                                                                                          | 却下     |
 
 境界。

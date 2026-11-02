@@ -1,4 +1,4 @@
-# ADR-0064: 認可は、行の所有を query の関数の `userId` の条件で、それ以外の条件を loader・action と routes/ の handler の先頭で判定し、global の middleware に載せない
+# ADR-0065: 認可は、行の所有を query の関数の `userId` の条件で、それ以外の条件を loader・action と routes/ の handler の先頭で判定し、global の middleware に載せない
 
 - Status: Accepted
 - Date: 2026-11-03

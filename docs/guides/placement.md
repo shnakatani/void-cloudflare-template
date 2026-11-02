@@ -7,13 +7,13 @@
 | テスト専用コードの import は `no-restricted-imports` で止める                                                                                   | ADR-0008 |
 | tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ                        | ADR-0047 |
 | ドメインの schema と query と画面の部品は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
-| Void の規約のディレクトリは `sourceDir` を設定せずプロジェクトのルートに置き、アプリのコードは `src/` に置く                                    | ADR-0063 |
+| Void の規約のディレクトリは `sourceDir` を設定せずプロジェクトのルートに置き、アプリのコードは `src/` に置く                                    | ADR-0064 |
 
 ## how-to
 
 ### Void の規約のディレクトリと `src/` を分ける
 
-Void が読む規約のディレクトリ (`pages/`・`routes/`・`middleware/`・`db/` など) はプロジェクトのルートに置き、`void.config.ts` に `sourceDir` を書かない (ADR-0063)。規約のディレクトリには Void が読むファイルだけを置き、アプリのコードは `src/` に置く。
+Void が読む規約のディレクトリ (`pages/`・`routes/`・`middleware/`・`db/` など) はプロジェクトのルートに置き、`void.config.ts` に `sourceDir` を書かない (ADR-0064)。規約のディレクトリには Void が読むファイルだけを置き、アプリのコードは `src/` に置く。
 
 | 置くもの                                                             | 置き場所                                                                                                                   |
 | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -22,7 +22,7 @@ Void が読む規約のディレクトリ (`pages/`・`routes/`・`middleware/`�
 | 部品、ドメインと画面のコード、hook、純粋関数、テストの足場           | `src/` (下の「features か lib・hooks か」)                                                                                 |
 | 規約のディレクトリのテスト                                           | ファイル名を `_` で始めて直下に置く。置けるディレクトリは `docs/guides/testing/configuration.md`「テストの種別と置き場所」 |
 
-- 規約のディレクトリの一覧は `scripts/lib/void-source-dirs.ts` が持つ。足したら、その docstring が挙げる、一覧を読めず字面で持つ箇所 (lint の検査の期待値、rules の `paths`、`src/styles.css` の `@source`、tsconfig の `include`) にも足す。足し忘れた箇所は、そのディレクトリのコードだけが検査から無言で外れる (ADR-0063)
+- 規約のディレクトリの一覧は `scripts/lib/void-source-dirs.ts` が持つ。足したら、その docstring が挙げる、一覧を読めず字面で持つ箇所 (lint の検査の期待値、rules の `paths`、`src/styles.css` の `@source`、tsconfig の `include`) にも足す。足し忘れた箇所は、そのディレクトリのコードだけが検査から無言で外れる (ADR-0064)
 - 部品や hook を `pages/` の中に置かない。`pages/` の下はページの木として読まれる (「1 つの画面だけで使うものも features に置く理由」)
 
 ### features か lib・hooks か

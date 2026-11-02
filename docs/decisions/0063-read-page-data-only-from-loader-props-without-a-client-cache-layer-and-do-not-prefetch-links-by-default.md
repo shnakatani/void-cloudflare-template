@@ -1,4 +1,4 @@
-# ADR-0062: ページのデータは loader の props だけで読み、client に取得とキャッシュの層を置かず、リンクは既定で先読みしない
+# ADR-0063: ページのデータは loader の props だけで読み、client に取得とキャッシュの層を置かず、リンクは既定で先読みしない
 
 - Status: Accepted
 - Date: 2026-11-03

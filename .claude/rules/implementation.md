@@ -97,9 +97,9 @@ lint では見ないのでレビューで見る。
 
 lint では見ないのでレビューで見る。
 
-- ページのデータは `pages/<path>.server.ts` の loader が返す props で読む。client にサーバの状態の取得やキャッシュの層 (TanStack Query など) を足さず、取り直しは action の応答、`router.refresh()`、遷移の loader の再実行に任せる (ADR-0062)
-- 遅い値も loader で await して返す。deferred props は使わない (ADR-0051)。遷移を待たせたくない値は、ページを分ける (ADR-0062)
-- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらない (ADR-0062)
+- ページのデータは `pages/<path>.server.ts` の loader が返す props で読む。client にサーバの状態の取得やキャッシュの層 (TanStack Query など) を足さず、取り直しは action の応答、`router.refresh()`、遷移の loader の再実行に任せる (ADR-0063)
+- 遅い値も loader で await して返す。deferred props は使わない (ADR-0051)。遷移を待たせたくない値は、ページを分ける (ADR-0063)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらない (ADR-0063)
 
 ## ページの失敗は loader の値と区画の境界で受ける
 

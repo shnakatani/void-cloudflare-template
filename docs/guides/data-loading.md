@@ -11,7 +11,7 @@
 | 一覧の上に重ねるダイアログは、一覧のページの query で開き、保存と削除は一覧の絶対 URL へ redirect して条件を保つ                                | ADR-0056 |
 | 検索の条件は、打鍵が止まったときと Enter で URL に replace で書き、loader は読み込みの失敗と見つからない行を値で返す                            | ADR-0057 |
 | 遷移は Void の View Transitions でクロスフェードにし、送信とダイアログの Popup はクロスフェードに混ぜない                                       | ADR-0058 |
-| ページのデータは loader の props だけで読み、client に取得とキャッシュの層を置かず、リンクは既定で先読みしない                                  | ADR-0062 |
+| ページのデータは loader の props だけで読み、client に取得とキャッシュの層を置かず、リンクは既定で先読みしない                                  | ADR-0063 |
 
 ## how-to
 
@@ -19,10 +19,10 @@
 
 1. `pages/<path>.server.ts` の `loader` で、ページが描くすべての値を await して返す。query の関数は `src/features/<domain>/*.server.ts` に置き、loader は user と `db` を渡すだけにする (ADR-0055)
 2. ページは `import type { Props } from "./<path>.server"` で型だけを読み、props で受ける ([Void docs「Loaders & Props」][] の Using the Data in Page Components)
-3. 操作のあとの値は action の応答の props に任せ、読み直しは `router.refresh()` で行う (ADR-0062)。client で取得やキャッシュの層 (TanStack Query など) を足さない
+3. 操作のあとの値は action の応答の props に任せ、読み直しは `router.refresh()` で行う (ADR-0063)。client で取得やキャッシュの層 (TanStack Query など) を足さない
 
-- 遅い値も同じ loader で待つ。deferred props は使わない (ADR-0051)。遷移を待たせたくない値が出たら、そのページを分ける (ADR-0062)
-- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。visit は先読みの cache にある値をそのまま描き、取り直した値には入れ替わらない (ADR-0062)。足すときは `prefetch` と `cacheFor` をそのリンクで明示し、行き先の値が hover の時点のものになってよいページに限る。ダイアログを開くリンクには足さない (ADR-0056)
+- 遅い値も同じ loader で待つ。deferred props は使わない (ADR-0051)。遷移を待たせたくない値が出たら、そのページを分ける (ADR-0063)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。visit は先読みの cache にある値をそのまま描き、取り直した値には入れ替わらない (ADR-0063)。足すときは `prefetch` と `cacheFor` をそのリンクで明示し、行き先の値が hover の時点のものになってよいページに限る。ダイアログを開くリンクには足さない (ADR-0056)
 
 ### client に届く文言を書く
 

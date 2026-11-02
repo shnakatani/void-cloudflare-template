@@ -10,7 +10,7 @@
 | 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                                                                | ADR-0053 |
 | ページの path は定数と URL を組む関数に 1 か所で持ち、Link・visit・redirect にはそれを渡す                                                                 | ADR-0059 |
 | 別の origin からの書き込みは Void の判定に任せ、routes/ の書き込みの handler は user を読んでから書く                                                      | ADR-0060 |
-| 認可は、行の所有を query の関数の `userId` の条件で、それ以外の条件を loader・action と routes/ の handler の先頭で判定し、global の middleware に載せない | ADR-0064 |
+| 認可は、行の所有を query の関数の `userId` の条件で、それ以外の条件を loader・action と routes/ の handler の先頭で判定し、global の middleware に載せない | ADR-0065 |
 
 ## how-to
 
@@ -50,7 +50,7 @@
 
 ### 認可を足す
 
-認可は、行の所有と、それ以外の条件 (ロール、user の状態) の 2 つの層で判定する (ADR-0064)。
+認可は、行の所有と、それ以外の条件 (ロール、user の状態) の 2 つの層で判定する (ADR-0065)。
 
 1. 所有は query の関数が判定する。query の関数は `db` と `userId` を引数で受け、読み出し・更新・削除の `where` を `userId` に絞る (`docs/guides/database.md`「query を書く」)。loader と action は `requireAuth(c).id` を渡す。別の user の行は見つからないものとして扱われ、loader は「見つからない」の値で返す (ADR-0057)
 2. ロールが要るなら、ルートの `auth.ts` の `defineAuth` に Better Auth の `admin()` plugin を足す ([Better Auth docs「Admin」][] の `defaultRole`・`adminRoles`)。auth の table が変わるので、`docs/guides/database.md`「auth の設定を変える」の手順で migration を生成する。`requireAuth(c)` が返す `AuthUser` に `role` が入る ([Void docs「Auth API」][] の `AuthUser`)
@@ -64,7 +64,7 @@
 | `routes/` の handler | `throw new HTTPException(403, { message })`                                                                           |
 
 - loader で `HTTPException(403)` を throw しない。応答が `text/plain` の 403 になり、ページも説明も描かれない (ADR-0055)
-- global の middleware にロールの判定を載せない。path のサブツリーをまるごと 1 つのロールに閉じるときだけ、`src/features/auth/access.ts` の区分を足して redirect し、それでも loader・action・handler の先頭の判定は外さない (ADR-0064)
+- global の middleware にロールの判定を載せない。path のサブツリーをまるごと 1 つのロールに閉じるときだけ、`src/features/auth/access.ts` の区分を足して redirect し、それでも loader・action・handler の先頭の判定は外さない (ADR-0065)
 - 画面の出し分けに使うなら、`SharedUser` と `middleware/01.auth.ts` の詰め替えに `role` を足す (「全ページで user を読む」)。出し分けは見せ方であって判定ではない
 - 所有は query のテストで、別の user の `userId` を渡して行が返らないことを確かめる (「テストで D1 を使う」)。経路 (loader・action・handler が判定を呼ぶこと) は、build した成果物を preview で叩いて確かめる (ADR-0054)。loader で `userId` を渡し間違えても、型検査も lint も気付かない
 
@@ -163,7 +163,7 @@ Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か�
 
 ### 認可を global の middleware に載せない理由
 
-認証 (ログインしているか) は要否が path で決まるので、global の middleware が path の区分で判定する (ADR-0053)。認可 (その人に許すか) は要否が loader・action ごとに違う。一律に掛けると、権限が無いことを本人に説明するページまで止まり、path の一覧に足し忘れた経路は public のまま開く。loader・action・handler の先頭で判定すれば、loader は値を返して説明を描け、action と handler は 403 を返せる。比べた案は ADR-0064 にある。
+認証 (ログインしているか) は要否が path で決まるので、global の middleware が path の区分で判定する (ADR-0053)。認可 (その人に許すか) は要否が loader・action ごとに違う。一律に掛けると、権限が無いことを本人に説明するページまで止まり、path の一覧に足し忘れた経路は public のまま開く。loader・action・handler の先頭で判定すれば、loader は値を返して説明を描け、action と handler は 403 を返せる。比べた案は ADR-0065 にある。
 
 ### page の loader に middleware を渡さない理由
 
