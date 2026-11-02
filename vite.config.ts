@@ -76,7 +76,10 @@ export default defineConfig({
       tailwindcss(),
       voidPlugin(),
       // bail out はビルドログへ出す (ADR-0014)
-      voidReact({ react: reactPluginOptions({ compiler: true, reportDiagnostics: true }) }),
+      voidReact({
+        react: reactPluginOptions({ compiler: true, reportDiagnostics: true }),
+        viewTransitions: true,
+      }),
     ];
   }),
 });
