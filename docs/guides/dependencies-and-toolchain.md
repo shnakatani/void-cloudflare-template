@@ -27,7 +27,7 @@
 
 ### 依存を足したページの最初の要求が dev で 500 になったら
 
-dev の事前バンドルのキャッシュ (`node_modules/.vite`) を作ったあとに、まだ使っていなかった依存を import するページを足すと、そのページの最初の要求で Vite が依存を事前バンドルし直し、worker を読み直す ([Vite docs「Dependency Pre-Bundling」][] の Dependencies Discovered After the Initial Scan)。その要求は `TypeError: Cannot read properties of null (reading 'useContext')` で 500 になる。
+dev の事前バンドルのキャッシュ (`node_modules/.vite`) を作ったあとに、まだ使っていなかった依存を import するページを足すと、そのページの最初の要求で Vite が依存を事前バンドルし直し、worker を読み直す ([Vite docs「Dependency Pre-Bundling」][] の Automatic Dependency Discovery)。その要求は `TypeError: Cannot read properties of null (reading 'useContext')` で 500 になる。
 
 - もう一度読み込む。事前バンドルし直したあとの要求は通る
 - `optimizeDeps.include` に足さない。page から辿れる import は、キャッシュの無い起動で Void の設定 (worker の環境の `entries` が `pages/**`) が拾う。`include` は、plugin の変換で生まれる import のように走査で見つからない依存のためのもの ([Vite docs「Dependency Pre-Bundling」][] の Customizing the Behavior)
