@@ -15,7 +15,7 @@ Void の docs は、Cloudflare へ出す経路として次の 2 つを案内す�
 | 手元から         | `void deploy --platform cloudflare`。ブラウザでログインし、アカウントを選ぶ                                                                          |
 | GitHub から (CI) | `void init --github` が workflow を生成する。repository の secret に `CLOUDFLARE_API_TOKEN` を置く (Void の docs「Deployment」の Deploy from GitHub) |
 
-Cloudflare の Git 連携 (Workers Builds) は、Void の docs と Void 1.4.0 のソースのどこにも出てこない (2026-11-03 に `grep -rniE 'workers builds|ci-cd/builds|git integration'` で確かめた)。
+Cloudflare の Git 連携 (Workers Builds) は、Void 1.4.0 の `docs/` と `packages/void/src/` に出てこない (2026-11-03 に `grep -rniE 'workers builds|ci-cd/builds|git integration'` で確かめた)。
 
 2026-11-03 に Void 1.4.0 の `void init --github` を、`.void/project.json` に `{"platform":"cloudflare"}` を置いたこのリポジトリの写しで打った。生成物 (`.github/workflows/void-deploy.yml`) を zizmor 1.31.1 にかけると、`unpinned-uses` が 3 件 (high)、`artipacked` が 1 件 (low) 出た。生成物は ADR-0006 の検査を通らない。
 
