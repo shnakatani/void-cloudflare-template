@@ -19,7 +19,7 @@ Cloudflare の Git 連携 (Workers Builds) は、Void 1.4.0 の `docs/` と `pac
 
 2026-11-03 に Void 1.4.0 の `void init --github` を、`.void/project.json` に `{"platform":"cloudflare"}` を置いたこのリポジトリの写しで打った。生成物 (`.github/workflows/void-deploy.yml`) を zizmor 1.31.1 にかけると、`unpinned-uses` が 3 件 (high)、`artipacked` が 1 件 (low) 出た。生成物は ADR-0006 の検査を通らない。
 
-workflow のファイルはテンプレートから作った repository にそのまま届く。GitHub の Disable はファイルの外の状態なので、作った repository では有効のまま届く (推論)。
+workflow のファイルはテンプレートから作った repository にそのまま届く。GitHub Docs は Disable を、ファイルを repository から消さずに trigger を止める操作として書く (「Disabling and enabling a workflow」)。Disable はファイルに残らないので、作った repository では workflow が有効のまま届く (推論。届いた先の状態を書いた docs は無い)。
 
 ## Decision
 

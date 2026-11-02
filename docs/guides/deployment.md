@@ -34,7 +34,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 
 ### deploy しない repository で workflow を止める
 
-テンプレートから作った repository では、`.github/workflows/void-deploy.yml` が有効のまま届く (推論。Disable は repository の設定で、ファイルに残らない)。token を置かずに残すと、main への push のたびに失敗する (ADR-0061)。
+Disable はファイルを消さずに trigger を止める操作で、ファイルには残らない ([GitHub Docs「Disabling and enabling a workflow」][])。テンプレートから作った repository では、`.github/workflows/void-deploy.yml` が有効のまま届く (推論。届いた先の状態を書いた docs は無い)。token を置かずに残すと、main への push のたびに失敗する (ADR-0061)。
 
 - ファイルは消さず、GitHub の側で Disable にする。Actions の画面で workflow を選んで Disable workflow を押すか、次を打つ ([GitHub Docs「Disabling and enabling a workflow」][])
 
