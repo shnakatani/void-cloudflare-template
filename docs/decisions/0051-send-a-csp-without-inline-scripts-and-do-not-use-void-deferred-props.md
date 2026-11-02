@@ -34,7 +34,7 @@ Void 1.4.0 の React の adapter は、deferred props を次の形で描く。
 | server の描画       | deferred props を決して解決しない Promise にして描き、`<Suspense>` の fallback を描いたところで React の stream を打ち切る。境界は「待っている」印 (`<!--$?-->`) のまま HTML に残り、React はその境界を完了させない。値は Void が後から流す `<script>` で届く | `packages/react/src/runtime/pages-server.ts` の `createPendingDeferred`、`page-streams.ts` の `readDeferredShell`      |
 | client の hydration | React 19 は、文書の読み込みが終わったあとも「待っている」印のままの境界を、server が描き終えられなかった境界として扱う。React の error 419 ("The server could not finish this Suspense boundary …") を回復できるエラーとして報告し、境界を client で描き直す  | `react-dom` 19.3.1 の `isSuspenseInstanceFallback` (`readyState` が `loading` でない `<!--$?-->` を fallback とみなす) |
 
-2026-11-03 に、`defer()` で 1.5 秒待つ値を `use()` で描く一時のページを Playwright の Chromium で開いた。error 419 はどの環境でも、console の行ではなく捕まえられていない error (Playwright の `pageerror`) として出た。
+2026-11-03 に、`defer()` で 1.5 秒待つ値を `use()` で描く一時のページを Playwright の Chromium で開いた。React は error 419 を既定の `onRecoverableError` から `reportError` で報告するので、`console.error` ではなく window の `error` イベントとして届く (Playwright では `page.on("pageerror")` で受け、`page.on("console")` には来ない)。
 
 | 環境                                                                 | 値         | error 419 |
 | -------------------------------------------------------------------- | ---------- | --------- |
