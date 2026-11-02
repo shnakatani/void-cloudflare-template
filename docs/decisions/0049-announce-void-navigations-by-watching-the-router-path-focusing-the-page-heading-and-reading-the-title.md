@@ -113,7 +113,7 @@ Gatsby 2019 のテストの、枠についての証言は両方向にある。�
 - 遷移の直後は、Tab を押すまで focus の位置が目では見えない。Gatsby 2019 の拡大鏡と音声操作の被験者は枠が位置をつかむのに役立つと答えており、この利用者には手がかりが減る。見出しの枠の有無を比べたテストは見つかっていない
 - 検出は Void の内部の 3 つの順序に乗る。新しいページの描画で `useRouter().path` が変わること、`useNavigation()` が idle に戻る描画の時点で `document.title` が新しい値になっていること、遷移の開始ごとに `useNavigation()` の値が新しくなること。どれも docs に書かれていない。Void を上げたら、dev server で 2 つのページの間を遷移し、読み上げの region に新しいページの title が入ることを確かめる。遷移の先には、layout effect で同期の更新を起こすページも含める
 - Void が遷移の開始と完了を購読する API を持ったら、この検出を作り直す
-- 見出しの focus と title の読み上げがスクリーンリーダーでどう聞こえるかは、一次資料で決着していない。この実装 (title を `useNavigation()` が idle に戻った描画で読み上げる) は、Void 1.4.0 の上で支援技術を使って聞いていない。自動テストは聞こえ方を見られないので、ページを足したときと、見出しか title を変えたときに、VoiceOver で聞いて確かめる (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)。聞こえ方が悪ければ、読み上げの文言と強さを見直す
+- 見出しの focus と title の読み上げがスクリーンリーダーでどう聞こえるかは、一次資料で決着していない。この実装 (title を `useNavigation()` が idle に戻った描画で読み上げる) は、Void 1.4.0 の上で支援技術を使って聞いていない。聞いて確かめる手順は `docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」が持つ。聞こえ方が悪ければ、読み上げの文言と強さを見直す
 - 入れない改善: 戻る・進むで戻った先で、前に focus していた要素へ focus を戻す。MPA で bfcache から戻ったときと揃う形で (whatwg/html#6696、2021-10-14 にマージ。"the focused element stays the same/not reset")、Navigation API の explainer も traverse の例に挙げる。ただし explainer 自身が "the notion of \"the same element\" is not generally stable" とし、要素を識別子で覚える仕組みが要る。ブラウザの実装も揃っていない (wpt.fyi の `back-forward-cache/focus.html` は、2026-09-28 の時点で Edge 154 だけが 1/1 の結果を持ち、Chrome・Firefox・Safari は結果が無い)。いまの実装は、戻った先でも新しいページの見出しへ focus を移す (下の「調査結果」のブラウザの戻るの行)
 - 偽の router (ADR-0048) は title の書き換えを再現しない。`src/components/route-announcer.test.tsx` は、新しいページの描画と遷移の完了の間に `document.title` を置き換えて確かめる。title の順序は下の「調査結果」の dev server の実測が持つ
 
