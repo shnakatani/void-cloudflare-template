@@ -117,8 +117,8 @@ export function RouteAnnouncer(): null {
       waitAnnounced.current = false;
       announce(document.title);
     } else if (waitAnnounced.current) {
-      // ページが変わらずに終わった遷移 (今の path への redirect、今のページの中の遷移による取り消し) では
-      // title を読まないので、「読み込み中」の終わりを伝える (ADR-0049「待ちの読み上げ」)
+      // ページが変わらずに終わった遷移では title を読まないので、「読み込み中」の終わりを伝える。
+      // 当たる場面は ADR-0049「待ちの読み上げ」
       waitAnnounced.current = false;
       announce("読み込みを終えました");
     }
