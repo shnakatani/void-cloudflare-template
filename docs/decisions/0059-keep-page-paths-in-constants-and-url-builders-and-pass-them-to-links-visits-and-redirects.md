@@ -32,10 +32,11 @@ Void 1.4.0 では、遷移の行き先はどれも素の文字列で、行き先
 
 ## Decision
 
-**ページの path は、定数と、query や param を持つ URL を組む関数に 1 か所で持つ。`Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit`、`c.redirect` には、それを渡し、path の文字列を直に書かない。**
+**ページの path は、定数と、query や param を持つ URL を組む関数に 1 か所で持つ。`Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit` にはそれを渡し、`c.redirect` にはそれを絶対 URL にして渡す。path の文字列を直に書かない。**
 
 - path の定数は、URL を組む関数と別のモジュールに置く。定数のモジュールは、ほかの path の定数のほかを import しない。URL を組む関数と守る path の一覧は、その定数を import する。認証の画面の path は `src/features/auth/access.ts` の `HOME_PATH`・`LOGIN_PATH`・`SIGNUP_PATH` が持つ
 - query を持つ URL は、query の名前と値の組み方を持つ関数で組む。呼び出し側で `?` と `&` を連結しない
+- `c.redirect` には `new URL(<定数か関数の値>, c.req.url).href` を渡す。相対の path は要求の query を行き先に混ぜる (`docs/guides/auth.md`「redirect を絶対 URL で書く理由」)
 - ページのファイルを動かしたら、その path の定数を直す。定数の値と `pages/` のファイルの対応は、型でも検査でも見ていない
 
 ### 検討した選択肢
