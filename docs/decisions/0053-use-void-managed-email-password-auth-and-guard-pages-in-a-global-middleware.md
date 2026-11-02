@@ -18,7 +18,7 @@ Void 1.4.0 は Better Auth を管理して持つ。`void/auth` から import す
 | secret                | dev は `BETTER_AUTH_SECRET` が無ければ固定値に倒れる。dev 以外 (`vp preview` を含む) は要求ごとに `auth: Missing Better Auth secret` で throw する。deploy は無ければ作る (Void の docs「Authentication」の Behavior、Void 1.4.0 の `runtime/better-auth-shared.ts`)                                                                         |
 | rate limit            | deploy 先の Cloudflare では、Better Auth の既定で client の IP ごとに効く (サインインは 10 秒に 3 回など)。dev では効かない (Void の docs「Authentication」の Behavior)                                                                                                                                                                      |
 
-ページを守る場所の候補には、Void 1.4.0 で次の制約がある (2026-11-02 の時点)。
+ページを守る場所の候補には、Void 1.4.0 で次の制約がある。
 
 | 守る場所                                                                           | 1.4.0 での振る舞い                                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

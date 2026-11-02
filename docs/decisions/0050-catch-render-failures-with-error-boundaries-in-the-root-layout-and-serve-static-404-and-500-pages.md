@@ -103,7 +103,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 - `public/error-page.css` の値は `src/styles.css` の写しである。`--background`・`--foreground`・`--font-sans` の light の値を変えたら、`error-page.css` も直す。アプリにテーマの切り替えを入れたら、静的なページの dark を決め直す
 - 静的なページの font は、端末に Geist Variable が無ければ `sans-serif` で描く。アプリの font のファイルは bundle の中にあり、静的なページから読めない
 - 静的なページの title にはアプリ名を文字列で書く。`src/lib/app-name.ts` の `APP_NAME` を替えたら、`public/404.html` と `public/500.html` の title も替える
-- `serveCustomPage` は要求の method を見ずに `/500.html` を返すので、action の POST が 500 になったときの本文も `public/500.html` になる (v1.4.0 のソースから推論。実測していない)
+- `serveCustomPage` は要求の method を見ずに `/500.html` を返すので、action の POST が 500 になったときの本文も `public/500.html` になる (2026-11-03 に preview で実測。ADR-0065)
 - `src/components/screens/app-error.test.tsx` は偽の router (ADR-0048) で描く。偽の `refresh()` は Void の commit を通らずに決着するので、再試行を Action の中で待つ形でもテストは通る。再試行の決着は dev で確かめる。Void を上げたら、client の最初の描画だけが throw するページへ `Link` で移り、再試行でページに戻ることと、続けて失敗したら再試行をまた押せることを確かめる (下の「調査結果」の形)
 - エラー表示から別のページへ移り、その先でも描画が失敗したときは、「エラー: 」が付かない可能性がある。`AppError` は作り直されず、Void が新しいページの title を書き換えるのは `AppError` の effect の後になりうる (推論。実測していない)
 - イベントハンドラと非同期の処理の throw は境界に届かない (react.dev「Component」)。`usePageAction` の送信から境界に届くのは `onSuccess` の throw だけ (ADR-0016)

@@ -64,7 +64,7 @@ skip link を置かないのは、繰り返すブロックが layout の `<heade
 | 2   | `role="dialog"` か `role="alertdialog"` で `aria-modal="true"` を持つ要素が表示されている | 外側を隠さず、`aria-modal` だけでモーダルを表すダイアログ。Base UI 1.9.0 の Popup は `aria-modal` を付けないので当たらない |
 
 - 一覧のページの query で開くダイアログ (ADR-0056) は、path が変わらないので見出しへ移す経路を通らない
-- path の遷移と同じ描画で開くダイアログは、判定 1 に当たらないことがある。Base UI が外側に `aria-hidden` を付けるのは、Popup を描いたあとの `useEffect` (`FloatingFocusManager`) である。別のページから一覧の query の URL へ移ると見出しへ focus が 1 回移り、そのあとダイアログの中へ移った (ADR-0056 の Context の実測)。path の遷移でダイアログを開くページを足すと、開くときに見出しを経由する (ADR-0056 の Consequences)
+- path の遷移と同じ描画で開くダイアログは、判定 1 に当たらないことがある。Base UI 1.9.0 は Popup を次の描画で入れ (`FloatingPortal`)、外側の `aria-hidden` をそのあとの `useEffect` で付ける (`FloatingFocusManager`)。別のページから一覧の query の URL へ移ると見出しへ focus が 1 回移り、そのあとダイアログの中へ移った (ADR-0056 の Consequences の実測)。path の遷移でダイアログを開くページを足すと、開くときに見出しを経由する
 
 ### 見出しに枠を出さない理由
 
