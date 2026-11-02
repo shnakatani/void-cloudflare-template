@@ -27,16 +27,17 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = { args: { tableKey: "fruits-default" } };
 
 /** data が空のときは列数ぶんの colSpan を持つ案内行を 1 つ描く */
 export const Empty: Story = {
-  args: { data: [] },
+  args: { tableKey: "fruits-empty", data: [] },
 };
 
 /** rowProps で行ごとに busy を表す。半透明は registry の TableRow が data-busy から当てる */
 export const BusyRow: Story = {
   args: {
+    tableKey: "fruits-busy-row",
     rowProps: ({ original }) => ({ "data-busy": original.id === 2 }),
   },
 };
@@ -64,6 +65,7 @@ function FruitDetail({ row }: { row: Row<DataTableFeatures, Fruit> }) {
 /** 行を開くと、全列をまたぐ詳細の行を本体の行の直後に出す。開けない行 (みかん) にはボタンを出さない */
 export const Expandable: Story = {
   args: {
+    tableKey: "fruits-expandable",
     columns: helper.columns([
       helper.display({ id: "toggle", header: "詳細", cell: ToggleCell }),
       ...columns,

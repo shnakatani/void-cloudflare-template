@@ -60,6 +60,7 @@ updates:
       # 別の版が入ると、テストの workerd と dev の workerd が食い違う。Void を上げたら vp why miniflare で
       # @cloudflare/vite-plugin の下の版を確かめ、package.json の miniflare を同じ版に書き換える。
       # 撤去条件: Void が Miniflare の D1 を返すテスト用の入口を公開し、src/test/app/d1.ts が miniflare を import しなくなったとき (ADR-0005)
+      # void と @void/react も exact で持つ。撤去条件: @void/react の peer の void が範囲になり、上の miniflare の撤去条件も成り立ったとき (ADR-0005)
       void:
         patterns:
           - "void"

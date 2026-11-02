@@ -63,6 +63,7 @@ export function NotesResults({
   }
   return (
     <DataTable
+      tableKey="notes"
       caption={NOTES_PAGE_TITLE}
       columns={noteColumns}
       data={rows}

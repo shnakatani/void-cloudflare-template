@@ -1,4 +1,9 @@
 import { CheckFailure, startPreview } from "../../lib/preview-server.ts";
+import {
+  type ExpectedResponse,
+  findRedirectViolations,
+  type ObservedResponse,
+} from "../../lib/redirect-responses.ts";
 
 /**
  * 未ログインの要求が保護した path から `/login` へ送られることを、ビルド成果物を `vp preview` で起動して確かめる。
@@ -11,13 +16,7 @@ import { CheckFailure, startPreview } from "../../lib/preview-server.ts";
 
 const REQUEST_TIMEOUT_MS = 2000;
 
-type Expectation = {
-  readonly path: string;
-  readonly status: number;
-  readonly location?: string;
-};
-
-const EXPECTATIONS: readonly Expectation[] = [
+const EXPECTATIONS: readonly ExpectedResponse[] = [
   { path: "/", status: 302, location: "/login" },
   { path: "/?q=x", status: 302, location: "/login" },
   { path: "/notes", status: 302, location: "/login" },
@@ -28,8 +27,9 @@ const EXPECTATIONS: readonly Expectation[] = [
 async function run(): Promise<void> {
   const server = await startPreview("auth-redirect");
   try {
-    const violations: string[] = [];
-    for (const { path, status, location } of EXPECTATIONS) {
+    const checks: { expected: ExpectedResponse; actual: ObservedResponse }[] = [];
+    for (const expected of EXPECTATIONS) {
+      const { path } = expected;
       // oxlint-disable-next-line eslint/no-await-in-loop -- 1 つのサーバへ数件を順に聞くだけで、並列にしても得るものが無い
       const response = await fetch(`${server.origin}${path}`, {
         redirect: "manual",
@@ -39,20 +39,13 @@ async function run(): Promise<void> {
           `${path} の応答を得られない: ${error instanceof Error ? error.message : String(error)}`,
         );
       });
-      if (response.status !== status) {
-        violations.push(
-          `${path}: status が ${response.status.toString()} で、${status.toString()} ではない`,
-        );
-        continue;
-      }
-      if (location === undefined) continue;
-      const expected = `${server.origin}${location}`;
-      const actual = response.headers.get("location");
-      if (actual !== expected) {
-        violations.push(`${path}: location が ${String(actual)} で、${expected} ではない`);
-      }
+      checks.push({
+        expected,
+        actual: { status: response.status, location: response.headers.get("location") },
+      });
     }
     server.assertStillRunning();
+    const violations = findRedirectViolations(server.origin, checks);
     if (violations.length > 0) {
       throw new CheckFailure(
         [

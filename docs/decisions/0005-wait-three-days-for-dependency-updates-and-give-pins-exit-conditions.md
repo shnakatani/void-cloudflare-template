@@ -159,6 +159,7 @@ version update の PR の上限 (`open-pull-requests-limit`) の既定は 5 で�
 - Dependabot PR の処理が「依存更新の取り込み」と「pin の出口確認」を兼ねる。手順が 1 段増えるが、独立した定期タスクを管理するより忘れにくい
 - 再評価の条件は、GitHub が cooldown の既定値を変えたとき、pnpm のメジャー更新で strict 挙動の既定が変わったとき、Vite+ が自身の抱えるパッケージの exact pin をやめたとき、Vite+ が bot 向けの設定例を docs に載せたとき (voidzero-dev/vite-plus#2463、2026-09-29 に draft)、vite の alias と CLI の版のずれを検知して `vp` を止めるようになったとき (voidzero-dev/vite-plus#2462、2026-09-29 に draft)。`vitest` 系の `ignore` は、`vite-plus` の新しい版が npm の latest に載り、cooldown を過ぎたあとの Dependabot の実行でも `vite-plus` の PR ができないときにも見直す。Dependabot の PR を処理するとき (トリガ B) に、`docs/guides/dependencies-and-toolchain.md`「Vite+ を上げる」の手順で確かめる
 - `package.json` の `playwright` は caret で持つ。`*` にして版追随を `@vitest/browser-playwright` へ委任する形は成り立たない。その peer 自身が `playwright: "*"` (`optional: false`) で何も制約しておらず、委任先が存在しない (2026-09-02 実測)。実際に版を決めているのは lockfile と待機ゲートで、そこは caret でも変わらない。caret にすると major が Dependabot の別 PR になり判断が挟まる。exact pin ではないため出口条件は無い
+- `package.json` の `void` と `@void/react` は同じ版に exact pin する。`@void/react` は peer に `void` を自分と同じ exact の版で持ち (2026-11-01 に `node_modules/@void/react/package.json` で確認)、2 つは同じ版でしか組めない。`void init` も 2 つを自分の版の exact で書く (Void 1.4.0 の `packages/void/src/cli/init.ts` が `getOwnVersion()` を渡す)。範囲にすると `vp update` が 2 つを上げ、exact で持つ `miniflare` を Void に揃え直す手順 (`.github/dependabot.yml` の `void` グループのコメント) を通らない。出口条件は、`@void/react` の peer の `void` が範囲になり、`miniflare` の撤去条件も成り立つこと。そのとき範囲指定か `catalog:` へ移せるかを見直す
 
 ## 出典
 

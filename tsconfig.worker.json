@@ -23,6 +23,7 @@
     "durable-objects/**/*.ts",
     "durable-objects/**/*.tsx",
     "pages/**/*.server.ts",
+    "pages/**/*.server.tsx",
     "auth.ts",
     "env.ts"
   ]

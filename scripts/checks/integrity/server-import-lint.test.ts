@@ -26,6 +26,12 @@ const PROBE_FILES = {
   "void-db-import.tsx": 'import { db } from "void/db";\n\nexport const d = db;\n',
   "void-db-type-import.tsx": 'import type { Db } from "void/db";\n\nexport type D = Db;\n',
   "void-db-in-server.server.ts": 'import { db } from "void/db";\n\nexport const e = db;\n',
+  "void-auth-import.tsx": 'import { getUser } from "void/auth";\n\nexport const u = getUser;\n',
+  "void-email-testing-import.tsx":
+    'import { createEmailTestHarness } from "void/email/testing";\n\nexport const t = createEmailTestHarness;\n',
+  "void-db-in-tsx-server.server.tsx": 'import { db } from "void/db";\n\nexport const f = db;\n',
+  "tsx-server-import-with-extension.tsx":
+    'import { f } from "./void-db-in-tsx-server.server.tsx";\n\nexport const g = f;\n',
   "helper.test-helpers.ts": "export const h = 1;\n",
   "test-helper-import.tsx": 'import { h } from "./helper.test-helpers";\n\nexport const w = h;\n',
 };
@@ -74,6 +80,13 @@ describe("client から .server の import を止める lint", () => {
     ["void-db-import.tsx", true],
     ["void-db-type-import.tsx", false],
     ["void-db-in-server.server.ts", false],
+    // void/auth は Void が client で差し替えず、build は警告だけで通り、読み込みで throw する (ADR-0055)
+    ["void-auth-import.tsx", true],
+    // paths の name は完全一致なので、void/email とは別に要る
+    ["void-email-testing-import.tsx", true],
+    // .server.tsx も Void の server の companion で、server の module として扱う
+    ["void-db-in-tsx-server.server.tsx", false],
+    ["tsx-server-import-with-extension.tsx", true],
   ])("%s で止まるか: %s", (file, restricted) => {
     expect(restrictedFiles.has(file)).toBe(restricted);
   });
