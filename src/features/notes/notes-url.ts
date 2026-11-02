@@ -74,15 +74,22 @@ export function noteEditUrl(id: Note["id"], q: string): string {
   return urlWith(noteEditQuery(id, q));
 }
 
+/** 同じ名前が重複した query は最初の値を採る。loader の `c.req.query()` (Hono) と同じ読み方で、`Object.fromEntries(searchParams)` は最後の値になる */
+export function firstValueQuery(searchParams: URLSearchParams): Record<string, string> {
+  return Object.fromEntries(
+    Array.from(new Set(searchParams.keys()), (name) => [name, searchParams.get(name) ?? ""]),
+  );
+}
+
 /**
  * 読み込み中の遷移が編集のダイアログを開く一覧へ向かうなら、その id。押したリンクの Spinner に使う。
- * 行き先は loader と同じ読み方で読み、URL の文字列では比べない (query の順と percent-encoding が揃わない)
+ * 行き先は loader と同じ読み方 (`firstValueQuery`) で読み、URL の文字列では比べない (query の順と percent-encoding が揃わない)
  */
 export function pendingNoteEditId(navigation: NavigationState): Note["id"] | null {
   const { state, location } = navigation;
   if (state !== "loading" || location === null || location.pathname !== NOTES_PATH) {
     return null;
   }
-  const { dialog } = parseNotesPageQuery(Object.fromEntries(location.searchParams));
+  const { dialog } = parseNotesPageQuery(firstValueQuery(location.searchParams));
   return dialog.kind === "edit" ? dialog.id : null;
 }

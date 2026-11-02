@@ -6,12 +6,13 @@ import {
   noteEditUrl,
   notesListUrl,
   parseNotesPageQuery,
+  firstValueQuery,
   pendingNoteEditId,
 } from "./notes-url";
 
 /** URL を Hono の `c.req.query()` と同じ形 (名前ごとに最初の値) に読む */
 function queryOf(url: string): Record<string, string> {
-  return Object.fromEntries(new URL(url, "http://localhost").searchParams);
+  return firstValueQuery(new URL(url, "http://localhost").searchParams);
 }
 
 describe("parseNotesPageQuery", () => {
@@ -81,6 +82,10 @@ function loading(url: string): NavigationState {
 describe("pendingNoteEditId", () => {
   it("編集のダイアログを開いた一覧へ読み込み中なら、その id を返す", () => {
     expect(pendingNoteEditId(loading(noteEditUrl(7, "x")))).toBe(7);
+  });
+
+  it("edit が重複していたら、loader と同じく最初の値を読む", () => {
+    expect(pendingNoteEditId(loading("/notes?edit=7&edit=9"))).toBe(7);
   });
 
   it.each<[string, NavigationState]>([
