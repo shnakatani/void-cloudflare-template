@@ -60,9 +60,9 @@ workflow のファイルはテンプレートから作った repository にそ�
 
 ## 出典
 
-- Void の docs「Deployment」(Deploy from GitHub、Migrations): `node_modules/void/docs/guide/deployment.md`
+- Void の docs「Deployment」(Deploy to Cloudflare、Deploy from GitHub、Migrations): `node_modules/void/docs/guide/deployment.md`
 - Void の docs「Cloudflare」(What happens during deploy、Deploying from CI): `node_modules/void/docs/integrations/cloudflare.md`
-- Void 1.4.0 のソース: `packages/void/src/cli/init.ts` (`getWorkflowYaml` の Cloudflare の分岐、`setupGithubActions`)
+- Void 1.4.0 のソース: `packages/void/src/cli/init.ts` (`getWorkflowYaml` の Cloudflare の分岐、`setupGithubActions`)、`packages/void/src/cli/deploy-migrations.ts` (`applyAndVerifyRemoteD1Migrations`)
 - zizmor の audit 一覧 (`unpinned-uses`、`artipacked`、`cache-poisoning`、`secrets-outside-env`): https://docs.zizmor.sh/audits/
 - GitHub Docs「Deployments and environments」(Deployment branches and tags、Environment secrets): https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
 - GitHub Docs「Managing environments for deployment」: https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments
