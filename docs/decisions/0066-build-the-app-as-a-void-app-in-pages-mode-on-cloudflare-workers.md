@@ -36,7 +36,7 @@
 
 ## Consequences
 
-- 画面の移動、読み込みの待ち、リンク、移動の読み上げは Void の router (`@void/react`) の上に組む (移動の読み上げは ADR-0049)。Void 1.4.0 の router は在らない path を型で止めないので、行き先は path の定数で渡す (ADR-0059)
+- 画面の移動、読み込みの待ち、リンク、移動の読み上げは Void の router (`@void/react`) の上に組む (移動の読み上げは ADR-0049、行き先の渡し方は ADR-0059)
 - ADR とガイドが引く Void の挙動の多くは Void 1.4.0 で確かめたものである。Void を上げたら、版と日付を添えた記述を確かめ直す
 - Void の公式の情報は、同梱の docs (`node_modules/void/docs/`) と skill (`.claude/skills/void`) で、入れた版と同じものを読める
 - 再評価の条件: Void の版を上げられなくなったとき (開発が止まる、Workers の runtime の変更に追従しないなど) は、Workers に載る別の枠組みと比べ直す
