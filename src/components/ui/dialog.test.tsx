@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
+import { AlertDialog, AlertDialogContent, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { recordEndKeyScroll } from "@/test/assert/end-key-scroll";
 import {
   expectWithinViewport,
@@ -101,5 +103,71 @@ describe("DialogContent（viewport 溢れ backstop）", () => {
         await expect.element(marker).toBeInViewport();
       },
     );
+  });
+});
+
+/** View Transition を始め、animation の付いた擬似要素を返す */
+async function animatedPseudoElements(): Promise<string[]> {
+  const transition = document.startViewTransition(() => {});
+  await transition.ready;
+  const pseudoElements = document
+    .getAnimations()
+    .map((animation) =>
+      animation.effect instanceof KeyframeEffect ? animation.effect.pseudoElement : null,
+    )
+    .filter((pseudoElement) => pseudoElement !== null);
+  await transition.finished;
+  return pseudoElements;
+}
+
+/**
+ * `src/styles.css` の Popup の規則 (ADR-0058「ダイアログの Popup」)。擬似要素の名前は読めないので、Popup の computed style で
+ * 切り出す名前と class が付くことを見て、遷移の間に root の外の擬似要素が動かないことを見る
+ */
+describe("ダイアログの Popup と View Transition", () => {
+  it.each([
+    {
+      name: "Dialog",
+      slot: "dialog-content",
+      ui: (
+        <Dialog open>
+          <DialogContent>
+            <DialogTitle>見出し</DialogTitle>
+          </DialogContent>
+        </Dialog>
+      ),
+    },
+    {
+      name: "AlertDialog",
+      slot: "alert-dialog-content",
+      ui: (
+        <AlertDialog open>
+          <AlertDialogContent>
+            <AlertDialogTitle>見出し</AlertDialogTitle>
+          </AlertDialogContent>
+        </AlertDialog>
+      ),
+    },
+    {
+      name: "Sheet",
+      slot: "sheet-content",
+      ui: (
+        <Sheet open>
+          <SheetContent>
+            <SheetTitle>見出し</SheetTitle>
+          </SheetContent>
+        </Sheet>
+      ),
+    },
+  ])("$name の Popup はクロスフェードから切り出され、遷移の間も動かない", async ({ slot, ui }) => {
+    const screen = await render(ui);
+    await expect.element(screen.getBySlot(slot)).toBeVisible();
+
+    await expect
+      .element(screen.getBySlot(slot))
+      .toHaveStyle("view-transition-name: match-element; view-transition-class: dialog");
+    const pseudoElements = await animatedPseudoElements();
+    expect(pseudoElements).toContain("::view-transition-group(root)");
+    expect(pseudoElements.filter((pseudoElement) => !pseudoElement.endsWith("(root)"))).toEqual([]);
   });
 });

@@ -63,7 +63,7 @@ Void は `voidReact({ viewTransitions: true })` で、遷移を `document.startV
 
 ### ダイアログの Popup
 
-`src/styles.css` が、Dialog と AlertDialog の Popup (`data-slot` が `dialog-content`・`alert-dialog-content`) に `view-transition-name: match-element` と `view-transition-class: dialog` を付ける。`::view-transition-old(.dialog)` は隠し、`::view-transition-group(.dialog)` と `::view-transition-new(.dialog)` は動かさない。遷移の間も Popup は live の要素のまま描かれ、Base UI の開く・閉じるアニメーションがそのまま見える。
+`src/styles.css` が、Dialog・AlertDialog・Sheet の Popup (`data-slot` が `dialog-content`・`alert-dialog-content`・`sheet-content`) に `view-transition-name: match-element` と `view-transition-class: dialog` を付ける。`::view-transition-old(.dialog)` は隠し、`::view-transition-group(.dialog)` と `::view-transition-new(.dialog)` は動かさない。遷移の間も Popup は live の要素のまま描かれ、Base UI の開く・閉じるアニメーションがそのまま見える。Sheet は registry の部品を使う画面が無く、見た目を dev で確かめていない。Base UI の Popup が `data-starting-style`・`data-ending-style` で開閉を動かす点は Dialog と同じなので、同じ規則に入れる。`data-slot` を上書きする Popup (Sidebar の mobile の `SheetContent`) は当たらない。
 
 | 案                                                                  | 評価                                                                                                                                                                                                                                                                                  | 採否     |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -94,7 +94,7 @@ Safari のスワイプのように、ブラウザが自分で遷移のアニメ�
 - `prefers-reduced-motion: reduce` でもクロスフェードは止まらない (2026-11-02、dev で `reducedMotion: "reduce"` を偽装して、root の animation が 250ms のままだった)。クロスフェードは opacity の変化で、WCAG 2.3.3 の motion animation に当たらない。ダイアログの開閉は registry の部品の閉じ方のままで、reduced motion の扱いも registry の部品に従う
 - 遷移が続けて始まると、飛ばされた View Transition の `AbortError` が unhandled rejection になる (Context の実測)。遷移は完了し、`src/` には `unhandledrejection` を受ける処理が無いので、本番では console に出るだけである。ブラウザテストは偽の router で描き、Void の View Transition を始めないので、テストの設定で `AbortError` を外す処理は持たない。テストで View Transition を自分で始めるときは、前の遷移の `finished` を待ってから次を始める
 - 遷移の読み上げ (ADR-0049) はクロスフェードの間も働く。リンクで別のページへ移ると、focus は新しいページの `h1` へ移った (2026-11-02、dev)
-- ブラウザテストは偽の router で描く (ADR-0048) ので、Void の View Transition は走らない。テストは `router.visit`・`router.refresh()`・送信に渡る `viewTransition` と、`data-ua-visual-transition` のある間に擬似要素の animation が無いことを見る。Popup を切り出す規則は、擬似要素の名前を読む API が無く、テストで見分けられない。dev で確かめる
+- ブラウザテストは偽の router で描く (ADR-0048) ので、Void の View Transition は走らない。テストは `router.visit`・`router.refresh()`・送信に渡る `viewTransition` と、`data-ua-visual-transition` のある間に擬似要素の animation が無いことを見る。Popup を切り出す規則は、`src/components/ui/dialog.test.tsx` が Popup の computed style の `view-transition-name` と `view-transition-class`、遷移の間に root の外の擬似要素が動かないことで見る。Popup が旧画面の snapshot に残らない見た目は、テストで見分けられない。dev で確かめる
 - 再評価条件
   - Void が遷移の `ViewTransition` の `ready` を拾うようになったら、unhandled rejection の Consequences を外す
   - Void が戻る・進むの遷移に `viewTransition` を渡す口か、View Transition の `types` を持ったら、`data-ua-visual-transition` と閉じる遷移の Overlay を比べ直す
