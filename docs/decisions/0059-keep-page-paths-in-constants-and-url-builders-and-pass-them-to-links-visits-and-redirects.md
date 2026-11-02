@@ -19,7 +19,7 @@ Void 1.4.0 では、遷移の行き先はどれも素の文字列で、行き先
 
 - `.void/routes.d.ts` が生成する型のうち、`RouteMap` は `routes/` の handler だけを、`PageActionMap` は action を持つページだけを持つ。ページの path をすべて並べた型は無い
 - 在らない path への遷移は、型検査でも lint でも落ちない。押したときに 404 のページになる (ADR-0050)
-- リンクだけを描くページが、URL を組む関数のモジュールから path の定数を import すると、そのモジュールが import する検証のスキーマと日付の型も、そのページの client の chunk に入る。2026-11-02 に `vp build` (Void 1.4.0) の manifest で、そのページの chunk から import で辿る chunk の合計は、定数だけのモジュールから import したとき 78,969 byte、URL を組む関数のモジュールから import したとき 92,659 byte だった
+- リンクだけを描くページが、URL を組む関数のモジュールから path の定数を import すると、そのモジュールが import する検証のスキーマも、そのページの client の chunk に入る。2026-11-02 に `vp build` (Void 1.4.0) の manifest で、そのページの chunk から import で辿る chunk の合計は、定数だけのモジュールから import したとき 78,969 byte、URL を組む関数のモジュールから import したとき 92,659 byte だった
 
 上流では型の付いた行き先が足されている (2026-11-02 の時点)。
 
