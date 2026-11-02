@@ -18,7 +18,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
    vp exec void deploy --platform cloudflare
    ```
 
-2. Cloudflare の API token を作り、repository の secret に置く。権限は Workers Scripts の Edit と、Void が作る資源の Edit にする ([Void docs「Cloudflare」][] の Deploying from CI)。このアプリが作る資源は D1 である
+2. Cloudflare の API token を作り、repository の secret に置く。権限は、Workers Scripts の Edit、bind する資源の読み取り、Void が作る資源の Edit の 3 つにする ([Void docs「Cloudflare」][] の Deploying from CI)。このアプリが bind し、Void が作る資源は D1 である
 
    ```bash
    gh secret set CLOUDFLARE_API_TOKEN
@@ -27,8 +27,9 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 3. `void.lock.json` を commit して main へ push する。選んだアカウントと作った資源の ID はここに残り、CI の deploy はこれを読む (「最初の deploy を手元で行う理由」)。この push で workflow が走るので、token は先に置く
 4. 以後は main への push のたびに `.github/workflows/void-deploy.yml` が `void deploy --platform cloudflare` を走らせる。同じブランチの前の deploy が走っていれば取り消す
 
-- token が複数のアカウントに届くなら、repository の secret に `CLOUDFLARE_ACCOUNT_ID` も置き、workflow の `env` に足す ([Void docs「Cloudflare」][] の Deploying from CI)
+- token が複数のアカウントに届くなら、repository の secret に `CLOUDFLARE_ACCOUNT_ID` も置き、workflow の Deploy の step の `env` に足す ([Void docs「Cloudflare」][] の Deploying from CI)
 - Worker の version に preview の URL が無いときは、repository の変数に `CLOUDFLARE_WORKERS_SUBDOMAIN` を置く。Cloudflare Access が readiness の URL を守るときは、secret に `CF_ACCESS_CLIENT_ID` と `CF_ACCESS_CLIENT_SECRET` を置く。workflow はどちらも渡している ([Void docs「Cloudflare」][] の Deploying from CI)
+- Access が route か Custom Domain を守り、`workers_dev` が `false` なら、その origin を `CF_ACCESS_READINESS_ORIGIN` として workflow の Deploy の step の `env` に足す。`void.config.ts` に書いた値は無視される ([Void docs「Cloudflare」][] の Cloudflare Access)
 - secret を置く前の push では、Deploy の step が ``Cloudflare authentication is required. Set CLOUDFLARE_API_TOKEN in CI, or run `void cloudflare login` in an interactive terminal.`` で失敗する (Void 1.4.0 の `cli/cloudflare-auth.ts`)。出さない repository なら「deploy しない repository で workflow を止める」に従う
 
 ### deploy しない repository で workflow を止める
