@@ -15,6 +15,7 @@ paths:
   - "queues/**/*.test-d.*"
   - "email/**/*.test-d.*"
   - "scripts/**/*.test.*"
+  - "src/**/*.stories.*"
   - "src/test/**"
   - "**/*.test-helpers.*"
   - "tooling/test/**"
