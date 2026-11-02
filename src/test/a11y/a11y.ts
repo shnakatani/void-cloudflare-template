@@ -35,8 +35,8 @@ export const expectNoA11yViolations = vi.defineHelper(
     const result = await axe.run(container, {
       rules: {
         // region は「ページ本体が landmark の中にあるか」を見る文書レベルの規則で、
-        // コンポーネントや 1 ページを単体 render するテストは __root.tsx を通らないため
-        // 必ず違反になる。文書側の landmark (<main>) は root-document.test.ts が押さえる
+        // コンポーネントや 1 ページを単体 render するテストは pages/layout.tsx を通らないため
+        // 必ず違反になる。文書側の landmark (<main>) は pages/_layout.test.tsx が押さえる
         region: { enabled: false },
       },
     });
