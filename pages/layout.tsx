@@ -1,5 +1,5 @@
 import { useShared } from "@void/react";
-import { StrictMode, type ReactNode } from "react";
+import { StrictMode, useEffect, type ReactNode } from "react";
 
 import { AppDevtools } from "@/components/app-devtools";
 import { LiveRegions } from "@/components/live-regions";
@@ -9,6 +9,7 @@ import { AppErrorBoundary } from "@/components/screens/app-error";
 import { Toaster } from "@/components/ui/toast";
 import { LogoutButton } from "@/features/auth/logout-button";
 import type { AppShared } from "@/features/auth/shared";
+import { mirrorUAVisualTransition } from "@/lib/ua-visual-transition";
 
 // root layout が読む CSS は、Void がこの layout の下のすべてのページの <head> に載せる
 import "@/styles.css";
@@ -19,6 +20,8 @@ import "@/styles.css";
 export default function Layout({ children }: { children: ReactNode }) {
   // 型を引数で渡す。`CloudContextVariables` の augmentation (`middleware/01.auth.ts`) は worker の program にだけある
   const { user } = useShared<AppShared>().auth;
+  // 戻る・進むでブラウザが遷移のアニメーションを出したら、View Transition を重ねない (ADR-0058)
+  useEffect(() => mirrorUAVisualTransition(window, document.documentElement), []);
   return (
     <StrictMode>
       {user && (

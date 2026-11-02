@@ -196,7 +196,7 @@ describe("usePageAction", () => {
   });
 
   // 決着が新しい props の commit を待つと、Action の中の await が commit と互いを待って決着しない (ADR-0015)
-  it("POST で、shell の到着で決着する指定を付けて送り、scroll の指定は既定で渡さない", async () => {
+  it("POST で、shell の到着で決着する指定とクロスフェードにしない指定を付けて送り、scroll の指定は既定で渡さない", async () => {
     vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
     const { result } = await renderHook(() => usePageAction(ACTION_URL, {}));
 
@@ -206,6 +206,7 @@ describe("usePageAction", () => {
       method: "POST",
       data: { title: "a", memo: "" },
       preserveScroll: undefined,
+      viewTransition: false,
       _resolveOnShell: true,
     });
   });

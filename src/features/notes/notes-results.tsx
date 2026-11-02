@@ -93,7 +93,7 @@ function NotesLoadFailed() {
         <Button
           variant="outline"
           onClick={() => {
-            router.refresh().catch((error: unknown) => {
+            router.refresh({ viewTransition: false }).catch((error: unknown) => {
               toastMutationError(error);
             });
           }}

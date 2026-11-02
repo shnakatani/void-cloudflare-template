@@ -8,7 +8,8 @@ const idleNavigation: NavigationState = { state: "idle", location: null, method:
 
 export type FakeRouter = VoidRouter & {
   readonly visits: ReadonlyArray<{ url: string; options: VisitOptions | undefined }>;
-  readonly refreshCount: number;
+  /** `refresh` を呼んだ順の options */
+  readonly refreshes: ReadonlyArray<VisitOptions | undefined>;
   /** `/a?q=x` のように query も受ける。commit された遷移を作る */
   navigate(path: string): void;
   subscribe(listener: () => void): () => void;
@@ -19,8 +20,8 @@ export type FakeRouter = VoidRouter & {
  */
 export function createFakeRouter(initialPath = "/"): FakeRouter {
   let url = new URL(initialPath, ORIGIN);
-  let refreshCount = 0;
   const visits: Array<{ url: string; options: VisitOptions | undefined }> = [];
+  const refreshes: Array<VisitOptions | undefined> = [];
   const listeners = new Set<() => void>();
 
   return {
@@ -36,15 +37,13 @@ export function createFakeRouter(initialPath = "/"): FakeRouter {
     },
     params: {},
     visits,
-    get refreshCount() {
-      return refreshCount;
-    },
+    refreshes,
     visit(target, options) {
       visits.push({ url: String(target), options });
       return Promise.resolve(undefined);
     },
-    refresh() {
-      refreshCount += 1;
+    refresh(options) {
+      refreshes.push(options);
       return Promise.resolve(undefined);
     },
     prefetch() {

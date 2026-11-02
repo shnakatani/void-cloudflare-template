@@ -21,7 +21,7 @@ Void 1.4.0 の確認結果は次のとおり (2026-11-01、`node_modules/void/do
 
 **`Link`・`useRouter`・`useNavigation`・`useShared` に依存する部品は、`src/test/app/void-router.tsx` の偽の router を `RouterContext` と `NavigationContext` に、テストが決めた値を `SharedContext` に渡して描く。**
 
-- `createFakeRouter(initialPath)` は `VoidRouter` を満たし、`visit` を `visits` に記録し、`refresh` を `refreshCount` に数える。`navigate(path)` が URL を書き換え、遷移が commit された状態を作る
+- `createFakeRouter(initialPath)` は `VoidRouter` を満たし、`visit` を `visits` に記録し、`refresh` の options を `refreshes` に記録する。`navigate(path)` が URL を書き換え、遷移が commit された状態を作る
 - `VoidRouterProvider` は 2 つの context を与え、`navigate` のたびに `useRouter()` の購読者を新しい値で描き直す。`navigation` を渡すと `useNavigation()` がその状態を返す
 - `VoidRouterProvider` に `shared` を渡すと `useShared()` がその値を返す。渡さないと `SharedContext` を与えず、`useShared()` は Void のページの外と同じく throw する
 

@@ -7,6 +7,7 @@
 | mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                  | ADR-0016 |
 | 描画の失敗は root の layout と区画の error boundary で受け、当たらない URL と server の失敗には静的な 404 と 500 のページを返す | ADR-0050 |
 | 検索の条件は、打鍵が止まったときと Enter で URL に replace で書き、loader は読み込みの失敗と見つからない行を値で返す            | ADR-0057 |
+| 遷移は Void の View Transitions でクロスフェードにし、送信とダイアログの Popup はクロスフェードに混ぜない                       | ADR-0058 |
 
 ## how-to
 
@@ -41,11 +42,11 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 
 ### 失敗した画面から再試行する
 
-| 失敗を受けた場所                    | 再試行で呼ぶもの                                                                                                                                           |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| loader が失敗の値を返した区画       | `router.refresh()` で loader を読み直す。`Button` の `onClick` から呼び、reject は `.catch()` で `toastMutationError` (`src/lib/mutation-error.ts`) に渡す |
-| 全画面の境界                        | `AppErrorBoundary` の再試行が持つ。足さない (ADR-0050)                                                                                                     |
-| 区画の境界 (`SectionErrorBoundary`) | 境界の再試行のボタンが持つ。子を描き直すだけで、loader を読み直さない (ADR-0050)                                                                           |
+| 失敗を受けた場所                    | 再試行で呼ぶもの                                                                                                                                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| loader が失敗の値を返した区画       | `router.refresh({ viewTransition: false })` で loader を読み直す (ADR-0058)。`Button` の `onClick` から呼び、reject は `.catch()` で `toastMutationError` (`src/lib/mutation-error.ts`) に渡す |
+| 全画面の境界                        | `AppErrorBoundary` の再試行が持つ。足さない (ADR-0050)                                                                                                                                         |
+| 区画の境界 (`SectionErrorBoundary`) | 境界の再試行のボタンが持つ。子を描き直すだけで、loader を読み直さない (ADR-0050)                                                                                                               |
 
 - `router.refresh()` を Action の中で待たない。`ActionButton` の `action` に渡すと、読み直しの応答が返っても表示が替わらず、ボタンが押せないまま残る (ADR-0050)
 - loader が失敗の値を返した区画を、`SectionErrorBoundary` の再試行に任せない。境界が受けるのは描画の throw だけで、子を描き直しても loader は読み直されない (「区画の境界と loader の失敗を分ける理由」)

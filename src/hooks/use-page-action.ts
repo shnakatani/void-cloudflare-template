@@ -132,6 +132,8 @@ export function usePageAction<U extends ActionUrl>(
       method: method ?? "POST",
       data,
       preserveScroll,
+      // 送信は遷移ではないので、クロスフェードにしない。送信の後に描き直すのは同じページか、redirect した先である (ADR-0058)
+      viewTransition: false,
       _resolveOnShell: true,
     }).catch((error: unknown) => {
       if (!isAbortError(error)) {

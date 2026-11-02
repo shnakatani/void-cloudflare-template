@@ -90,6 +90,7 @@ lint では見ないのでレビューで見る。
 - 失敗の値を返したら、server の `console.error` に残す。応答は 200 で届き、ほかに気付く手掛かりが無い (ADR-0057)
 - 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)
 - loader が失敗の値を返した区画の再試行は、`router.refresh()` を `Button` の `onClick` から呼ぶ。`SectionErrorBoundary` の再試行は loader を読み直さない (`docs/guides/data-loading.md`「失敗した画面から再試行する」)
+- 再試行の `router.refresh()` には `{ viewTransition: false }` を渡す。渡さないと、Void の既定で失敗の表示と読み直した画面がクロスフェードで重なる (ADR-0058)
 
 ## 一覧の上のフォームのダイアログは一覧のページの query で開く
 
@@ -98,6 +99,8 @@ lint では見ないのでレビューで見る。
 - 追加と編集のダイアログは一覧のページの query (`<一覧>?new`、`<一覧>?edit=<id>`) で開き、Dialog の Root は開閉をまたいで描いたまま `open` を props から導く (ADR-0056)
 - 保存の Action の間は、Root の `onOpenChange` で `eventDetails.cancel()` を呼び、キャンセルのボタンも `disabled` にする。止める条件はそのダイアログ自身の保存の pending だけにする。閉じる遷移が保存の送信を取り消す (ADR-0056)
 - ダイアログの中身に、ダイアログの種類と値の id から作った `key` を渡す。渡さないと、開いたまま別の値へ移ったとき form が前の値のまま残る (ADR-0056)
+- props のダイアログが閉じた後も、直前に開いていたダイアログの中身を Root の `onOpenChangeComplete(false)` まで描く。中身をすぐ外すと Popup が閉じるアニメーションを流さずに消える (ADR-0056「閉じる見せ方」)
+- 閉じる操作の `startVisit` には `viewTransition: false` を渡す。クロスフェードにすると Overlay が Base UI の閉じ方より長く残る (ADR-0056「閉じる見せ方」)
 - `finalFocus` に `finalFocusToOpener(<開いた元のリンクを data 属性で探す関数>)` (`src/lib/dialog-final-focus.ts`) を渡す。閉じたら開いた元のリンクへ、無ければ見出しへ移し、別のダイアログに替わったら触れない。`finalFocus` からリンクを返すと、替わるときに focus がリンクを経由する (ADR-0056)
 - 操作中の行の開くリンクは `Button` の `focusableWhenDisabled` と `disabled` に描き替える。native の `disabled` は tab 順から外れ、focus が `<body>` へ落ちる (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)
 - ダイアログを足したら、閉じたときの focus をページのテストで確かめる。開いた元のリンクの探し方を誤っても、型検査も Base UI も気付かない (`docs/guides/forms-and-inputs.md`「一覧の上にフォームのダイアログを組む」)

@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/toast";
 import type { AppShared, SharedUser } from "@/features/auth/shared";
 import { LIVE_REGION_IDS } from "@/lib/live-announcer";
 import { MUTATION_ERROR_FALLBACK_MESSAGE } from "@/lib/mutation-error";
+import { UA_VISUAL_TRANSITION_ATTRIBUTE } from "@/lib/ua-visual-transition";
 import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 import { expectAbsent } from "@/test/assert/absent";
 
@@ -104,6 +105,15 @@ describe("root layout", () => {
     await expect
       .element(screen.getByRole("heading", { name: "エラーが発生しました" }))
       .toHaveFocus();
+  });
+
+  it("ブラウザが遷移のアニメーションを出した戻る・進むで html に印を付け、unmount で外す", async () => {
+    const screen = await renderLayout(<p>x</p>);
+    const marked = () => document.documentElement.hasAttribute(UA_VISUAL_TRANSITION_ATTRIBUTE);
+    window.dispatchEvent(new PopStateEvent("popstate", { hasUAVisualTransition: true }));
+    expect(marked()).toBe(true);
+    await screen.unmount();
+    expect(marked()).toBe(false);
   });
 
   it("ログイン中は、メールアドレスとログアウトのボタンを出す", async () => {
