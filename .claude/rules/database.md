@@ -18,7 +18,7 @@ paths:
 
 ## query
 
-- query の関数は `src/features/<domain>/` の `*.server.ts` に置いて `db` と `userId` を引数で受け、`pages/*.server.ts` は `getUser()` と `db` を渡すだけにする (ADR-0055)
+- query の関数は `src/features/<domain>/` の `*.server.ts` に置いて `db` と `userId` を引数で受け、`pages/*.server.ts` は `getUser()` か `requireAuth(c)` で読んだ user と `db` を渡すだけにする (ADR-0055)
 - `db.query.*` を使わず、`db.select()` などの query builder で書く。列の SQL の名前は schema で明示し、`database.casing` に頼らない。テストの `db` は schema も casing も持たない (`docs/guides/database.md`「query を書く」)
 - ユーザーの行は、読み出し・更新・削除のすべてで `where` を `userId` に絞る。更新と削除は `and(<id の一致>, <userId の一致>)` にする (`docs/guides/database.md`「query を書く」)
 - query のテストは `src/features/<domain>/*.test.ts` に置き、`createTestD1()` の D1 を使い、`dispose()` で止める。`db/` にはテストを置かない (`docs/guides/database.md`「テストで D1 を使う」)
