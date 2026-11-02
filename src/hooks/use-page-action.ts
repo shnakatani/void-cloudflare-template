@@ -186,7 +186,7 @@ export function usePageAction<U extends ActionUrl>(
  *
  * ```tsx
  * const form = useAppForm({ defaultValues, onSubmit: async ({ value }) => { await run(v.parse(inputSchema, value)); } });
- * const { run, submit } = usePageActionForm(form, "/notes/:id", { method: "PUT", params });
+ * const { run, submit } = usePageActionForm(form, "/items/:id", { method: "PUT", params });
  * <ActionForm submitAction={submit}>...</ActionForm>
  * ```
  *
