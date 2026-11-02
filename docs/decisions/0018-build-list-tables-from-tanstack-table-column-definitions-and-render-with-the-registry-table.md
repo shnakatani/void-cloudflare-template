@@ -47,7 +47,7 @@
 ## Consequences
 
 - 依存に `@tanstack/react-table` が入る (ADR-0005 の待機 3 日は経過)。`@tanstack/table-core` と `@tanstack/react-store` が同梱で入る
-- 開発の依存に `@tanstack/react-table-devtools` が入る。アプリのコードは dev だけで読むので、TanStack Devtools の docs「Production」の dev だけで使う場合の置き場 (dev dependency) に従う
+- 開発の依存に `@tanstack/react-table-devtools` が入る。本番の build には入らない (`DataTable` の登録は dev だけで読み、panel は Vite の plugin が外す。ADR-0061) ので、TanStack Devtools の docs「Production」の dev だけで使う場合の置き場 (dev dependency) に従う
 - features に置くかの基準は `docs/guides/placement.md`「features か lib・hooks か」にある
 - 再評価条件: 2 つ目の一覧画面が出たとき (`createTableHook` の factory)、sorting / pagination を足すとき (`autoResetPageIndex`)、楽観的更新を扱う画面が増えたとき (TanStack DB)
 
