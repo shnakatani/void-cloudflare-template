@@ -68,6 +68,12 @@ paths:
 - テストの中で `vi.stubEnv("TZ", …)` で TZ を切り替えず、TZ ごとの実行はスクリプト (`scripts/time-zones/run-tests.ts`) に任せる。threads / vmThreads の pool ではテストの中の切り替えが `Date` に効かず、無言で通る (`docs/guides/testing/time-zones.md`「TZ ごとにプロセスを分ける理由」)
 - ブラウザテストの TZ の切り替えは CDP の `Emulation.setTimezoneOverride` で行い、`afterEach` で `timezoneId: ""` を送って戻す。`vi.stubEnv` はブラウザの TZ を変えない (`docs/guides/testing/time-zones.md`「ブラウザテストで切り替える」)
 
+## テスト用の router
+
+- `Link`・`useRouter`・`useNavigation`・`useShared` を使う部品は、子に持つ部品も含めて `VoidRouterProvider` (`src/test/app/void-router.tsx`) で包み、`createFakeRouter(<初期の path>)` を渡して描く。包まないと `path` はいつも `/` になり、`Link` は文書ごと遷移する (`docs/guides/testing/void-router.md`「router に依存する部品を描く」)
+- 遷移を始めたことは `router.visits`、読み直しは `router.refreshes` で確かめ、遷移が終わったあとの描画は `router.navigate(<path>)` で作る。偽の `visit` は URL を変えない (`docs/guides/testing/void-router.md`「router に依存する部品を描く」)
+- loader の実行、title の書き換え、`visit` の決着の時点、scroll は偽の router で再現しないので、dev server で確かめる (`docs/guides/testing/void-router.md`「偽の router が再現しないものを確かめる」)
+
 ## a11y の検査は tag で分ける
 
 - `axe` で「アクセシブルか」を問うテストに `{ tags: ["a11y"] }` を付ける。単独実行は `--tags-filter a11y`。`--tags-filter '!a11y'` で外しても、挙動テストに相乗りした assert は走る (`docs/guides/accessibility.md`「a11y の tag を付ける」)
