@@ -61,7 +61,7 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 - ページの URL が query (ダイアログを開く key、絞り込みの語) を持つときは、`usePageAction` / `usePageActionForm` の `pageQuery` に `?` を除いて渡す。載せないと、server の検証の失敗 (422) でページが query の無い URL で描き直され、ダイアログと絞り込みが消えてエラーも出ない。その action の redirect は絶対 URL で返す (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から Better Auth の client (`void/client` の `auth`) で送るときは、`requestAuth` で呼び、`ActionForm` の `submitAction` に `submitClearingServerFieldErrors(form)` を渡す。理由は上の行と同じ (`docs/guides/auth.md`「Better Auth の client から送る」)
 - Action の中から遷移するときは `startVisit(router, path)` で始め、`router.visit` を await しない。Action と遷移の commit が互いを待ち、ボタンが pending のまま止まる (`docs/guides/auth.md`「Better Auth の client から送る」)
-- `router.refresh()` の決着を待つ処理 (全画面のエラー表示の再試行など) は、Action の外のハンドラで走らせ、`ActionButton` の `action` に渡さない。理由は上の行と同じで、読み直しの応答が返っても表示が替わらない (ADR-0050)
+- `router.refresh()` の決着を待つ処理 (全画面のエラー表示の再試行など) は、Action の外のハンドラで走らせ、`ActionButton` の `action` に渡さない。理由は上の行と同じで、読み直しの応答が返っても表示が替わらない。決着までの pending は部品の state に持ち、`ActionButtonShell` の `isPending` に渡す (ADR-0050)
 - `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
 - 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける。Action の中で閉じるのは `handle.close()` で行う。同期区間で React の state (`open`) を false にしても、ダイアログは Action の終わりまで残る (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
 - 確定操作の直後に閉じる操作は、その Action の間、同じ種類の操作のほかの項目の起点を、対象の項目と同じ楽観値から `aria-disabled` で止める。止めないと、後の送信が前の送信を取り消し、届く前なら前の操作は知らされずに起きない。native の `disabled` は、確定のあと移した focus を `<body>` へ落とす (ADR-0017)

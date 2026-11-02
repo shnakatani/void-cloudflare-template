@@ -24,25 +24,25 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 
 ## Decision
 
-| 項目                         | 決定                                                                                                                                                                                                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 境界の部品                   | `react-error-boundary` の `ErrorBoundary` で作る。class の境界を自前で書かない                                                                                                                                                                                |
-| 全画面の境界                 | `pages/layout.tsx` が `<main>` の中のページを `AppErrorBoundary` (`src/components/screens/app-error.tsx`) で包む。Toaster、LiveRegions、遷移の読み上げ (ADR-0049) は境界の外に置き、エラー表示の間も動かす                                                    |
-| 区画の境界                   | ページの中で、失敗しても周り (検索欄など) を残したい区画は、使う側が `SectionErrorBoundary` (`src/components/parts/section-error-boundary.tsx`) で包む                                                                                                        |
-| 失敗の受け手                 | 失敗は、境界を置いた最も近い祖先が受ける。区画の境界はページごとの既定にせず、置いた場所だけで受ける。どの区画の境界にも入らない失敗は、root の layout の境界が受ける                                                                                         |
-| 例外の文言                   | 画面に出さない。全画面は「ページを表示できませんでした。時間をおいて再試行してください。」、区画は使う側が渡す `message` を出す。原因は dev の overlay と console で追う                                                                                      |
-| 例外のログ                   | React の既定の `onCaughtError` が出す `console.error` に任せ、境界の `onError` で重ねて出さない                                                                                                                                                               |
-| 全画面の再試行               | `router.refresh()` で loader を読み直し、その Promise が決着してから境界を戻す。読み直しが reject したら `console.warn` に残し、境界は戻す。待つ処理は Action の外のハンドラで走らせる                                                                        |
-| 全画面の再試行のあとの focus | 境界を戻した描画を `flushSync` で確定させてから、`focusPageHeading` で見出しへ移す。描き直したページが描ければその `<h1>` へ、また失敗すれば全画面のエラー表示の `<h1>` へ移る                                                                                |
-| 区画の再試行                 | 境界を戻して子を描き直すだけにし、loader を読み直さない。再試行で消えるボタンの代わりに、区画の外枠へ focus を移す                                                                                                                                            |
-| 境界が戻る契機               | 全画面は `useRouter().path` の変化 (layout は遷移で作り直されないので、戻さないと失敗の表示が次のページに残る)。区画は使う側が渡す `resetKeys` のどれかの変化                                                                                                 |
-| 区画の失敗の読み上げ         | 捕まえた時点で 1 回、`sectionErrorAnnouncement(message)` を `announce()` (ADR-0026) で流す                                                                                                                                                                    |
-| 全画面のエラー表示の title   | 出している間は `document.title` の前に「エラー: 」を付ける。外れたとき、title が付けたときのままなら戻す。遷移の先で失敗したときの読み上げは、ADR-0049 の部品がこの title を読む                                                                              |
-| 全画面のエラー表示の見出し   | `FullScreenNotice` の `<h1>`。ページの `<h1>` は描かれないので、遷移の後の focus はこの見出しへ移る (ADR-0049 の `focusPageHeading`)。遷移を伴わない失敗 (操作による再描画の throw) では、表示が出た時点で focus が `<body>` か `null` なら、この見出しへ移す |
-| 404                          | `public/404.html`。ページの対象そのものが無いとき、loader は `return c.notFound()` と書き、`throw new HTTPException(404)` を使わない。ページは在り、その上の 1 区画の対象が無いときは値で返す (ADR-0057)                                                      |
-| 500                          | `public/500.html`                                                                                                                                                                                                                                             |
-| 静的なページの形             | `<html lang="ja">`、`charset`、viewport、`<ページの見出し> — <アプリ名>` の title、`/error-page.css`、`<main>` の中の `<h1>` と `/` へのリンク。inline の `<script>` と `style` 属性は書かない                                                                |
-| 静的なページの見た目         | `public/error-page.css` が `src/styles.css` の `:root` (light) の `--background`・`--foreground`・`--font-sans` の値を写して持つ。dark は持たない                                                                                                             |
+| 項目                         | 決定                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 境界の部品                   | `react-error-boundary` の `ErrorBoundary` で作る。class の境界を自前で書かない                                                                                                                                                                                                           |
+| 全画面の境界                 | `pages/layout.tsx` が `<main>` の中のページを `AppErrorBoundary` (`src/components/screens/app-error.tsx`) で包む。Toaster、LiveRegions、遷移の読み上げ (ADR-0049) は境界の外に置き、エラー表示の間も動かす                                                                               |
+| 区画の境界                   | ページの中で、失敗しても周り (検索欄など) を残したい区画は、使う側が `SectionErrorBoundary` (`src/components/parts/section-error-boundary.tsx`) で包む                                                                                                                                   |
+| 失敗の受け手                 | 失敗は、境界を置いた最も近い祖先が受ける。区画の境界はページごとの既定にせず、置いた場所だけで受ける。どの区画の境界にも入らない失敗は、root の layout の境界が受ける                                                                                                                    |
+| 例外の文言                   | 画面に出さない。全画面は「ページを表示できませんでした。時間をおいて再試行してください。」、区画は使う側が渡す `message` を出す。原因は dev の overlay と console で追う                                                                                                                 |
+| 例外のログ                   | React の既定の `onCaughtError` が出す `console.error` に任せ、境界の `onError` で重ねて出さない                                                                                                                                                                                          |
+| 全画面の再試行               | `router.refresh()` で loader を読み直し、その Promise が決着してから境界を戻す。読み直しが reject したら `console.warn` に残し、境界は戻す。待つ処理は Action の外のハンドラで走らせ、決着までの pending と二重の発火は、部品の state を `ActionButtonShell` の `isPending` に渡して塞ぐ |
+| 全画面の再試行のあとの focus | 境界を戻した描画を `flushSync` で確定させてから、`focusPageHeading` で見出しへ移す。描き直したページが描ければその `<h1>` へ、また失敗すれば全画面のエラー表示の `<h1>` へ移る                                                                                                           |
+| 区画の再試行                 | 境界を戻して子を描き直すだけにし、loader を読み直さない。再試行で消えるボタンの代わりに、区画の外枠へ focus を移す                                                                                                                                                                       |
+| 境界が戻る契機               | 全画面は `useRouter().path` の変化 (layout は遷移で作り直されないので、戻さないと失敗の表示が次のページに残る)。区画は使う側が渡す `resetKeys` のどれかの変化                                                                                                                            |
+| 区画の失敗の読み上げ         | 捕まえた時点で 1 回、`sectionErrorAnnouncement(message)` を `announce()` (ADR-0026) で流す                                                                                                                                                                                               |
+| 全画面のエラー表示の title   | 出している間は `document.title` の前に「エラー: 」を付ける。外れたとき、title が付けたときのままなら戻す。遷移の先で失敗したときの読み上げは、ADR-0049 の部品がこの title を読む                                                                                                         |
+| 全画面のエラー表示の見出し   | `FullScreenNotice` の `<h1>`。ページの `<h1>` は描かれないので、遷移の後の focus はこの見出しへ移る (ADR-0049 の `focusPageHeading`)。遷移を伴わない失敗 (操作による再描画の throw) では、表示が出た時点で focus が `<body>` か `null` なら、この見出しへ移す                            |
+| 404                          | `public/404.html`。ページの対象そのものが無いとき、loader は `return c.notFound()` と書き、`throw new HTTPException(404)` を使わない。ページは在り、その上の 1 区画の対象が無いときは値で返す (ADR-0057)                                                                                 |
+| 500                          | `public/500.html`                                                                                                                                                                                                                                                                        |
+| 静的なページの形             | `<html lang="ja">`、`charset`、viewport、`<ページの見出し> — <アプリ名>` の title、`/error-page.css`、`<main>` の中の `<h1>` と `/` へのリンク。inline の `<script>` と `style` 属性は書かない                                                                                           |
+| 静的なページの見た目         | `public/error-page.css` が `src/styles.css` の `:root` (light) の `--background`・`--foreground`・`--font-sans` の値を写して持つ。dark は持たない                                                                                                                                        |
 
 ### 検討した案: 全画面の再試行の順序
 
@@ -88,7 +88,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 - 静的なページの font は、端末に Geist Variable が無ければ `sans-serif` で描く。アプリの font のファイルは bundle の中にあり、静的なページから読めない
 - 静的なページの title にはアプリ名を文字列で書く。`src/lib/app-name.ts` の `APP_NAME` を替えたら、`public/404.html` と `public/500.html` の title も替える
 - `serveCustomPage` は要求の method を見ずに `/500.html` を返すので、action の POST が 500 になったときの本文も `public/500.html` になる (v1.4.0 のソースから推論。実測していない)
-- `src/components/screens/app-error.test.tsx` は偽の router (ADR-0048) で描く。偽の `refresh()` は Void の commit を通らずに決着するので、再試行を Action の中で待つ形でもテストは通る。再試行の決着は dev で確かめる
+- `src/components/screens/app-error.test.tsx` は偽の router (ADR-0048) で描く。偽の `refresh()` は Void の commit を通らずに決着するので、再試行を Action の中で待つ形でもテストは通る。再試行の決着は dev で確かめる。Void を上げたら、client の最初の描画だけが throw するページへ `Link` で移り、再試行でページに戻ることと、続けて失敗したら再試行をまた押せることを確かめる (下の「調査結果」の形)
 - エラー表示から別のページへ移り、その先でも描画が失敗したときは、「エラー: 」が付かない可能性がある。`AppError` は作り直されず、Void が新しいページの title を書き換えるのは `AppError` の effect の後になりうる (推論。実測していない)
 - イベントハンドラと非同期の処理の throw は境界に届かない (react.dev「Component」)。`usePageAction` の送信から境界に届くのは `onSuccess` の throw だけ (ADR-0016)
 - title の扱いは Void の内部の順序に乗る。遷移の commit の `applyClientHead` (`void/src/pages/navigation-engine.ts` の `makeCommit`) が、エラー表示の effect より先に title を書き換えること。docs に書かれていない。Void を上げたら、描画が throw するページへ `Link` で遷移し、title と読み上げの region に「エラー: 」が付くことを確かめる
@@ -120,6 +120,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 | Action の外のハンドラで、境界を戻してから読み直し、見出しへ移す | `<ページ名> — <アプリ名>`         | 増えない          | `<h1>エラーが発生しました</h1>`                      | 全画面のエラー表示のまま |
 
 - どの形でも、再試行で出た要求は `GET` の 1 本で、status 200 と `X-VoidPages` を返した
+- 1 行目の形で pending を部品の state に持ち `ActionButtonShell` に渡しても、値は 1 行目と同じだった。描画が 2 回続けて throw するページでは、1 回目の再試行のあと全画面のエラー表示に戻り、再試行のボタンは `aria-disabled="false"`、focus は `<h1>エラーが発生しました</h1>` になり、2 回目の再試行でページに戻った
 - preview で当たらない URL は status 404 と `public/404.html`、loader が throw するページは status 500 と `public/500.html` を返した。どちらの応答にも `routing.headers` の 6 つのヘッダが付いた。body の背景色と文字色は `error-page.css` の値 (`oklch(1 0 0)`、`oklch(0.148 0.004 228.8)`) になった
 - dev の 500 は `public/500.html` の後ろに Void の error overlay の `<style>` と要素が付いた
 

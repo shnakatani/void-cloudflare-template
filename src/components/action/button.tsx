@@ -13,7 +13,8 @@ type ActionButtonShellProps = Omit<
 
 /**
  * pending を prop で受ける Button の共通部 (ADR-0016「Action 層」)。`ActionButton` と
- * `ActionFormSubmit` (`form.tsx`) が使う。
+ * `ActionFormSubmit` (`form.tsx`) が使う。Action に載せられない処理 (`router.refresh()` の決着を待つ再試行。ADR-0050) は、
+ * 決着までを state に持ってこの部品に渡す。
  *
  * - pending 中は `disabled` + `focusableWhenDisabled` で `aria-disabled` にし、フォーカスを保ったまま
  *   Base UI が click を止める。決着前の二重発火はこの `isPending` だけで塞ぐ (react.dev の
