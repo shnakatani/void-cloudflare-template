@@ -136,9 +136,8 @@ Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か�
 | session を読むすべての要求 | `POST`・`PUT`・`PATCH`・`DELETE` で、`Origin` が要求の origin とも `trustedOrigins` とも違う ([Void docs「Authentication」][] の Behavior、Void 1.4.0 の `runtime/better-auth-shared.ts` の `sessionHeaders`)                                                                              | cookie を捨て、user の無い要求として通す |
 
 - cookie を捨てる判定は要求を止めない。`routes/` の handler が守られるのは、user を読み、無ければ止まるからである
-- ブラウザは別の origin への要求に `Origin` を付ける ([MDN「Origin」][])。どちらの判定も、`Origin` の無い要求をブラウザの外の client として通す
-- session の cookie は `SameSite=Lax` で発行される (2026-11-02、`vp preview` の `Set-Cookie`)。別の site からの `POST` には cookie が付かない。同じ site の別の origin (兄弟の subdomain) からの `POST` には付くので、上の 2 か所が止める
-- 2026-11-02 に `vp preview` で叩いた結果は ADR-0060 の Context にある
+- `Origin`・`Sec-Fetch-Site`・`Referer` のどれも無い要求は、どちらの判定もブラウザの外の client として通す
+- ブラウザが別の origin への要求に `Origin` を付けること、session の cookie の `SameSite` が止める範囲、2026-11-02 に `vp preview` で叩いた結果は、ADR-0060 の Context にある
 
 ### page の loader に middleware を渡さない理由
 
@@ -152,7 +151,7 @@ Void の docs も、programmatic な遷移を `router.visit("/users");` と awai
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。Better Auth docs と MDN は 2026-11-02 に読んだ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。Better Auth docs は 2026-11-02 に読んだ。
 
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
 [Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
@@ -162,4 +161,3 @@ Void の docs も、programmatic な遷移を `router.visit("/users");` と awai
 [Void docs「Actions & Forms」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/actions-and-forms.md
 [Better Auth docs「Email & Password」]: https://www.better-auth.com/docs/authentication/email-password
 [React docs「useTransition」]: https://react.dev/reference/react/useTransition
-[MDN「Origin」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Origin
