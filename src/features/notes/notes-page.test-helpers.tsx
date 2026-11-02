@@ -12,7 +12,7 @@ const EMPTY_PAGE: NotesPageData = { q: "", notes: [], dialog: { kind: "closed" }
 
 /**
  * 一覧のページを props で描く。新しい props は戻り値の `rerender` で渡す (loader の応答の commit に当たる)。
- * `navigation` は `useNavigation()` が返す遷移の状態
+ * `navigation` は `useNavigation()` が返す遷移の状態。`rerender` に渡すと、その描画から替わる (遷移の開始に当たる)
  */
 export async function renderNotesPage(
   data: Partial<NotesPageData> = {},
@@ -21,9 +21,10 @@ export async function renderNotesPage(
 ) {
   const props = { ...EMPTY_PAGE, ...data };
   const fakeRouter = router ?? createFakeRouter(notesListUrl(props.q));
+  let currentNavigation = navigation;
   function ui(next: NotesPageData) {
     return (
-      <VoidRouterProvider router={fakeRouter} navigation={navigation}>
+      <VoidRouterProvider router={fakeRouter} navigation={currentNavigation}>
         <NotesPage {...next} />
         <Toaster />
       </VoidRouterProvider>
@@ -33,6 +34,12 @@ export async function renderNotesPage(
   return {
     screen,
     router: fakeRouter,
-    rerender: (next: Partial<NotesPageData>) => screen.rerender(ui({ ...props, ...next })),
+    rerender: (
+      next: Partial<NotesPageData>,
+      nextNavigation: NavigationState | undefined = currentNavigation,
+    ) => {
+      currentNavigation = nextNavigation;
+      return screen.rerender(ui({ ...props, ...next }));
+    },
   };
 }
