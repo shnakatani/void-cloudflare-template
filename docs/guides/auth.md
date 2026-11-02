@@ -1,6 +1,6 @@
 # 認証
 
-ページを守る、user を読む、Better Auth の client から送る、auth の設定を変える、preview に secret を渡す手順と、その形にしている理由を持つ。
+ページを守る、`routes/` に書き込みの handler を足す、user を読む、Better Auth の client から送る、auth の設定を変える、preview に secret を渡す手順と、その形にしている理由を持つ。
 
 | 決定                                                                                                                                | ADR      |
 | ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -8,12 +8,14 @@
 | tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ            | ADR-0047 |
 | Void のページの context に依存する部品は、export された router・navigation・shared の context を通して story とブラウザテストで描く | ADR-0048 |
 | 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                                         | ADR-0053 |
+| ページの path は定数と URL を組む関数に 1 か所で持ち、Link・visit・redirect にはそれを渡す                                          | ADR-0059 |
+| 別の origin からの書き込みは Void の判定に任せ、routes/ の書き込みの handler は user を読んでから書く                               | ADR-0060 |
 
 ## how-to
 
 ### 保護する path を足す
 
-1. `src/features/auth/access.ts` の `PROTECTED_PATHS` に path を足す。下位の path (`/x/1`) も守られる。`/` だけは `/` そのものに限る
+1. `src/features/auth/access.ts` の `PROTECTED_PATHS` に、そのページの path の定数を import して足す。文字列を直に書くと、ページを動かして定数だけを直したときに、動かした先が黙って守られなくなる (ADR-0059)。下位の path (`/x/1`) も守られる。`/` だけは `/` そのものに限る
 2. `scripts/checks/runtime/auth-redirect.ts` の `EXPECTATIONS` に、その path が未ログインで `/login` へ送られる行を足す
 3. その path がページなら、`scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` に `signedIn: true` の行を足す。足さないと、そのページの HTML に CSP で止まる script があっても落ちない (`docs/guides/security-headers.md`「CSP の下で script を足す」)
 4. `vp build` のあと `vp run verify:auth-redirect` と `vp run verify:security-headers` で確かめる
@@ -22,6 +24,20 @@
 - 守るページは prerender しない。`.md` のページと loader の無い island のページは自動で prerender されるので、守る path の下に置かない (ADR-0053)
 - ログイン済みなら開く意味の無い path (ログインと登録の画面) は `GUEST_ONLY_PATHS` に足す。ログイン済みの要求は `/` へ送られる
 - redirect の行き先は `new URL(<path>, c.req.url).href` の絶対 URL で渡す。相対の path を渡すと、要求の query が行き先に混ざる (「redirect を絶対 URL で書く理由」)
+
+### `routes/` に書き込みの handler を足す
+
+`routes/` の handler には、page の action のような origin の判定が掛からない。Void が別の origin からの書き込みの要求で session の cookie を捨てるので、user を読んで書く handler だけが守られる (ADR-0060、「別の origin からの書き込みが止まる仕組み」)。足す handler の形で守り方を選ぶ。
+
+| handler の形                                                      | 守り方                                                                                                                                                                      |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`・`PUT`・`PATCH`・`DELETE` で、ログインした user の行を書く | 書く前に `requireAuth(c)` で user を読み、その user で絞って書く。別の origin からの要求は user が無く、401 で止まる                                                        |
+| Void の session でない cookie を読む                              | Void が捨てるのは session の cookie だけである。handler に origin の判定を足す。Void の docs は Hono の `csrf()` を例に挙げる ([Void docs「Authentication」][] の Behavior) |
+| `GET` で書く                                                      | 作らない。書き込みは `POST` などで受ける。`GET` は cookie を捨てる判定を通らず、別の origin から session のまま走る                                                         |
+| 別の origin の frontend から呼ばせる                              | その origin を `auth.ts` の `trustedOrigins` に足す (「auth の設定を変える」)。足さないと、その frontend の書き込みはログインしていない要求になる                           |
+
+- handler の path が `PROTECTED_PATHS` の下にあれば、user の無い要求は middleware が `/login` へ redirect する。それでも handler の中で `requireAuth(c)` を読む。path の一覧から外れても、handler が自分で止まる
+- `Origin` も `Sec-Fetch-Site` も `Referer` も無い要求は、ブラウザの外の client として扱われ、session の cookie を持てば user が読める。ブラウザの外の client から呼ばせない API でも、user を読む判定は外さない
 
 ### 全ページで user を読む
 
@@ -111,6 +127,19 @@ vp build
 
 Void 1.4.0 の `c.redirect("/login")` は、要求の query を行き先に混ぜる (voidzero-dev/void#648、2026-11-02 の時点で open)。`/?q=x` から相対の path で送ると、`location` は `/login?q=x` になった (2026-11-02、`vp preview`)。query が守るページの検索の条件なら、ログインの画面の URL に残る。issue が挙げる回避の 1 つの、絶対 URL を渡す形を採る。`verify:auth-redirect` は `location` を絶対 URL で比べるので、相対に戻すと落ちる。
 
+### 別の origin からの書き込みが止まる仕組み
+
+Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か所で扱う。どちらも Void が持つもので、このテンプレートは何も足していない。
+
+| 場所                       | 判定                                                                                                                                                                                                                                                                         | 結果                                     |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| page の action             | `Origin` が要求の origin と違う。`Origin` が無ければ、`Sec-Fetch-Site` が `same-origin` でも `none` でもないか、`Referer` の origin が違う ([Void docs「Actions & Forms」][] の Authentication and origin checks、Void 1.4.0 の `pages/protocol.ts` の `isSameOriginAction`) | 403 で止める                             |
+| session を読むすべての要求 | `POST`・`PUT`・`PATCH`・`DELETE` で、`Origin` が要求の origin とも `trustedOrigins` とも違う ([Void docs「Authentication」][] の Behavior、Void 1.4.0 の `runtime/better-auth-shared.ts` の `sessionHeaders`)                                                                | cookie を捨て、user の無い要求として通す |
+
+- cookie を捨てる判定は要求を止めない。`routes/` の handler が守られるのは、user を読み、無ければ止まるからである
+- `Origin`・`Sec-Fetch-Site`・`Referer` のどれも無い要求は、どちらの判定もブラウザの外の client として通す
+- ブラウザが別の origin への要求に `Origin` を付けること、session の cookie の `SameSite` が止める範囲、2026-11-02 に `vp preview` で叩いた結果は、ADR-0060 の Context にある
+
 ### page の loader に middleware を渡さない理由
 
 Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.4.0 では loader が 500、action が空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は 2026-11-02 の時点で open)。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置く (ADR-0053)。
@@ -130,5 +159,6 @@ Void の docs も、programmatic な遷移を `router.visit("/users");` と awai
 [Void docs「Sending Email」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/email/sending.md
 [Void docs「Server Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/server-routing.md
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/overview.md
+[Void docs「Actions & Forms」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/actions-and-forms.md
 [Better Auth docs「Email & Password」]: https://www.better-auth.com/docs/authentication/email-password
 [React docs「useTransition」]: https://react.dev/reference/react/useTransition

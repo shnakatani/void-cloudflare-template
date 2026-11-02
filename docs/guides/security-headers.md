@@ -1,6 +1,10 @@
 # セキュリティヘッダ
 
-`void.config.ts` の `routing.headers` で付けるセキュリティヘッダ (CSP を含む)の変え方と、ヘッダが届く範囲、ヘッダごとの効き方を持つ。
+`void.config.ts` の `routing.headers` で付けるセキュリティヘッダ (CSP を含む)の変え方と、CSP を広げる前に試す手順と違反の集め方と、ヘッダが届く範囲、ヘッダごとの効き方を持つ。
+
+| 決定                                                                      | ADR      |
+| ------------------------------------------------------------------------- | -------- |
+| inline の script を許さない CSP を送り、Void の deferred props を使わない | ADR-0051 |
 
 ## how-to
 
@@ -23,6 +27,41 @@
 | `void.config.ts` を変えたあと、build し直さずに検査する | ヘッダの rule はビルドの成果物 (`dist/ssr/index.js`) に入るので、そのままだと古い設定の成果物を検査することになる (Void 1.4.0、2026-11-01 に実測)。検査は `void.config.ts` が `dist/ssr/wrangler.json` より新しいと、応答を見ずに落ちる。git checkout などで更新日時だけが変わったときも落ちる | `vp run verify:build` からやり直す              |
 | 同じヘッダを別の pattern にも書く                       | 一致した rule はすべて合わさり、同じ名前のヘッダは最後に一致した rule の値になる ([Void docs「Custom Headers」][] の Rules)。`"/*"` より後ろの pattern に書くと、その path だけ `"/*"` の値を上書きする                                                                                        | 意図した上書きでなければ、`"/*"` の側だけに書く |
 | `Strict-Transport-Security` の `includeSubDomains`      | 配信するドメインのサブドメインすべてが、`max-age` の間 HTTPS に固定される ([MDN「Strict-Transport-Security」][])                                                                                                                                                                               | http でしか配信しないサブドメインがあるなら外す |
+
+### CSP を広げる前に Report-Only で試す
+
+`style-src` のように、いま止めていない種類の資源を止めるディレクティブを足すときは、先に `Content-Security-Policy-Report-Only` で配って違反を集める。Report-Only は違反を止めず、報せるだけにする ([MDN「Content-Security-Policy-Report-Only」][])。違反は `securitypolicyviolation` の event に `disposition: "report"` で出る (2026-11-02、Chromium 156 で確かめた)。
+
+1. `void.config.ts` の `routing.headers` の `"/*"` に、`Content-Security-Policy` と並べて `"Content-Security-Policy-Report-Only: <試すディレクティブ>"` を足す。`Content-Security-Policy` の行は変えない
+2. `vp build` のあと `vp preview` で起動し、「違反を集める」の手順で、ページの表示・client の遷移・ダイアログの開閉・戻るを通して違反を集める。dev は CSP の値が本番と違うので (ADR-0051)、dev では試さない
+3. 違反を、コードを直すか、ディレクティブを広げるかで解消する
+4. 違反が出なくなったら、Report-Only の行を消してディレクティブを `void.config.ts` の `CSP` に入れ、「ヘッダを足す・変える」の手順で `EXPECTED_HEADERS` を揃える
+
+- テンプレートには違反の報告先 (`report-to`) が無い。違反はブラウザの event で見る
+- `style-src 'self'` を Report-Only で配ると、Void の `Link` が SSR で描く `style` 属性が `style-src-attr` の違反として出る (2026-11-02、Void 1.4.0 の `vp preview` と Playwright の Chromium 156。`Link` を持つページを直接開いたとき)。同じページへ client の遷移で入ったときは、違反が増えなかった。`style-src` を足すなら、`style-src-attr` に `'unsafe-inline'` を置いて属性だけを緩めることになる (ADR-0051)
+
+### 違反を集める
+
+CSP の違反は、`securitypolicyviolation` の event をページの script より先に登録して集める。event はディレクティブと止めた資源を持つので、ページごと・ディレクティブごとに数えられる。ページの script より先に走らせる口 (Playwright の `page.addInitScript`、chrome-devtools の MCP の `navigate_page` の `initScript`) に次を渡し、操作のあとに `window.__cspViolations` を読む。
+
+```js
+window.__cspViolations = [];
+document.addEventListener(
+  "securitypolicyviolation",
+  (e) => {
+    window.__cspViolations.push({
+      directive: e.effectiveDirective,
+      disposition: e.disposition,
+      blocked: e.blockedURI,
+      source: e.sourceFile,
+    });
+  },
+  true,
+);
+```
+
+- 読み込んだあとに登録すると、hydration の間の違反を取りこぼす
+- 集め方が効いているかは、`<img src="data:," onerror="1">` を差し込んで、`script-src-attr` の違反が `disposition: "enforce"` で 1 件出ることで確かめる (2026-11-02、Chromium 156 で確かめた)
 
 ## explanation
 
@@ -67,10 +106,11 @@ SSR の page は 2026-11-02 に `/login` で取り直した。`/` は未ログ�
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/guide/edge/headers.md` にある。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/guide/edge/headers.md` にある。MDN「Content-Security-Policy-Report-Only」は 2026-11-02 に読んだ。
 
 [Void docs「Custom Headers」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/edge/headers.md
 [MDN「Content-Security-Policy」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy
+[MDN「Content-Security-Policy-Report-Only」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy-Report-Only
 [MDN「X-Content-Type-Options」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Content-Type-Options
 [MDN「X-Frame-Options」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Frame-Options
 [MDN「Referrer-Policy」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Referrer-Policy

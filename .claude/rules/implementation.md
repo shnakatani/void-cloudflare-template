@@ -28,6 +28,7 @@ lint では見ないのでレビューで見る。
 - effect は、表示された結果を React の外の系 (DOM、ブラウザ API、外部 widget、イベントに応じて動く購読、announcer) に合わせるときだけ使う (`docs/guides/react/effects.md`「effect とイベントハンドラを分ける理由」)
 - 開発時の二重実行で見える結果が変わったら、まず後始末を書く。後始末を書いても変わるときは、操作ならイベントハンドラへ、アプリの読み込みならコンポーネントの外へ移す (`docs/guides/react/effects.md`「開発時の二重実行が示すもの」)
 - effect を 1 回しか走らせないための ref を書かない。1 回に抑えても、離れて戻ったときの後始末の欠けは残る。直前に反映した値を ref に持ち、同じなら何もしない形は、何度走っても同じ結果になるのでよい (`docs/guides/react/effects.md`「開発時の二重実行が示すもの」)
+- 遷移を契機に外の系へ伝える処理 (analytics、外部のキャッシュの消去) は、DOM を描かない部品の effect で `useRouter().path` (query も契機なら `useRouter().url.href`) を依存にして書き、`pages/layout.tsx` の `AppErrorBoundary` の外に置く。ページの effect に置くと、別のページと失敗の表示の間は走らない。そのページが出ている間だけ要る連携は、ページの effect でよい。Void に遷移を購読する API は無い (`docs/guides/react/effects.md`「遷移を契機に外の系へ伝える」)
 
 ## Effect が読む最新値は useEffectEvent へ切り出す
 
@@ -80,6 +81,17 @@ lint では見ないのでレビューで見る。
 - ページの本文に `<h1>` を 1 つ描き、title のページ名と同じ文字列にする。見出しの行を持つページは `PageHeader` の `title` に渡す (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 - 読み込んだデータで名前が決まるページは、`head()` の 2 つ目の引数 (loader の props) から title を組む (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 - layout に `<h1>` を置かない。遷移のたびに focus が layout の `<h1>` へ移る (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+- ページを足したとき、見出しか title を変えたときは、VoiceOver で遷移と戻るの読み上げを聞いて確かめる。自動テストは聞こえ方を見られない (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
+
+## 遷移の行き先は path の定数で渡す
+
+型検査も lint も行き先を見ないのでレビューで見る (ADR-0059)。
+
+- アプリのページへ遷移する `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。Void 1.4.0 では在らない path を書いても、押すまで 404 に気付けない (ADR-0059)
+- `c.redirect` には、path の定数か URL を組む関数の値を `new URL(<値>, c.req.url).href` で絶対 URL にして渡す。相対の path は要求の query を行き先に混ぜる (`docs/guides/auth.md`「redirect を絶対 URL で書く理由」)
+- query を持つ URL は、query の組み方を持つ関数で組み、呼び出し側で `?` と `&` を連結しない (ADR-0059)
+- path の定数は URL を組む関数と別のモジュールに置き、そのモジュールは path の定数のほかを import しない。同じモジュールに置くと、リンクだけを描くページの client の chunk に検証のスキーマが入る (ADR-0059)
+- ページのファイルを動かしたら、その path の定数を直す。定数と `pages/` の対応は何も検査しない (ADR-0059)
 
 ## ページの失敗は loader の値と区画の境界で受ける
 

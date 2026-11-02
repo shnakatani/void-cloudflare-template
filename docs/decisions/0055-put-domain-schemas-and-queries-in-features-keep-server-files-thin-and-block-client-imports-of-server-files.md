@@ -25,14 +25,16 @@ Void は、client で動くコードが `.server.ts` や server だけの module
 
 loader と action に分岐を足すほど、build した成果物を HTTP で叩く層でしか確かめられない部分が増える (ADR-0054)。
 
-server で起きた例外の文言は、production の Void が client へ運ばない。次は Void 1.4.0 のソースを読んで分かったことで、動かしては確かめていない。
+server で起きた例外の文言は、production の Void が client へ運ばない (Void 1.4.0 の `runtime/routing-errors.ts` の `createErrorRenderer` のコメント "production never includes exception details")。2026-11-02 に Void 1.4.0 の `vp build` の成果物を `vp preview` で起動し、loader と action が `throw new Error("<目印>")` するページと、loader が `throw new HTTPException(409, { message: "<目印>" })` するページを一時的に置いて `curl` で叩き、応答の本文に目印が載るかを見た。page の要求は、文書の要求と、client の遷移の要求 (`X-VoidPages: true` を付けたもの) の両方で叩いた。測ったあとページは消した。
 
-| 場面                                           | client に届くもの                                                                                                                                                            |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| loader・action の未知の例外                    | 500 のページか `Internal Server Error`。例外の文言を持たない (`runtime/routing-errors.ts` の `createErrorRenderer` のコメント "production never includes exception details") |
-| action の失敗の `VoidActionError`              | `message` は `Action failed with <status> <statusText>` で、server の文言を持たない (`pages/action-result.ts`)                                                               |
-| `throw new HTTPException(status, { message })` | `message` がそのまま本文になる。server のログには出ない (`runtime/routing-errors.ts` の `onError`)                                                                           |
-| `ValidationError`・`withValidator` の issue    | 項目ごとの文言が `form.errors` に入る                                                                                                                                        |
+| 場面                                           | 応答                                                           | 応答の本文に目印 | server のログ                   |
+| ---------------------------------------------- | -------------------------------------------------------------- | ---------------- | ------------------------------- |
+| loader の未知の例外 (文書・client の遷移とも)  | 500。`public/500.html` の本文 (ADR-0050)                       | 載らない         | `Error: <目印>` と stack が残る |
+| action の未知の例外 (form の送信・client とも) | 500。`public/500.html` の本文                                  | 載らない         | `Error: <目印>` と stack が残る |
+| `throw new HTTPException(status, { message })` | その status で、`text/plain` の本文が `message` そのものになる | 載る             | 何も残らない (status の行だけ)  |
+
+- action の失敗を受けた client の `VoidActionError` の `message` は `Action failed with <status> <statusText>` で組まれ、応答の本文を読まない (`pages/action-result.ts` を読んだもの。動かしてはいない)。上の表のとおり応答の本文にも目印は載らないので、client が受け取れる文言の中に server の例外の文言は無い
+- `ValidationError` と `withValidator` の issue は、項目ごとの文言が `form.errors` に入る。開発者が選んで書く文言で、例外の文言ではない
 
 ## Decision
 

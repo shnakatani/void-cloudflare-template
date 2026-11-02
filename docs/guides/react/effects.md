@@ -1,11 +1,13 @@
 # effect
 
-コードを effect に書くかイベントハンドラに書くかを決めるときの手順と、その判定の理由を持つ。
+コードを effect に書くかイベントハンドラに書くかを決めるときの手順と、遷移を契機に外の系へ伝える手順と、その判定の理由を持つ。
 
 | 決定                                                                                                                                                 | ADR      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | 状態の通知は常時 mount の live region に集約し、項目の状態は静的テキストと `aria-disabled` で持つ                                                    | ADR-0026 |
 | ページは URL の変化で作り直さず、取得結果の入れ替わりはページの effect が loader の props の入れ替わりで通知し、直前に通知した条件と同じなら出さない | ADR-0027 |
+| Void の遷移は router の path の変化で検出し、新しいページの見出しへの focus と title の読み上げで伝える                                              | ADR-0049 |
+| 描画の失敗は root の layout と区画の error boundary で受け、当たらない URL と server の失敗には静的な 404 と 500 のページを返す                      | ADR-0050 |
 
 ## explanation
 
@@ -50,6 +52,17 @@ effect が読む値は、変わったら外の系に合わせ直す契機にな�
 - 例: `src/components/ui/sidebar.tsx` の keydown の購読は、ショートカットで呼ぶ `toggleSidebar` を Effect Event の中で読み、listener を張り直さない。`src/components/ui/calendar.tsx` の日付ボタンの effect は、`modifiers.focused` が focus を移す契機なので依存に置く
 - Effect Event を Effect と Effect Event の外で呼ぶことと、依存配列に入れることは、lint (`react/rules-of-hooks`、`react/exhaustive-deps`) が止める (2026-09-28、oxlint 1.82.0 で確認)。[React docs「useEffectEvent」][] が強制を保証するのは eslint-plugin-react-hooks で、Caveats の "Effect Events can only be called from inside Effects or other Effect Events." に当たる
 
+### 遷移を契機にする副作用の置き場所
+
+遷移を契機にする副作用 (analytics のページの表示の送信、外部のキャッシュの消去、遷移の後の DOM の操作) は、どのページへ移っても、失敗の画面が出ている間も途切れてはいけない。Void 1.4.0 で、その条件を満たす置き場所は root の layout の中の、全画面の error boundary の外である。
+
+- layout は遷移をまたいで state を保つ ([Void docs「Layouts & Shared Data」][] の Layouts: "Layouts nest with your directories and keep their component state as you navigate.")。layout の中の部品の effect は、遷移のたびに mount し直されない
+- `pages/layout.tsx` の `AppErrorBoundary` は、layout の中でページだけを包む。境界の外に置いた部品は、ページが失敗の表示に置き換わっても描かれ続ける (ADR-0050)
+- ページの component の effect は、そのページが出ている間しか走らない。別のページへ移れば unmount され、失敗の表示の間は境界より下が描かれない ([React docs「Component」][] の「Catching rendering errors with an Error Boundary」の "display some fallback UI instead of the part that crashed")
+- Void の React の runtime は、遷移の開始と完了を購読する API を持たない。export するのは `useRouter()`・`useNavigation()` などの hook だけである ([Void docs「Pages Adapters」][] の React Runtime)。遷移は、hook の値が変わった描画の effect で見る
+- `useRouter().path` は最初の描画から今のページの path を持つので、mount の effect が最初のページを扱う。SSR で描いた最初のページも、hydration の後の mount の effect で扱える
+- 先行例は `src/components/route-announcer.tsx` の `RouteAnnouncer` で、`pages/layout.tsx` の `<main>` の外に置かれ、`useRouter().path` の変化で見出しへ focus を移し、`useNavigation()` が idle に戻った描画で title を読み上げる (ADR-0049)
+
 ## how-to
 
 ### effect に書くかを判定する
@@ -68,11 +81,27 @@ effect が読む値は、変わったら外の系に合わせ直す契機にな�
 - 「表示された結果を React の外の系に合わせる」の行の effect は、開発時の二重実行で利用者に見える結果が変わらないことを確かめる。変わったときの読み方は「開発時の二重実行が示すもの」
 - その行に当たる例: `src/components/ui/calendar.tsx` の focus、`src/components/ui/sidebar.tsx` の keydown の購読、loader の props が入れ替わったあとの件数の通知 (ADR-0027)
 
+### 遷移を契機に外の系へ伝える
+
+遷移ごとに外の系へ伝える処理は、次の形で書く。理由は「遷移を契機にする副作用の置き場所」が持つ。
+
+1. DOM を描かず `null` を返す部品を作り、`pages/layout.tsx` の `AppErrorBoundary` の外に置く。ページの component にも、`AppErrorBoundary` の中にも置かない
+2. 部品の effect の依存に、契機にする値を置く。path の変化だけを契機にするなら `useRouter().path`、query の変化も契機にするなら `useRouter().url.href`
+3. 遷移の完了 (新しいページの title が入った後) を待つ処理は、`useNavigation()` が idle に戻った描画の effect で行う。path が変わった描画の時点では、`document.title` が前のページの値のことがある (ADR-0049 の調査結果)
+4. 開発時の二重実行で、送った回数が利用者に見える結果を変えるかを確かめる (「開発時の二重実行が示すもの」)。変えるなら、直前に扱った path を ref に持ち、同じなら何もしない (`src/components/route-announcer.tsx`)
+
+- そのページが出ている間だけ要る連携 (そのページの部品と外の widget を合わせる処理など) は、ページの component の effect に書いてよい。layout に置くのは、どのページへ移っても、失敗の表示の間も途切れてはいけない処理だけにする
+- 最初のページを数えない処理 (遷移の読み上げなど) は、ref の初期値を最初の path にして、mount の effect では何もしない
+- 遷移の途中の状態を画面に出すなら、effect で外へ写さず `useNavigation()` の値で描く (`src/components/navigation-progress.tsx`)
+
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。「effect に書くかを判定する」の 4 の行が引く [React docs「You Might Not Need an Effect」][] の文は、2026-10-06 に原文と照らした。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。「effect に書くかを判定する」の 4 の行が引く [React docs「You Might Not Need an Effect」][] の文は、2026-10-06 に原文と照らした。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。
 
 [React docs「Separating Events from Effects」]: https://react.dev/learn/separating-events-from-effects
 [React docs「You Might Not Need an Effect」]: https://react.dev/learn/you-might-not-need-an-effect
 [React docs「Synchronizing with Effects」]: https://react.dev/learn/synchronizing-with-effects
 [React docs「useEffectEvent」]: https://react.dev/reference/react/useEffectEvent
+[React docs「Component」]: https://react.dev/reference/react/Component
+[Void docs「Layouts & Shared Data」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/layouts.md
+[Void docs「Pages Adapters」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/api/pages.md
