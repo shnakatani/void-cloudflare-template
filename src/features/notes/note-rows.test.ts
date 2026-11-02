@@ -16,6 +16,19 @@ describe("toNoteRows", () => {
     ]);
   });
 
+  it("読み込み中の編集の id の行だけ isEditPending になる", () => {
+    const rows = toNoteRows({
+      notes: [NOTE_VIEW, OTHER_NOTE_VIEW],
+      deletingIds: [],
+      q: "",
+      pendingEditId: OTHER_NOTE_VIEW.id,
+    });
+    expect(rows.map((row) => [row.note.id, row.isEditPending])).toEqual([
+      [NOTE_VIEW.id, false],
+      [OTHER_NOTE_VIEW.id, true],
+    ]);
+  });
+
   it("編集の URL は一覧の q を保つ", () => {
     const [row] = toNoteRows({ notes: [NOTE_VIEW], deletingIds: [], q: "x" });
     expect(row?.editHref).toBe(`/notes?edit=${String(NOTE_VIEW.id)}&q=x`);

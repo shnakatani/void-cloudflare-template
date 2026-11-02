@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vite-plus/test";
+import type { NavigationState } from "void/pages-client";
 
-import { noteCreateUrl, noteEditUrl, notesListUrl, parseNotesPageQuery } from "./notes-url";
+import {
+  noteCreateUrl,
+  noteEditUrl,
+  notesListUrl,
+  parseNotesPageQuery,
+  firstValueQuery,
+  pendingNoteEditId,
+} from "./notes-url";
 
 /** URL を Hono の `c.req.query()` と同じ形 (名前ごとに最初の値) に読む */
 function queryOf(url: string): Record<string, string> {
-  return Object.fromEntries(new URL(url, "http://localhost").searchParams);
+  return firstValueQuery(new URL(url, "http://localhost").searchParams);
 }
 
 describe("parseNotesPageQuery", () => {
@@ -64,5 +72,36 @@ describe("URL の組み立て", () => {
       q,
       dialog: { kind: "edit", id: 7 },
     });
+  });
+});
+
+function loading(url: string): NavigationState {
+  return { state: "loading", location: new URL(url, "http://localhost"), method: "GET" };
+}
+
+describe("pendingNoteEditId", () => {
+  it("編集のダイアログを開いた一覧へ読み込み中なら、その id を返す", () => {
+    expect(pendingNoteEditId(loading(noteEditUrl(7, "x")))).toBe(7);
+  });
+
+  it("edit が重複していたら、loader と同じく最初の値を読む", () => {
+    expect(pendingNoteEditId(loading("/notes?edit=7&edit=9"))).toBe(7);
+  });
+
+  it.each<[string, NavigationState]>([
+    ["遷移していない", { state: "idle", location: null, method: null }],
+    ["編集でない一覧へ移る", loading(noteCreateUrl("x"))],
+    ["id として読めない edit", loading("/notes?edit=abc")],
+    ["一覧でない path", loading("/other?edit=7")],
+    [
+      "送信中",
+      {
+        state: "submitting",
+        location: new URL(noteEditUrl(7, ""), "http://localhost"),
+        method: "POST",
+      },
+    ],
+  ])("%s ときは null", (_, navigation) => {
+    expect(pendingNoteEditId(navigation)).toBeNull();
   });
 });

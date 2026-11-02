@@ -25,6 +25,16 @@
 - background で動かすときは `&` ではなく `mise daemons start serve` (Storybook は `storybook`) で起動し、`mise daemons stop <同じ名前>` で止める。`mise daemons stop` は port を持つ子孫まで止める (ADR-0004)
 - 起動したプロセスの pid にだけ SIGTERM を送らない。port を持つのは起動したプロセスではなく子孫の node なので、サーバーが残って worktree の port を持ち続け、次の `mise run serve` は別の port へずれずに終わる (使用中の port で終わらせる理由は ADR-0004)。2026-10-14 に mise 2026.10.3、vite-plus 1.1.0 で、`mise run serve` の pid にだけ SIGTERM を送ると、mise は終わったが、vite の node が port を持ったまま残った
 
+### 依存を足したページの最初の要求が dev で 500 になったら
+
+dev の事前バンドルのキャッシュ (`node_modules/.vite`) を作ったあとに、まだ使っていなかった依存を import するページを足すと、そのページの最初の要求で Vite が依存を事前バンドルし直し、worker を読み直す ([Vite docs「Dependency Pre-Bundling」][] の Automatic Dependency Discovery)。その要求は `TypeError: Cannot read properties of null (reading 'useContext')` で 500 になる。
+
+- もう一度読み込む。事前バンドルし直したあとの要求は通る
+- `optimizeDeps.include` に足さない。page から辿れる import は、キャッシュの無い起動で Void の設定 (worker の環境の `entries` が `pages/**`) が拾う。`include` は、plugin の変換で生まれる import のように走査で見つからない依存のためのもの ([Vite docs「Dependency Pre-Bundling」][] の Customizing the Behavior)
+- キャッシュを作り直すなら、dev server を止めてから `node_modules/.vite` を消す。キャッシュは lockfile や `vite.config.ts` が変わるまで作り直されない ([Vite docs「Dependency Pre-Bundling」][] の Caching)
+
+2026-11-02 に Void 1.4.0、vite-plus 1.4.0 (Vite 8.3.5) で、`@tanstack/react-table` と `@base-ui/react/alert-dialog` を初めて import するページを足したあとの最初の要求が 500 になり、2 回目は 200 だった。キャッシュの無い起動では、同じページの最初の要求が 200 だった。
+
 ### commit hook を扱う
 
 commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマンドを staged のファイルへ当てる。`vp staged` は `.vite-hooks/pre-commit` から呼び、hook のディスパッチャ (`.vite-hooks/_`) は `package.json` の `prepare` の `vp config` が入れる ([Vite+ docs「Commit Hooks」][])。
@@ -238,3 +248,4 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 [Vite+ docs「Package Management」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/install.md
 [Vite+ docs「Environment」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/env.md
 [Vite+ docs「Commit Hooks」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/commit-hooks.md
+[Vite docs「Dependency Pre-Bundling」]: https://vite.dev/guide/dep-pre-bundling

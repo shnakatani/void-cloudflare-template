@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 
 import { columnWidthFrom } from "./data-table-columns";
-import type { DataTableFeatures } from "./data-table-features";
+import type { DataTableFeatures, DataTableMeta } from "./data-table-features";
 import { dataTableFeatures } from "./data-table-features";
 
 /** 転送する option の型は `useTable` の options から導出する (再宣言すると転送先の型変更に追随しない) */
@@ -37,6 +37,8 @@ interface DataTableBaseProps<TData extends RowData> extends Pick<
   rowProps?: (row: Row<DataTableFeatures, TData>) => { "data-busy"?: boolean };
   /** data が空のときに 1 行で出す案内。画面が `Empty` 部品を別に持つなら描画側で分岐する */
   emptyText?: string;
+  /** cell の部品へ渡す画面の callback */
+  meta?: DataTableMeta;
 }
 
 /**
@@ -68,6 +70,7 @@ export function DataTable<TData extends RowData>({
   getRowId,
   rowProps,
   emptyText = "データがありません",
+  meta,
   getRowCanExpand,
   renderSubComponent,
 }: DataTableProps<TData>) {
@@ -77,6 +80,7 @@ export function DataTable<TData extends RowData>({
     data,
     getRowId,
     getRowCanExpand,
+    meta,
     // 既定では data の参照が変わるたびに開いた行を閉じる。一覧は操作中の行の表示のために data を組み直すので、
     // 戻さない (TanStack Table の guide「Expanding」の Auto Reset Expanded State)
     autoResetExpanded: false,

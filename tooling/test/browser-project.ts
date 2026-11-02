@@ -30,6 +30,7 @@ export async function browserProject({ compiler }: { compiler: boolean }) {
           "@base-ui/react/popover",
           "react-day-picker",
           "react-error-boundary",
+          "react-dom/client",
         ],
       },
       test: {

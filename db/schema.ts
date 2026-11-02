@@ -1,5 +1,5 @@
 import { sql } from "void/db";
-import { check, integer, sqliteTable, text } from "void/schema-d1";
+import { check, index, integer, sqliteTable, text } from "void/schema-d1";
 
 // アプリの table を書く (Void の docs「Database」の Schema Definition)。auth の table は Void が
 // migration に足すので、ここに重ねて書かない (Void の docs「Authentication」の Database and Migrations)
@@ -25,6 +25,8 @@ export const notes = sqliteTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    // 一覧も 1 件の読み書きも user_id で絞る (`docs/guides/database.md`「query を書く」)。無いと行が増えるほど全行を読む
+    index("notes_user_id_idx").on(table.userId),
     // SQLite の date() は暦に無い日を翌月へ繰り越し、YYYY-MM-DD 以外の形は別の文字列か NULL にする。
     // 自分と一致する値だけを通し、入力スキーマを通らない書き込みでも暦に無い日付を入れさせない。
     // date() の結果は 0000〜9999 年の外で未定義で (SQLite「Date And Time Functions」)、負の年

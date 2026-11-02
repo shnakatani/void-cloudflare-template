@@ -255,13 +255,14 @@ oxlint のカテゴリは実装者がルールを分類した軸で、上流の 
 
 ### React Compiler の既定 off のルール
 
-eslint-plugin-react-hooks が既定で off にするルールのうち、oxlint に実装があるのは 9 で、有効になるのは `perf` 経由の 1 つだけである。
+eslint-plugin-react-hooks が既定で off にするルールのうち、oxlint に実装があるのは 9 で、有効になるのは `perf` 経由の 1 つと名指しの 1 つである。
 分割後の 22 ルールは、上流 recommended-latest に入る 13 (`correctness` の 12 と `unsupported-syntax`) とこの 9 で尽きる。`exhaustive-deps` と `rules-of-hooks` は分割前からあるルールで、22 には含まれない。
 
 | ルール                                                                                 | oxlint のカテゴリ | 扱い                                                                              |
 | -------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------- |
 | `no-deriving-state-in-effects`                                                         | `perf`            | カテゴリ経由で error                                                              |
-| `invariant` / `rule-suppression` / `syntax` / `todo`                                   | `restriction`     | off。`todo` は Compiler の未実装による bail out で、欠陥として扱わない (ADR-0014) |
+| `invariant`                                                                            | `restriction`     | `rules` へ名指しで error (ADR-0007「基準から外れる名指し」)                       |
+| `rule-suppression` / `syntax` / `todo`                                                 | `restriction`     | off。`todo` は Compiler の未実装による bail out で、欠陥として扱わない (ADR-0014) |
 | `capitalized-calls` / `exhaustive-effect-dependencies` / `hooks` / `memo-dependencies` | `suspicious`      | off。上流が既定から外している                                                     |
 
 分割後のルールは `rules-of-hooks` の代わりにならない。

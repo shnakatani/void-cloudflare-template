@@ -100,6 +100,7 @@ lint では見ないのでレビューで見る。
 
 - 新しいコードで `useMemo` / `useCallback` を予防的に書かない。手で書くのは、性能の問題が実際に出た箇所と、effect の依存のように値の同一性を精密に制御する箇所だけ。ほかは Compiler がメモ化する (`docs/guides/react/memoization.md`「手動メモ化を書く」)
 - `react-compiler(Todo)` の診断を消すためにコードを書き換えない。Compiler の未対応の構文で、コードの誤りではない。手を入れるのは、その関数で性能の問題が実際に出たときに限る (`docs/guides/react/memoization.md`「React Compiler の診断を読む」)
+- lint (`react/invariant`) が止めたら、help の案内する Oxc への報告より先に、宣言より前の値を読む経路 (hook に渡す関数が、後で宣言する関数を経由してその hook の戻り値を読む形) を切る。抑制は書き換えで消えないときだけ (`docs/guides/react/memoization.md`「React Compiler の診断を読む」)
 - effect の依存は、まず関数や object を effect の中へ移すか `useEffectEvent` へ切り出して依存から外し、外せないときだけ最後の手段としてメモ化する。`useMemo` は値が保たれることを保証せず、React がキャッシュを捨てると effect が走り直す (`docs/guides/react/memoization.md`「effect の依存をメモ化より先に外す理由」)
 - キャッシュが捨てられると壊れる値は `useMemo` に持たず、state か ref に持つ。React は `useMemo` のキャッシュを捨てうる (`docs/guides/react/memoization.md`「手動メモ化を書く」)
 - Compiler の自動メモ化にも正しさを頼らず、再計算や effect の再実行が増えても結果が正しいように書く。Compiler が諦めた部品と、`"use no memo"` で外した部品はメモ化されない (`docs/guides/react/memoization.md`「手動メモ化を書く」)

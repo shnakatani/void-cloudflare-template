@@ -36,6 +36,7 @@ loader で DB を読む一覧のページで確かめた (2026-11-02、dev、Voi
 - debounce は入力欄の onChange から呼ぶ (`@tanstack/react-pacer` の `useDebouncer`)。URL を書く原因は打鍵なので、debounce した値を effect で見張って visit しない
 - visit は `src/lib/start-visit.ts` の `startVisit` で始め、決着を待たない
 - 入力欄は、ページ自身が求めた条件の commit では値を戻さない。外からの条件の変化 (戻る・進む・直に開く) でだけ、props の条件に揃える。求めた条件の commit で戻すと、応答を待つ間に打ち足した文字が消える
+- ほかの visit (ダイアログを開くリンク、閉じる操作) を始めるときは、debounce の待ちを捨て、入力欄を props の条件に戻す。待ちを残すと、後から発火した検索の visit が先に始めた visit を取り消す (ADR-0017)。入力欄を戻さないと、どの visit も始まらないまま前の一覧が半透明で残る
 - 入力と props の条件がずれている間 (debounce の待ちと読み込み中) は、前の一覧を半透明で残す
 - 条件の上限は reject せず、schema が code point の境界で切り詰める (ADR-0036)
 - 結果の入れ替わりの読み上げは、ページの effect が props の条件の変化で出す (ADR-0027)
@@ -67,6 +68,8 @@ loader が返す値は次のとおりにする。ページそのもの (一覧) 
 
 - 打鍵が止まるたびに loader が走り、一覧を読み直す
 - 遷移の間は前のページを描いたまま残る。route の pending の表示を出す口は無く、遷移中かは `useNavigation()` で読む (「実測: 打鍵と遷移」)
+- 目に見える遷移中の印は、root の layout の帯 1 つ (`src/components/navigation-progress.tsx`) と、押したリンクの Spinner が持つ。ページごとの skeleton は置かない。帯は `aria-hidden` で、`"loading"` のときだけ、300ms 遅れて現れる。読み上げは ADR-0049 の部品と各ページの通知が持ち、送信中の印は押した部品の pending が持つ (ADR-0017)
+- 帯の遅れの 300ms に出典は無い。短い読み込みで帯を瞬かせないための値で、検索の入力の debounce と同じ桁に置いた。Nielsen Norman Group「Response Times: The 3 Important Limits」は、0.1 秒を超え 1.0 秒に満たない遅れには特別な表示は要らず、1.0 秒を超えると作業中だと知らせるとする。この値は閾値より短い側にあり、遅れを伸ばしても出典と矛盾しない
 - 一覧の読み込みの失敗も HTTP の 200 で届く。失敗に気付く手掛かりは server の `console.error` だけになる
 - 再試行は loader 全体を読み直すので、読めた側 (一覧か、開く 1 件) も読み直す
 
@@ -77,3 +80,4 @@ loader が返す値は次のとおりにする。ページそのもの (一覧) 
 - nuqs `history` option: https://nuqs.dev/docs/options
 - react.dev「You Might Not Need an Effect」: https://react.dev/learn/you-might-not-need-an-effect
 - TanStack Pacer「Debouncing Guide」: https://tanstack.com/pacer/latest/docs/guides/debouncing
+- Nielsen Norman Group「Response Times: The 3 Important Limits」: https://www.nngroup.com/articles/response-times-3-important-limits/

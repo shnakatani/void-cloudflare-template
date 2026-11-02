@@ -225,6 +225,9 @@ export const lintConfig = {
     "react/unsupported-syntax": "error",
     // Compiler が解析しない通常の関数からの hook 呼び出しを拾う。pedantic で既定 off (ADR-0007)
     "react/rules-of-hooks": "error",
+    // Compiler が部品ごと最適化を諦める内部の不整合。上流は既定 off だが、宣言より前の値を読む形のように
+    // 書き換えで消えるものもこの名前で出る。基準から外れる名指し (ADR-0007、ADR-0014)
+    "react/invariant": "error",
 
     // -- import: eslint-plugin-import の recommended (ADR-0007) --
     "import/export": "error",

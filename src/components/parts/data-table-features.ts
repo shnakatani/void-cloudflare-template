@@ -2,9 +2,19 @@ import type { CellContext, RowData } from "@tanstack/react-table";
 import {
   columnSizingFeature,
   createExpandedRowModel,
+  metaHelper,
   rowExpandingFeature,
   tableFeatures,
 } from "@tanstack/react-table";
+
+/**
+ * 画面が cell の部品へ渡す callback (`table.options.meta`、TanStack Table docs「Table and Column Meta」)。
+ * `DataTable` の `meta` で受け、cell の部品が `table.options.meta` から読む
+ */
+export type DataTableMeta = {
+  /** 行の中のリンクが遷移を始める直前に呼ぶ (Void の `Link` の `onNavigate`) */
+  readonly onRowNavigate?: () => void;
+};
 
 /**
  * 一覧テーブル共通の features。増やし方は `docs/guides/lists-and-search.md`「一覧テーブルを組む」の features 行。
@@ -17,6 +27,7 @@ export const dataTableFeatures = tableFeatures({
   columnSizingFeature,
   rowExpandingFeature,
   expandedRowModel: createExpandedRowModel(),
+  tableMeta: metaHelper<DataTableMeta>(),
 });
 
 export type DataTableFeatures = typeof dataTableFeatures;
