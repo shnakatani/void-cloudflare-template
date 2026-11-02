@@ -203,6 +203,14 @@
   opacity: 0;
 }
 
+/* 戻る・進むでブラウザが自分で遷移のアニメーションを出したあとは、View Transition を動かさない (ADR-0058)。
+   属性は src/lib/ua-visual-transition.ts が付け外しする */
+html[data-ua-visual-transition]::view-transition-group(*),
+html[data-ua-visual-transition]::view-transition-old(*),
+html[data-ua-visual-transition]::view-transition-new(*) {
+  animation: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
