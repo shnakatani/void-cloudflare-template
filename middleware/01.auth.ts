@@ -12,7 +12,7 @@ declare module "void" {
 
 /**
  * 保護する path の redirect と、全ページへの user。page の loader・action に middleware を渡す形
- * (`defineHandler(middleware, handler)`) は Void 1.4.0 で壊れる (voidzero-dev/void#564) ので、global に置く
+ * (`defineHandler(middleware, handler)`) は Void 1.5.0 まで壊れる (voidzero-dev/void#564) ので、global に置く
  */
 export default defineMiddleware(async (c, next) => {
   const user = getUser();

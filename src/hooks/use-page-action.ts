@@ -63,7 +63,7 @@ function actionUrlWithPageQuery<U extends ActionUrl>(url: U, pageQuery: string |
     // 載せると `?new` が key になり、ページは `new` を読めない。黙って閉じたダイアログに戻らないよう呼び出しの誤りとして止める
     throw new Error(`pageQuery は ? と & を除いて渡す: ${pageQuery}`);
   }
-  // Void 1.4.0 の `.void/routes.d.ts` が生成する `ActionUrl` は `<page>` か `<page>?<action 名>` だけを許し、query を載せた URL を型に持たない。
+  // Void 1.5.0 の `.void/routes.d.ts` が生成する `ActionUrl` は `<page>` か `<page>?<action 名>` だけを許し、query を載せた URL を型に持たない。
   // 載せた URL を `ParseActionUrl` に通すと action 名が `create&new` になり、送る値の型が消えるので、型は元の `U` のまま渡す
   // action を持つページが 1 つも無いと `ActionUrl` は never になり、`U` のまま文字列の method を呼べないので string で受け直す
   const base: string = url;
@@ -96,8 +96,8 @@ function routeParams(params: unknown): Record<string, string> | undefined {
  * Void の page の action を、Action (`startTransition` に渡す非同期関数) から呼ぶ入口。
  *
  * 送るのは `action()` ではなく、`action()` が中で呼ぶ `submitAction` である。`action()` の options は `data`・`method`・
- * `params` だけで、`preserveScroll` を渡せない (`void` 1.4.0 の `dist/pages/client.d.mts` の `ActionOptions`)。
- * `submitAction` に渡す値は `@void/react` 1.4.0 の `useForm` (`packages/react/src/runtime/use-form.ts`) と同じにし、
+ * `params` だけで、`preserveScroll` を渡せない (`void` 1.5.0 の `dist/pages/client.d.mts` の `ActionOptions`)。
+ * `submitAction` に渡す値は `@void/react` 1.5.0 の `useForm` (`packages/react/src/runtime/use-form.ts`) と同じにし、
  * `_resolveOnShell` で shell の到着で決着させる。付けないと Action の中の await が新しい props の commit と互いを待ち、
  * 決着しない (ADR-0015)。`_resolveOnShell` は `@internal` の option なので、Void を上げたら、Action の中で `run` を
  * await して pending が解け、props が入れ替わることを dev で確かめる。このファイルのテストは `submitAction` を
