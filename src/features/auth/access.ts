@@ -27,26 +27,31 @@ export function pathAccess(pathname: string): PathAccess {
 /** 画面を開く要求の method。redirect の行き先を描くのは、この要求だけである */
 const DOCUMENT_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD"]);
 
+/** middleware が要求に取る扱い。`redirect` は `path` へ送り、`unauthorized` は 401 で止め、`pass` は通す */
+export type AuthGuard =
+  | { readonly kind: "redirect"; readonly path: string }
+  | { readonly kind: "unauthorized" }
+  | { readonly kind: "pass" };
+
+const PASS: AuthGuard = { kind: "pass" };
+
 /**
- * middleware が送る行き先。送らないなら `null`。
+ * middleware が要求に取る扱いを決める。
  *
- * 送るのは画面を開く要求 (GET・HEAD) だけにする。action の要求 (POST・PUT・PATCH・DELETE) は通し、handler の
- * `requireAuth(c)` が 401 で止める。action を redirect すると、Void の `action()` は行き先のページを成功として受け取り、
- * 保存していないのに成功の通知が出て、入力が消える (ADR-0053)
+ * 送るのは画面を開く要求 (GET・HEAD) だけにする。保護する path への、それ以外の method の未ログインの要求は 401 で止める。
+ * 書き込みの要求を redirect すると、Void の `action()` は行き先のページを成功として受け取り、保存していないのに
+ * 成功の通知が出て、入力が消える (ADR-0053)
  */
-export function authRedirectPath(
-  access: PathAccess,
-  signedIn: boolean,
-  method: string,
-): string | null {
-  if (!DOCUMENT_METHODS.has(method)) return null;
+export function authGuard(access: PathAccess, signedIn: boolean, method: string): AuthGuard {
+  const opensDocument = DOCUMENT_METHODS.has(method);
   switch (access) {
     case "protected":
-      return signedIn ? null : LOGIN_PATH;
+      if (signedIn) return PASS;
+      return opensDocument ? { kind: "redirect", path: LOGIN_PATH } : { kind: "unauthorized" };
     case "guest-only":
-      return signedIn ? HOME_PATH : null;
+      return signedIn && opensDocument ? { kind: "redirect", path: HOME_PATH } : PASS;
     case "public":
-      return null;
+      return PASS;
     default: {
       const unhandled: never = access;
       throw new Error(`unhandled PathAccess: ${String(unhandled)}`);

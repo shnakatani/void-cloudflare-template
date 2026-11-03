@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { authRedirectPath, HOME_PATH, LOGIN_PATH, pathAccess, type PathAccess } from "./access";
+import {
+  type AuthGuard,
+  authGuard,
+  HOME_PATH,
+  LOGIN_PATH,
+  pathAccess,
+  type PathAccess,
+} from "./access";
 
 describe("pathAccess", () => {
   it.each<[string, PathAccess]>([
@@ -20,34 +27,45 @@ describe("pathAccess", () => {
   });
 });
 
-describe("authRedirectPath", () => {
-  it.each<[PathAccess, boolean, string | null]>([
-    ["protected", false, LOGIN_PATH],
-    ["protected", true, null],
-    ["guest-only", false, null],
-    ["guest-only", true, HOME_PATH],
-    ["public", false, null],
-    ["public", true, null],
-  ])("GET の %s でログイン %s なら %s", (access, signedIn, expected) => {
-    expect(authRedirectPath(access, signedIn, "GET")).toBe(expected);
+describe("authGuard", () => {
+  const login: AuthGuard = { kind: "redirect", path: LOGIN_PATH };
+  const home: AuthGuard = { kind: "redirect", path: HOME_PATH };
+  const pass: AuthGuard = { kind: "pass" };
+  const unauthorized: AuthGuard = { kind: "unauthorized" };
+
+  it.each<[PathAccess, boolean, AuthGuard]>([
+    ["protected", false, login],
+    ["protected", true, pass],
+    ["guest-only", false, pass],
+    ["guest-only", true, home],
+    ["public", false, pass],
+    ["public", true, pass],
+  ])("GET の %s でログイン %s なら %o", (access, signedIn, expected) => {
+    expect(authGuard(access, signedIn, "GET")).toEqual(expected);
   });
 
-  it.each<[string, string | null]>([
-    ["GET", LOGIN_PATH],
-    ["HEAD", LOGIN_PATH],
-    ["POST", null],
-    ["PUT", null],
-    ["PATCH", null],
-    ["DELETE", null],
-  ])("未ログインの protected への %s は %s", (method, expected) => {
-    expect(authRedirectPath("protected", false, method)).toBe(expected);
+  it.each<[string, AuthGuard]>([
+    ["GET", login],
+    ["HEAD", login],
+    ["POST", unauthorized],
+    ["PUT", unauthorized],
+    ["PATCH", unauthorized],
+    ["DELETE", unauthorized],
+    ["OPTIONS", unauthorized],
+  ])("未ログインの protected への %s は %o", (method, expected) => {
+    expect(authGuard("protected", false, method)).toEqual(expected);
   });
 
-  it.each<[string, string | null]>([
-    ["GET", HOME_PATH],
-    ["HEAD", HOME_PATH],
-    ["POST", null],
-  ])("ログイン済みの guest-only への %s は %s", (method, expected) => {
-    expect(authRedirectPath("guest-only", true, method)).toBe(expected);
+  it.each<[PathAccess, boolean]>([
+    ["protected", true],
+    ["guest-only", false],
+    ["guest-only", true],
+    ["public", false],
+  ])("%s でログイン %s の POST は通す", (access, signedIn) => {
+    expect(authGuard(access, signedIn, "POST")).toEqual(pass);
+  });
+
+  it("ログイン済みの guest-only への HEAD は / へ送る", () => {
+    expect(authGuard("guest-only", true, "HEAD")).toEqual(home);
   });
 });
