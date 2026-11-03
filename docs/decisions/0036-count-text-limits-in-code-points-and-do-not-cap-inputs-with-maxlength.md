@@ -1,7 +1,7 @@
 # ADR-0036: 文字数の上限は code point で数え、入力欄は maxlength で打ち止めにしない
 
 - Status: Accepted
-- Date: 2026-09-29
+- Date: 2026-11-03
 - 関連: ADR-0013 (ドメイン型は valibot のスキーマから導出する)
 
 ## Context
@@ -17,7 +17,7 @@
 
 ## Decision
 
-**文字数の上限は code point で数える。スキーマは `v.maxCodePoints` で判定し、切り詰めるときも code point の境界で切る (`src/lib/truncate-code-points.ts`)。入力欄には `maxlength` を付けず、上限を超えた入力はスキーマが文言を出すか切り詰める。**
+**文字数の上限は code point で数える。スキーマは `v.maxCodePoints` で判定し、切り詰めるときも code point の境界で切る (`src/lib/truncate-code-points.ts`)。入力欄には `maxlength` を付けず、上限を超えた入力はスキーマの判定で文言を出す。切り詰めるのは、URL の値のように利用者が入力欄で打っていない値だけにする (ADR-0057)。**
 
 ### 数える単位
 
@@ -75,6 +75,7 @@
 - valibot `maxGraphemes` (`maxCodePoints` を DB の `LENGTH()` に合わせる用途に挙げ、併用を勧める): <https://valibot.dev/api/maxGraphemes/>
 - valibot 1.5.0 のリリースノート (code point の action の追加): <https://github.com/open-circle/valibot/releases/tag/v1.5.0>
 - HTML Standard の maxlength と Infra の length: <https://html.spec.whatwg.org/multipage/input.html#attr-input-maxlength> / <https://infra.spec.whatwg.org/#string-length>
+- Cloudflare docs「D1 Limits」(LIKE のパターンの上限): <https://developers.cloudflare.com/d1/platform/limits/>
 - SQLite の core functions (`length()` と `substr` は code point): <https://sqlite.org/lang_corefunc.html>
 - デジタル庁デザインシステム input-text のアクセシビリティ (maxlength を使わない): <https://design.digital.go.jp/dads/components/input-text/accessibility/>
 - GOV.UK Design System の Character count: <https://design-system.service.gov.uk/components/character-count/>
