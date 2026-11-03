@@ -1,11 +1,12 @@
 # DB
 
-D1 の schema・migration・query を変える手順と、部分一致の検索を組む手順と、見本のデータを入れる手順と、テストで D1 を使う手順と、deploy 先の D1 の read replication を切る・確かめる手順と、その形にしている理由を持つ。
+D1 の schema・migration・query を変える手順と、D1 の上限に収める手順と、index を足す手順と、部分一致の検索を組む手順と、見本のデータを入れる手順と、テストで D1 を使う手順と、deploy 先の D1 の read replication を切る・確かめる手順と、その形にしている理由を持つ。
 
 | 決定                                                                                                                                            | ADR      |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | ドメイン型は valibot スキーマから導出する                                                                                                       | ADR-0013 |
 | フロントで使うスキーマはテーブル定義から作らず、テーブル定義の型と型テストで突き合わせる                                                        | ADR-0034 |
+| 文字数の上限は code point で数え、D1 の LIKE のパターンにする検索語は bytes で数える                                                            | ADR-0036 |
 | tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ                        | ADR-0047 |
 | DB は void/db と D1 で持ち、migration は auth の table ごと void db generate で生成して commit する                                             | ADR-0052 |
 | query は Miniflare の D1 で試し、保護したページの経路は preview を HTTP で叩いて試す                                                            | ADR-0054 |
@@ -61,13 +62,48 @@ D1 の schema・migration・query を変える手順と、部分一致の検索�
 - `db.query.*` (relational query) を使わず、`db.select()`・`db.insert()`・`db.update()`・`db.delete()` で書く。`db` の型も実体も schema を持たない
 - ユーザーの行は、読み出しも更新も削除も `where` で `userId` に絞る。更新と削除は `and(eq(<table>.id, id), eq(<table>.userId, userId))` にする。Void の docs に、ユーザーで行を絞る仕組みや例は無い
 - 読み出した行は、読み出し口で valibot のスキーマの `v.safeParse` に通す (ADR-0013)
+- 続けて書く複数の文は `db.batch([...])` で 1 回にまとめて送る ([Void docs「D1 (SQLite)」][] の Batch Operations)。batch は transaction で、途中の文が失敗すると全体を戻す ([Cloudflare docs「D1 Database」][] の batch)。別々に `await` すると、途中で失敗したときに前の文だけが残る
+
+### D1 の上限に収める
+
+D1 は 1 つの query と 1 回の Worker の呼び出しに上限を持つ。超えた query は D1 のエラーで落ちる。値は [Cloudflare docs「D1 Limits」][] (Last updated Oct 30, 2026) を 2026-11-03 に読んだもの。
+
+| 上限                             | 値                          | 踏みやすい書き方                                                                                                                                                                                                                        |
+| -------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LIKE / GLOB のパターン           | 50 bytes                    | ユーザー入力の部分一致。日本語は 1 文字 3 bytes で、`%` で包むと 16 文字までになる (「ユーザー入力で部分一致の検索を組む」)                                                                                                             |
+| 1 つの query の bound parameter  | 100                         | `inArray(<列>, <配列>)` に長さを限らない配列を渡す。値の数だけ parameter になり、101 個で落ちる (2026-11-03 に `createTestD1()` の D1 で確かめた)。複数の行の `insert().values([...])` も、行の数 × 値を渡した列の数の parameter になる |
+| 1 つの SQL 文の長さ              | 100,000 bytes (100 KB)      | 長い値を parameter にせず SQL に埋める                                                                                                                                                                                                  |
+| 1 回の Worker の呼び出しの query | Workers Paid 1000 / Free 50 | 配列の要素ごとに query を `await` する。`db.batch()` は文の数によらず 1 query と数える                                                                                                                                                  |
+
+- 上限は batch の中の文ごとにも効く。batch にまとめても、1 つの文の parameter と長さは減らない ([Cloudflare docs「D1 Limits」][] の Batch limits)
+- ユーザー入力の長さで parameter やパターンが伸びる query は、入力の検証で上限より先に止める。D1 のエラーで落ちると、loader は失敗の値を返し、何が長すぎたのかを利用者に伝えられない
+
+### index を足す
+
+1. 一緒に絞る列と並べる列を `db/schema.ts` の table の第 3 引数に `index("<table>_<列>_idx").on(<列>, …)` で書き、「schema を変える」の 2 から 4 で migration にする。`where` で等しさを比べる列を左に、`orderBy` の列を右に置く。複数の列の index は、左から順に使う列だけが効く ([Cloudflare docs「Use indexes」][] の Multi-column indexes)
+2. query が index を使うかを `EXPLAIN QUERY PLAN` で確かめる。テストの D1 で、drizzle の `.toSQL()` が返す SQL と parameter を渡して読む
+
+   ```ts
+   const { sql, params } = db.select().from(<table>).where(…).orderBy(…).toSQL();
+   const plan = await d1.prepare(`EXPLAIN QUERY PLAN ${sql}`).bind(...params).all();
+   ```
+
+   `detail` が `SEARCH <table> USING INDEX <index>` なら index で絞り、`SCAN <table>` なら全行を読む。`USE TEMP B-TREE FOR ORDER BY` は、絞った行を読んでから並べ替える (2026-11-03 に `createTestD1()` の D1 で確かめた)
+
+3. deploy したあと、`vp exec void db execute --remote "PRAGMA optimize"` で統計を取り直す。index を作ったあとに打つよう Cloudflare が勧める ([Cloudflare docs「SQL statements」][] の `PRAGMA optimize`)
+
+- D1 は返した行ではなく読んだ行の数で課金する。全行を読む query は、1 行を返すだけでも全行の分を払う ([Cloudflare docs「Use indexes」][] の Indexes and your bill)
+- 手元の `vp exec void db execute` は `SELECT` で始まる文の結果だけを表に出し、`EXPLAIN QUERY PLAN` の結果を出さない (Void 1.4.0 の `dist/db-*.mjs` の `runExecute`)。手元ではテストの D1 で読む。`--remote` は結果の行をすべて表に出す
 
 ### ユーザー入力で部分一致の検索を組む
 
 - 部分一致は `src/lib/like-pattern.server.ts` の `likeContains(<列>, <入力>)` で組み、パターンと `ESCAPE` 句を手で書かない。エスケープと `ESCAPE` 句は対で要り、片方を忘れてもエラーにならず結果だけが変わる。エスケープを忘れると入力の `%` と `_` がワイルドカードとして効き、`ESCAPE` 句を忘れるとエスケープに足した `\` が文字として残る (「部分一致の検索を D1 で確かめる理由」)
 - `void/db` の `like` にも SQLite にも、入力をエスケープする関数は無い。LIKE のパターンでは `%` が 0 文字以上の並びに、`_` が任意の 1 文字に当たり、文字そのものとして当てるには `ESCAPE` 句で決めた文字を前に置く ([SQLite docs「SQL Language Expressions」][] の The LIKE, GLOB, REGEXP, MATCH, and extract operators)
+- 検索語は、入力の検証で `fitsContainsPattern` (`src/lib/like-pattern.ts`) に通してから `likeContains` に渡す。パターンは `%` で包んでエスケープしたあとの UTF-8 で 50 bytes までで、超えると D1 が query ごと落とす (「D1 の上限に収める」)。`likeContains` は超える値を受けると、D1 へ送らずに throw する
+- 上限は文字数で決まらない。`%` で包んだ残りの 48 bytes に、英数字は 48 文字、日本語 (1 文字 3 bytes) は 16 文字、`%`・`_`・`\` (エスケープで 2 bytes) は 24 文字、サロゲートペアの文字 (4 bytes) は 12 文字が入る。入力欄で伝えるときは「N 文字以内」と書けないので、文字数を目安として出す
+- 超えた値を拒まずに受けるなら、`truncateToContainsPattern` で上限に収まる長さまで code point の境界で切る (ADR-0036)。切った語で探すと打った語と結果が食い違うので、利用者が打つ入力欄では拒んで伝える
 - 大文字小文字を同一視するのは ASCII の英字だけである ([SQLite docs「SQL Language Expressions」][]: "SQLite only understands upper/lower case for ASCII characters by default.")。ASCII でない文字の大文字小文字をまとめて当てたいなら、`likeContains` では足りない
-- 検索の query を足したら、`%`・`_`・`\` を含む検索語、ASCII の大文字小文字、日本語を、`createTestD1()` の D1 で確かめる (「テストで D1 を使う」)
+- 検索の query を足したら、`%`・`_`・`\` を含む検索語、ASCII の大文字小文字、日本語、上限ちょうどと 1 文字超える検索語を、`createTestD1()` の D1 で確かめる (「テストで D1 を使う」)。D1 は LIKE のパターンの上限を行に当てるときに判定するので、行の無い table では超えても落ちない
 
 ### テストで D1 を使う
 
@@ -152,6 +188,20 @@ D1 の結果の `meta.served_by_primary` は、その query を処理した inst
 
 エスケープの関数だけを単体で確かめると、SQL に `ESCAPE` 句を付け忘れても通る。エスケープと `ESCAPE` 句の対応は、SQL を走らせないと確かめられない。`src/lib/like-pattern.server.test.ts` は `createTestD1()` の D1 に table を作って `likeContains` を通し、`ESCAPE` 句を外した形とエスケープを外した形の両方で `%`・`_`・`\` の行が落ちる (2026-11-02 に確かめた)。
 
+D1 の LIKE のパターンの上限も、D1 に送らないと確かめられない。同じテストは、上限ちょうどのパターンを D1 が受けることと、51 bytes のパターンを D1 が `LIKE or GLOB pattern too complex` で拒むことを確かめる。`LIKE_PATTERN_MAX_BYTES` と D1 の上限がずれると、このテストが落ちる。
+
+### 部分一致を LIKE で組む理由
+
+D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs と `createTestD1()` の D1 (miniflare 5.20261023.1-beta) で比べた。
+
+| 案                                       | 評価                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 採否                                         |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `LIKE '%…%' ESCAPE '\'` とパターンの上限 | SQLite の LIKE の既定で、ASCII の英字の大文字小文字を同一視する。パターンが 50 bytes を超えると D1 が拒むので、入力の検証で上限を伝える。先頭が `%` なので index は効かず、絞った行をすべて読む ([Cloudflare docs「Use indexes」][] の leading wildcard の行)                                                                                                                                                                                                                                                                              | **採用**                                     |
+| FTS5 の trigram tokenizer                | Cloudflare docs が任意の部分一致に勧める形で、連続する 3 文字以上の検索語を index で引く ([Cloudflare docs「Use indexes」][])。D1 で `CREATE VIRTUAL TABLE … USING fts5(…, tokenize='trigram')` は通る。2 文字以下の語は `MATCH` で当たらず、FTS5 の table への `LIKE` も 50 bytes の上限を受ける。drizzle の schema は virtual table を書けず (drizzle-team/drizzle-orm#2046、2026-11-03 に open)、`void db generate` で migration にできない。virtual table のある D1 は export できない ([Cloudflare docs「Import and export data」][]) | 却下。全行を読む費用が問題になったら比べ直す |
+| `instr(lower(<列>), lower(?)) > 0`       | 関数の引数なのでパターンの上限が無く、エスケープも要らない。`lower()` は ASCII だけを小文字にし (D1 で `lower('Ä')` は `Ä`)、LIKE と同じに当たる。[Cloudflare docs「Use indexes」][] は部分一致の形に挙げない。`lower()` を行ごとに呼び、20,000 行の `:memory:` で 20 回平均 2.00ms と LIKE (1.12ms) の約 2 倍かかった (2026-09-23、better-sqlite3)                                                                                                                                                                                        | 却下                                         |
+
+- LIKE も `instr()` も、user で絞ったあとの行をすべて読む。読む行の数は同じで、上限の有無と 1 行あたりの時間が違う
+
 ### `db/migrations/meta/` を format しない理由
 
 `meta/` の JSON は drizzle-kit の生成物で、`vp check` の format に通すと落ちる (2026-11-02)。format し直すと、生成のたびに手で整える手順が要り、commit したものが drizzle-kit の出力のままかどうかを見分けにくくなる。deploy は `meta/` の snapshot を schema と比べるので ([Void docs「Database」][] の Hand-written migrations)、`vite.config.ts` の `fmt.ignorePatterns` で外し、生成したままの形で持つ。
@@ -180,12 +230,18 @@ D1 の結果の `meta.served_by_primary` は、その query を処理した inst
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。SQLite docs の引用は 2026-11-02 に、Cloudflare docs の手順は 2026-11-03 に原文と照らした。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。SQLite docs の引用は 2026-11-02 に、Cloudflare docs の値・引用・手順は 2026-11-03 に原文と照らした。
 
 [Void docs「Database」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database.md
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md
 [Void docs「void db reset」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md
 [SQLite docs「SQL Language Expressions」]: https://www.sqlite.org/lang_expr.html#like
+[Void docs「D1 (SQLite)」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database/d1.md
+[Cloudflare docs「D1 Limits」]: https://developers.cloudflare.com/d1/platform/limits/
+[Cloudflare docs「D1 Database」]: https://developers.cloudflare.com/d1/worker-api/d1-database/#batch
+[Cloudflare docs「Use indexes」]: https://developers.cloudflare.com/d1/best-practices/use-indexes/
+[Cloudflare docs「SQL statements」]: https://developers.cloudflare.com/d1/sql-api/sql-statements/#pragma-optimize
+[Cloudflare docs「Import and export data」]: https://developers.cloudflare.com/d1/best-practices/import-export-data/
 [Void docs「void db seed」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md
 [drizzle docs「Seed Overview」]: https://orm.drizzle.team/docs/seed-overview
 [Cloudflare docs「Global read replication」]: https://developers.cloudflare.com/d1/best-practices/read-replication/

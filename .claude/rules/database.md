@@ -24,6 +24,8 @@ paths:
 - `db.query.*` を使わず、`db.select()` などの query builder で書く。列の SQL の名前は schema で明示し、`database.casing` に頼らない。テストの `db` は schema も casing も持たない (`docs/guides/database.md`「query を書く」)
 - ユーザーの行は、読み出し・更新・削除のすべてで `where` を `userId` に絞る。更新と削除は `and(<id の一致>, <userId の一致>)` にする (`docs/guides/database.md`「query を書く」)
 - 部分一致の検索は `likeContains` (`src/lib/like-pattern.server.ts`) で組み、パターンと `ESCAPE` 句を手で書かない。片方を忘れると `%` `_` `\` を含む入力でだけ黙って結果が変わる (`docs/guides/database.md`「ユーザー入力で部分一致の検索を組む」)
+- 部分一致の検索語は、入力の検証で `fitsContainsPattern` (`src/lib/like-pattern.ts`) に通してから `likeContains` に渡す。D1 は LIKE のパターンを 50 bytes に限り、日本語は 16 文字で超える。超えた値は `likeContains` が throw する (`docs/guides/database.md`「ユーザー入力で部分一致の検索を組む」)
+- ユーザー入力の長さで伸びる `inArray` と複数の行の `insert` は、bound parameter の上限 (1 つの query に 100) より先に入力の検証で止める。続けて書く複数の文は `db.batch([...])` で送る (`docs/guides/database.md`「D1 の上限に収める」「query を書く」)
 - query のテストは `src/features/<domain>/*.test.ts` に置き、`createTestD1()` の D1 を使い、`dispose()` で止める。`db/` にはテストを置かない (`docs/guides/database.md`「テストで D1 を使う」)
 
 ## 保護と user
