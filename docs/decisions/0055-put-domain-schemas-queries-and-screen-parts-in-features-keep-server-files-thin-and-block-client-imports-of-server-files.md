@@ -117,7 +117,7 @@ drizzle の bind した値。
 - drizzle-orm の `params` は常に `undefined` になる。`params` を読むコードを書かない。patch が効いていることは `src/test/drizzle-query-error.test.ts` が確かめる (`pnpm-workspace.yaml` の `patchedDependencies` のコメント)
 - lint は `.server` で終わる module の import に加えて、Context の表で差し替わる module と `void/auth` の import も止める。止める module の一覧は `tooling/lint/config.ts` が持ち、Void の `plugin-client-stubs.ts` の stub のうち build を止めないものと揃える。`.server` で終わらないファイルは、これらを値で import できない。止めるのは `src/**` と `pages/**` である
 - `void/live`・`void/durable` の import と、`void/env` の server だけの key の読み出しは lint で止めない。どれも build が止める。`void/db` の `db` と `createDb` 以外の名前も build が止めるので、`db/schema.ts` を client から import しても build で気付く
-- `import type` は止めない。ページが `.server.ts` から `import type` すると、その `.server.ts` が app の program に入る (ADR-0047)。`src/features/<domain>/*.server.ts` は `tsconfig.app.json` の program に入るので、`void/env` を import しない
+- `import type` は止めない。ページが `.server.ts` から `import type` すると、その `.server.ts` が app の program に入る (ADR-0047)
 - oxc の docs は `allowTypeImports` を `paths` の option としてだけ載せる (2026-11-02 に確認)。`patterns` の中でも効くことは `server-import-lint.test.ts` の `import type` の行が確かめ、効かなくなるとその行が落ちる
 
 ## 出典

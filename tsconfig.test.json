@@ -1,8 +1,8 @@
 // テストと story (DOM の型と Node の型)。unit のテストは Node で、ブラウザテストと story は chromium で走る。
 // どちらも Vitest と Storybook の型を通して Node の型を読むので、アプリのコードと分ける。
 // Worker のディレクトリのテストは tsconfig.worker.json が、scripts/ と tooling/ のテストは
-// tsconfig.node.json が持つ。ここに入れると、テストが読む Worker のコードが Workers の型を
-// この program へ持ち込み、DOM の型とぶつかる (ADR-0047)
+// tsconfig.node.json が持つ。この program は Workers の型を持たないので、Workers の型の名前を書く
+// テストはここで落ちる (ADR-0047)
 {
   "extends": ["./tsconfig.base.json", "./.void/tsconfig.json", "./tsconfig.paths.json"],
   "compilerOptions": {
