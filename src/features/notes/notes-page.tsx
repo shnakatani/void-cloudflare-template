@@ -126,7 +126,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     if (queryTooLong) {
       return;
     }
-    // 正規化で値が変わるときだけ入力欄を揃える (trim と切り詰めが見える)
+    // 正規化で値が変わるときだけ入力欄を揃える (trim が見える)。上限を超えた語はここまで来ないので切り詰めは起きない
     if (field.text !== draftQ) {
       setField((current) => ({ ...current, text: draftQ }));
     }
