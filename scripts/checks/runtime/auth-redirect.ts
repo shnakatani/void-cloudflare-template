@@ -21,7 +21,7 @@ const REQUEST_TIMEOUT_MS = 2000;
 
 /**
  * 書き込みの要求は body を付けずに送り、middleware の 401 だけを見る。action のあるページで middleware が通すと、
- * body の無い要求は検証で 400 になって落ちる。body を付けると、検証を通る body は action の `requireAuth(c)` が、
+ * body の無い要求は JSON の parse で 400 になって落ちる。body を付けると、検証を通る body は action の `requireAuth(c)` が、
  * 検証に落ちる body は Void が走らせ直す loader (`pages/protocol.ts` の `handlePageMutation`) の `requireAuth(c)` が
  * 401 を返し、middleware が通しても落ちない。検証を通る body は、守りが壊れると dev と共有の D1 に書き込む (ADR-0054)
  */
