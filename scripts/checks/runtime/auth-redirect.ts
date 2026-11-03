@@ -16,7 +16,7 @@ import {
  *
  * ログインした要求の振り分け (ログイン済みで guest-only の path を開いたときの redirect) は確かめない。dev で確かめる。
  * middleware が `OPTIONS` を通すことも確かめない。`vp preview` は Vite の `cors` が Worker より前に `OPTIONS` へ
- * 204 を返すので、middleware が止めても落ちない。判定は `access.test.ts` が見る
+ * 204 を返すので (Vite+ 1.4.0 の preview と cors 2.8.6 の既定、2026-11-03)、middleware が止めても落ちない。判定は `access.test.ts` が見る
  */
 
 const REQUEST_TIMEOUT_MS = 2000;

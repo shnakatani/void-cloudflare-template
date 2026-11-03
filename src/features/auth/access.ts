@@ -30,7 +30,7 @@ const DOCUMENT_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD"]);
 /**
  * CORS の preflight の method。preflight は資格情報を付けずに送られるので、常に未ログインに見える。応答が ok status
  * (200-299) でないと preflight が失敗し、ログインした別の origin の本来の要求が送られない (Fetch Standard の
- * 「CORS-preflight fetch」)。後ろの middleware か route の `OPTIONS` の handler に答えさせる
+ * 「HTTP responses」と「CORS-preflight fetch」)。後ろの middleware か route の `OPTIONS` の handler に答えさせる
  */
 const PREFLIGHT_METHOD = "OPTIONS";
 
