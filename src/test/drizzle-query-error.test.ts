@@ -6,11 +6,7 @@ import { sqliteTable, text } from "void/schema-d1";
 
 import { createTestD1, type TestD1 } from "./app/d1";
 
-/**
- * drizzle-orm の patch (`pnpm-workspace.yaml` の `patchedDependencies`) が効いていることを見る。
- * 外すと、query の失敗の message と `params` に bind した値が載り、Void の `onError` と Better Auth が
- * `console.error` に渡すログへ残る (ADR-0055)
- */
+// bind する値。エラーのどこにも載らないことを見る目印
 const MARKER = "bound-value-marker";
 
 // migration に無い table。query を投げると D1 が no such table で落とす
@@ -28,6 +24,11 @@ async function queryError(db: Db, run: (db: Db) => Promise<unknown>): Promise<Er
   throw new Error("query が落ちなかった");
 }
 
+/**
+ * drizzle-orm の patch (`pnpm-workspace.yaml` の `patchedDependencies`) が効いていることを見る。
+ * 外すと、query の失敗の message と `params` に bind した値が載り、Void の `onError` と Better Auth が
+ * `console.error` に渡すログへ残る (ADR-0055)
+ */
 describe("drizzle の query の失敗", () => {
   let d1: TestD1;
   beforeEach(async () => {
