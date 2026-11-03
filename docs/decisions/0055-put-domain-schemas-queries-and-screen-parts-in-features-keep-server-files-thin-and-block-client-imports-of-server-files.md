@@ -108,11 +108,11 @@ patch を当てたあとも、SQL の文 (値は `?`) と、D1 の文言 (`no su
 
 server のログ。
 
-| 案                                                    | 評価                                                                                                                                                             | 採否     |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `void/log` の `logger.error(<message>, <fields>)`     | Cloudflare の Best Practices の例と同じく、`console.error` に 1 つの JSON の文字列を渡す。Error の stack と cause を写す処理を Void が持つ                       | **採用** |
-| `console.error(<message>, error)`                     | Void の docs が hosted の target 向けに書く形。message と Error が別の値になり、Cloudflare の docs が勧める 1 つの JSON にならない                               | 却下     |
-| `console.error(JSON.stringify({ ... }))` を自前で書く | Cloudflare の docs の例の形。`JSON.stringify` は Error を `{}` にする (Error の項目は列挙されない) ので、stack と cause を写す処理を呼び出しごとに書くことになる | 却下     |
+| 案                                                    | 評価                                                                                                                                                                              | 採否     |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `void/log` の `logger.error(<message>, <fields>)`     | Cloudflare の Best Practices の例と同じく、`console.error` に 1 つの JSON の文字列を渡す。Error の stack と cause を写す処理を Void が持つ                                        | **採用** |
+| `console.error(<message>, error)`                     | Void の docs が hosted の target 向けに書く形。message と Error が別の値になり、Cloudflare の docs が勧める 1 つの JSON にならない                                                | 却下     |
+| `console.error(JSON.stringify({ ... }))` を自前で書く | Cloudflare の docs の例の形。`JSON.stringify` は Error の name・message・stack・cause を落とす (どれも列挙されない) ので、stack と cause を写す処理を呼び出しごとに書くことになる | 却下     |
 
 drizzle の bind した値。
 
