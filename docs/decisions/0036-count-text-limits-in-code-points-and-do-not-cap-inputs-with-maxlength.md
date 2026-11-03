@@ -1,7 +1,7 @@
 # ADR-0036: 文字数の上限は code point で数え、入力欄は maxlength で打ち止めにしない
 
 - Status: Accepted
-- Date: 2026-09-29
+- Date: 2026-11-03
 - 関連: ADR-0013 (ドメイン型は valibot のスキーマから導出する)
 
 ## Context
@@ -17,7 +17,7 @@
 
 ## Decision
 
-**文字数の上限は code point で数える。スキーマは `v.maxCodePoints` で判定し、切り詰めるときも code point の境界で切る (`src/lib/truncate-code-points.ts`)。入力欄には `maxlength` を付けず、上限を超えた入力はスキーマが文言を出すか切り詰める。**
+**文字数の上限は code point で数える。スキーマは `v.maxCodePoints` で判定し、切り詰めるときも code point の境界で切る (`src/lib/truncate-code-points.ts`)。入力欄には `maxlength` を付けず、上限を超えた入力はスキーマの判定で文言を出す。切り詰めるのは、URL の値のように利用者が入力欄で打っていない値だけにする (ADR-0057)。**
 
 ### 数える単位
 
@@ -32,7 +32,7 @@
 
 | 案                                         | 評価                                                                                                                                                                                                                                                                                                                                                    | 採否     |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| スキーマだけが上限を持ち、入力欄は止めない | 上限の判定が 1 か所で、数える単位もスキーマの 1 つになる。超えたら文言を出すか切り詰める                                                                                                                                                                                                                                                                | **採用** |
+| スキーマだけが上限を持ち、入力欄は止めない | 上限の判定が 1 か所で、数える単位もスキーマの 1 つになる。入力欄で打った値が超えたら文言を出し、利用者が打っていない値 (URL の値など) だけを切り詰める                                                                                                                                                                                                  | **採用** |
 | 入力欄にも `maxlength` を付ける            | `maxlength` は code unit で数えるので、code point のスキーマとずれる (上限が N なら 𠮷 は N/2 文字で止まる)。変換中に上限へ達すると意図した文字列を入力できず、貼り付けた文字列は黙って切られる (デジタル庁デザインシステムの input-text のアクセシビリティ)。GOV.UK の Character count も入力欄の `maxlength` を外し、超えたことを知らせる形にしている | 却下     |
 
 ## Consequences
@@ -40,11 +40,13 @@
 - ZWJ で結んだ絵文字 (👨‍👩‍👧 は 5 code point) や結合文字 (か + 結合濁点は 2) は、見た目の 1 文字より多く数える。「N 文字以内」の文言とずれるのはこの場合だけである。GOV.UK の Character count は `text.length` (code unit) で数え、単体の絵文字も 2 と数えることを既知の問題として残している (alphagov/govuk-frontend#1104、2026-09-29 に open)
 - 切り詰めは code point の境界で切るので、サロゲートペアの片割れは残らない。ZWJ で結んだ絵文字は途中で切れうる
 - 例外は、server (Better Auth) が `.length` で判定する値で、client の検証も UTF-16 の code unit の `v.minLength`・`v.maxLength` で数える。単位を揃えないと境界の値で client と server の判定が割れる。対象は `src/features/auth/credentials.ts` のパスワード
-- 上限を目で見て分かるようにするなら、入力欄の近くに説明を置く (デジタル庁デザインシステムの案内)。検索語のように稀にしか超えない長さなら置かなくてよい
+- もう 1 つの例外は、D1 の LIKE のパターンにする検索語で、% で包んでエスケープしたあとの UTF-8 の bytes で数える。D1 が LIKE のパターンを 50 bytes に限り (Cloudflare docs「D1 Limits」、2026-11-03 に確認)、日本語は 17 文字から超える。判定と切り詰めは `src/lib/like-pattern.ts` が持ち、切るときは code point の境界で切る。bytes の上限は「N 文字以内」と言えないので、文言は日本語と英数字の文字数を目安に出す (`docs/guides/database.md`「ユーザー入力で部分一致の検索を組む」)
+- 上限を目で見て分かるようにするなら、入力欄の近くに説明を置く (デジタル庁デザインシステムの案内)。稀にしか超えない長さなら置かなくてよい
 
 ### 再評価の条件
 
 - DB を code point 以外で長さを数えるもの (MySQL の `VARCHAR` のバイト数など) に替えたとき
+- D1 の LIKE のパターンの上限が変わったとき。`src/lib/like-pattern.server.test.ts` の D1 の境界のテストが落ちる
 - 見た目の 1 文字で数える要件が出て、grapheme の数え方がサーバとブラウザで揃うことを確かめられたとき
 
 ## 調査結果
@@ -73,6 +75,7 @@
 - valibot `maxGraphemes` (`maxCodePoints` を DB の `LENGTH()` に合わせる用途に挙げ、併用を勧める): <https://valibot.dev/api/maxGraphemes/>
 - valibot 1.5.0 のリリースノート (code point の action の追加): <https://github.com/open-circle/valibot/releases/tag/v1.5.0>
 - HTML Standard の maxlength と Infra の length: <https://html.spec.whatwg.org/multipage/input.html#attr-input-maxlength> / <https://infra.spec.whatwg.org/#string-length>
+- Cloudflare docs「D1 Limits」(LIKE のパターンの上限): <https://developers.cloudflare.com/d1/platform/limits/>
 - SQLite の core functions (`length()` と `substr` は code point): <https://sqlite.org/lang_corefunc.html>
 - デジタル庁デザインシステム input-text のアクセシビリティ (maxlength を使わない): <https://design.digital.go.jp/dads/components/input-text/accessibility/>
 - GOV.UK Design System の Character count: <https://design-system.service.gov.uk/components/character-count/>

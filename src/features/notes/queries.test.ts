@@ -117,6 +117,15 @@ describe("notes の query", () => {
       expect((await list({ q: "react" })).map((note) => note.title)).toEqual(["React"]);
     });
 
+    // D1 は LIKE のパターンを 50 bytes に限る。「あ」は 3 bytes で、17 文字を % で包むと 2 + 51 = 53 bytes
+    it("URL から来た長い日本語の検索語も、schema を通せば D1 のエラーにならない", async () => {
+      await create({ title: "あ".repeat(20), body: "", dueDate: null });
+
+      const filter = v.parse(noteListFilterSchema, { q: "あ".repeat(17) });
+
+      expect((await list(filter)).map((note) => note.title)).toEqual(["あ".repeat(20)]);
+    });
+
     it("一致しなければ空配列", async () => {
       await create({ title: "りんご", body: "", dueDate: null });
 
