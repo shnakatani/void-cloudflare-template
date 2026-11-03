@@ -99,6 +99,11 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     if (next !== normalizeQuery(field.text)) {
       return;
     }
+    // 待ちの間に上限を超えた。超えた語は schema が切り詰めるので、上の比べ方では上限ちょうどの待っていた語と
+    // 一致して見える
+    if (isNoteQueryTooLong(field.text)) {
+      return;
+    }
     visitSearch(next);
   }
   // debounce の発火は打鍵の結果なので、effect で debounce 済みの値を見張らず、onChange から呼ぶ。
@@ -115,7 +120,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
 
   function handleTextChange(text: string) {
     setField((current) => ({ ...current, text }));
-    // 超える前に待っていた語は、発火しても入力欄の語と違うので送られない (handleDebouncedSearch)
+    // 超える前に待っていた語は、発火しても handleDebouncedSearch が捨てる
     if (!isNoteQueryTooLong(text)) {
       searchDebouncer.maybeExecute(normalizeQuery(text));
     }
