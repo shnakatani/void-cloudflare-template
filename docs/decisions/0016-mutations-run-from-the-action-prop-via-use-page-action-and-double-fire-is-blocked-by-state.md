@@ -1,7 +1,7 @@
 # ADR-0016: mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ
 
 - Status: Accepted
-- Date: 2026-11-02
+- Date: 2026-11-03
 - 関連: ADR-0015 (ユーザー操作による更新は Transition を既定にする)、ADR-0017 (完了点と、後の送信による前の送信の取り消し)、ADR-0020 (registry コードは触らない。Action 層は registry の外に置く)
 
 ## Context
@@ -99,13 +99,13 @@ React はユーザー起点のイベントごとに次のイベントより前�
 mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanStack Form から送るときは同じファイルの `usePageActionForm` を通す。呼び出し方は `docs/guides/react/updates.md`「mutation の書き方」にある。
 `run` は `action()` の失敗で reject しない。失敗は `run` が通知し、Action の reject に任せない。
 
-| `action()` の結果                                 | `run`                                                                                       | 理由                                                                                                                                                                      |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 成功                                              | `onSuccess` を await して `true`                                                            |                                                                                                                                                                           |
-| `ok: false`                                       | 422 のフィールドのエラーは `onValidationError` へ、それ以外は固定の文言の toast へ。`false` | 呼び出し側が結果を読み忘れても無通知にならない                                                                                                                            |
-| 取り消し (`AbortError`)                           | 何も出さずに `false`                                                                        | 後から始めた遷移や送信が前の送信を置き換えた結果で、利用者の操作の失敗ではない。Void の `useForm` も握る (`@void/react` 1.4.0 の `runtime/use-form.ts` の `isAbortError`) |
-| それ以外の throw (401・403・500・502・通信の失敗) | 生の error を `console.warn` に残し、固定の文言の toast に出して `false`                    | toast は Action の持ち主が unmount した後も出る (2026-11-02 に dev で確認)。境界に任せると、閉じたダイアログや消した行の失敗が消える                                      |
-| `onSuccess` の throw                              | `console.error` に残して reject する                                                        | 書き込みは成功しているので、「操作に失敗しました」の toast は誤りになる。Action の持ち主が unmount していれば、console にだけ残る                                         |
+| `action()` の結果                                 | `run`                                                                                                             | 理由                                                                                                                                                                      |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 成功                                              | `onSuccess` を await して `true`                                                                                  |                                                                                                                                                                           |
+| `ok: false`                                       | 422 のフィールドのエラーは `onValidationError` へ、それ以外は固定の文言の toast へ。`false`                       | 呼び出し側が結果を読み忘れても無通知にならない                                                                                                                            |
+| 取り消し (`AbortError`)                           | 何も出さずに `false`                                                                                              | 後から始めた遷移や送信が前の送信を置き換えた結果で、利用者の操作の失敗ではない。Void の `useForm` も握る (`@void/react` 1.4.0 の `runtime/use-form.ts` の `isAbortError`) |
+| それ以外の throw (401・403・500・502・通信の失敗) | 生の error を `console.warn` に残し、toast に出して `false`。401 はログインし直しを案内する文言、ほかは固定の文言 | toast は Action の持ち主が unmount した後も出る (2026-11-02 に dev で確認)。境界に任せると、閉じたダイアログや消した行の失敗が消える                                      |
+| `onSuccess` の throw                              | `console.error` に残して reject する                                                                              | 書き込みは成功しているので、「操作に失敗しました」の toast は誤りになる。Action の持ち主が unmount していれば、console にだけ残る                                         |
 
 ページの URL が query (ダイアログを開く key、絞り込みの条件) を持つときは、`pageQuery` に `?` を除いた query を渡し、`run` が action の URL の後ろに載せて送る。検証の失敗でも、ページは同じ query の URL で描き直される (「制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない」)。
 
@@ -137,7 +137,7 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 ## Consequences
 
 - `usePageAction` を通さずに `action()` を呼ぶと、`ok: false` が通知の無い失敗になり、throw は境界に届くか消える。lint で検出できないため、レビューで見る
-- 401・403・500 も toast で伝わり、画面は差し替わらない。Error Boundary (ADR-0050) が `usePageAction` の送信から受けるのは `onSuccess` の throw だけになる。画面ごと差し替えたい失敗 (認証切れでログインへ送るなど) を扱うときは、`run` の失敗の分岐に足す
+- 401・403・500 も toast で伝わり、画面は差し替わらない。Error Boundary (ADR-0050) が `usePageAction` の送信から受けるのは `onSuccess` の throw だけになる。認証切れの 401 も画面を差し替えずに toast で伝え、入力を残す。ログインへ送ると入力が消える (ADR-0053)。画面ごと差し替えたい失敗を扱うときは、`run` の失敗の分岐に足す
 - `pageQuery` の渡し忘れは lint でも型でも止まらない。渡し忘れると、検証の失敗でページの query が落ち、エラーも出ない。レビューで見る
 - 取り消された送信がサーバーで走るかは、取り消した時点で要求がサーバーに届いていたかで分かれる。分かれ方と、後の送信が前を取り消すときの見え方は ADR-0017 が持つ
 - 後続作業
