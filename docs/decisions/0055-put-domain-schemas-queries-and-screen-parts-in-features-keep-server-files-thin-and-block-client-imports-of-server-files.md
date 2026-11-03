@@ -54,7 +54,7 @@ drizzle-orm 0.45.4 の `DrizzleQueryError` は、driver の失敗を包み直す
 | loader が捕まえて失敗の値で返す (ADR-0057)             | 捕まえた側が `logger.error` に渡す                                                                                                                                                                       |
 | Better Auth のサインインとサインアップ (`/api/auth/*`) | 1 回の失敗につき、Better Auth の `[Better Auth]: Error` の行と、better-call 1.4.4 の `dist/router.mjs` の `# SERVER_ERROR:` の行の 2 か所に出る。テンプレートのコードを通らない                          |
 
-workerd は `console.error` に渡った Error を inspect の形で出すので、`message` の `params:` の行と `params` の配列の両方が載る。2026-11-03 に Void 1.4.0 の `vp build` の成果物を `vp preview` で起動し、ローカルの D1 の table を改名して、目印の値を送った。数えたのは、1 回の要求で preview のログに出た目印の件数である。
+Void の `onError` と Better Auth が `console.error` に渡した Error は、workerd が inspect の形で出すので、`message` の `params:` の行と `params` の配列の両方が載る。2026-11-03 に Void 1.4.0 の `vp build` の成果物を `vp preview` で起動し、ローカルの D1 の table を改名して、目印の値を送った。数えたのは、1 回の要求で preview のログに出た目印の件数である。
 
 | 経路                                     | drizzle-orm 0.45.4 のまま                                   | 下の Decision の patch を当てたあと |
 | ---------------------------------------- | ----------------------------------------------------------- | ----------------------------------- |
@@ -121,7 +121,7 @@ invocation log。
 | 案                                | 評価                                                                                                                                                                                                                                                                                              | 採否     |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | Cloudflare の既定のまま残す       | 要求ごとの Request・Response の記録が、`logger` の行と並んで残る。Cloudflare の docs「Workers Best Practices」は、間欠の失敗を調べるために本番の前から logs を集めておくよう案内し、「Query Builder」の有効にする例も `invocation_logs: true` を書く。URL の query に載る値 (検索語) はログに残る | **採用** |
-| `invocation_logs: false` で止める | 検索語は Workers Logs に残らない。要求ごとの記録を失い、失敗を調べる手掛かりが `logger` と `console.*` の行だけになる。検索語は共有と再読み込みのために URL に書いている (ADR-0057) ので、閲覧の履歴など URL が残る場所はログのほかにもある                                                       | 却下     |
+| `invocation_logs: false` で止める | 検索語は Workers Logs に残らない。要求ごとの記録を失い、失敗を調べる手掛かりが `logger` と `console.*` の行だけになる。検索語は共有と再読み込みのために URL に書いている (ADR-0057)                                                                                                               | 却下     |
 
 drizzle の bind した値。
 
