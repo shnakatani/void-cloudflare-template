@@ -1,4 +1,4 @@
-// Cloudflare Workers だけで動くコードと、そのテスト (Workers の型)。void/env が @cloudflare/workers-types を
+// Cloudflare Workers だけで動くコードと、そのディレクトリに置いたテスト (Workers の型)。void/env が @cloudflare/workers-types を
 // 読み、DOM の型とぶつかるので、ブラウザのコードと同じ tsconfig に入れない。*.server.ts(x) は
 // tsconfig.app.json の exclude と揃える (ADR-0047)
 {
