@@ -9,7 +9,7 @@ export const MUTATION_ERROR_FALLBACK_MESSAGE =
 /**
  * action が 401 (session 切れ) で止まったときの文言。時間をおいても通らないので、ログインし直しを案内する。
  * 同じタブでログインのページへ移ると、ダイアログと入力が消える。session の cookie はタブをまたいで効くので、
- * 別のタブでログインし直せば、残った入力のまま送り直せる (WCAG 2.2 Understanding「Re-authenticating」)
+ * 別のタブでログインし直せば、残った入力のまま送り直せる (WCAG 2.2 Understanding「Re-authenticating」の Examples のメールの例)
  */
 export const SESSION_EXPIRED_MESSAGE =
   "ログインが切れています。別のタブでログインし直してから、もう一度操作してください。";
