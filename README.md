@@ -16,15 +16,16 @@ DB は D1、認証は Void が管理する Better Auth の email とパスワー
 
 Void が名前で読むディレクトリをルートに置き、アプリのコードは `src/` に置く (ADR-0064)。名前と役割は Void の docs「Project Structure」(`node_modules/void/docs/reference/structure.md`) が持つ。
 
-| パス          | 中身                                                                                   |
-| ------------- | -------------------------------------------------------------------------------------- |
-| `pages/`      | ページ (`<path>.tsx`) と、その loader・action・head (`<path>.server.ts`)、`layout.tsx` |
-| `middleware/` | すべての要求の前に走る処理。ページの保護 (ADR-0053)                                    |
-| `db/`         | schema、migration、見本のデータ (`docs/guides/database.md`)                            |
-| `public/`     | そのまま配る静的なファイル。404 と 500 のページ (ADR-0050)                             |
-| `src/`        | 部品、ドメインのコード、hook、関数、テストの足場 (`docs/guides/placement.md`)          |
-| `scripts/`    | 検査とメンテのスクリプト                                                               |
-| `tooling/`    | lint、テスト、Vite の plugin の設定の中身。`vite.config.ts` が読む                     |
+| パス          | 中身                                                                                                             |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `pages/`      | ページ (`<path>.tsx`) と、その loader・action・head (`<path>.server.ts`)、`layout.tsx`                           |
+| `middleware/` | すべての要求の前に走る処理。ページの保護 (ADR-0053)                                                              |
+| `db/`         | schema、migration、見本のデータ (`docs/guides/database.md`)                                                      |
+| `public/`     | そのまま配る静的なファイル。404 と 500 のページ (ADR-0050)                                                       |
+| `src/`        | 部品、ドメインのコード、hook、関数、テストの足場 (`docs/guides/placement.md`)                                    |
+| `scripts/`    | 検査とメンテのスクリプト                                                                                         |
+| `tooling/`    | lint、テスト、Vite の plugin の設定の中身。`vite.config.ts` が読む                                               |
+| `types/`      | `tsconfig.app.json` と `tsconfig.test.json` の `typeRoots`。Workers の型を外す空の宣言と、global の型 (ADR-0047) |
 
 API の route (`routes/`) は、Void の規約のディレクトリとして、要るときに作る。
 

@@ -44,7 +44,6 @@ Void が読む規約のディレクトリ (`pages/`・`routes/`・`middleware/`�
 | loader の props を受けて描くページ本体、画面の部品、hook、列定義、画面の定数、URL を組む関数 | `src/features/<domain>/`。ページ本体は `pages/<path>.tsx` が描いて props を渡す。loader を持たないページは `pages/<path>.tsx` に直に書いてよい          |
 | loader・action・`head`                                                                       | `pages/<path>.server.ts`。`getUser()` か `requireAuth(c)` で読んだ user と `db` を query の関数へ渡すだけにする                                         |
 
-- `src/features/<domain>/*.server.ts` は `tsconfig.app.json` の program に入る。`void/env` を import すると Workers の型が app に入るので、import しない (ADR-0047)
 - query の関数の書き方とテストは `docs/guides/database.md`「query を書く」「テストで D1 を使う」にある
 
 1 つの部品のファイルの中だけで使う context は、`src/hooks/` へ出さずにそのファイルに置く (`src/components/action/form.tsx`)。
@@ -92,9 +91,10 @@ registry 由来でない付随ファイル (テスト・story とその helper) 
 
 ### 落とし穴
 
-| 落とし穴                                                                      | 起きること                                                                                                                 | 避け方                                                                                                                                |
-| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `src` と Void の規約のディレクトリの外のファイルに Tailwind の utility を書く | scan の対象が `src` と規約のディレクトリに絞られているので、その utility の CSS は生成されない。気付くのは効かないときだけ | utility を書くファイルは `src` か規約のディレクトリの中に置く (`docs/guides/styling-and-tokens.md`「scan と `theme(static)` の範囲」) |
+| 落とし穴                                                                                                                                                          | 起きること                                                                                                                                                                                  | 避け方                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `src` と Void の規約のディレクトリの外のファイルに Tailwind の utility を書く                                                                                     | scan の対象が `src` と規約のディレクトリに絞られているので、その utility の CSS は生成されない。気付くのは効かないときだけ                                                                  | utility を書くファイルは `src` か規約のディレクトリの中に置く (`docs/guides/styling-and-tokens.md`「scan と `theme(static)` の範囲」) |
+| Worker で動くファイル (`tsconfig.worker.json` の `include` のファイル。`middleware/`・`*.server.ts` など) から、DOM の API を使う `src/` の module を import する | import された module は `tsconfig.app.json` の program (DOM の型あり) で検査されるので、`vp check` は通る。Worker で動くコードの DOM の使用に、`vp check` の型検査では気付けない (ADR-0047) | Worker で動くファイルが import する module では、DOM の API (`document`・`window` など) を使わない                                    |
 
 ## explanation
 

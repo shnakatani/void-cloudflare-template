@@ -1,16 +1,22 @@
-// ブラウザで動くアプリのコード (DOM の型、Node の型なし)。ページは Worker の SSR でも動くが、DOM の型で
-// 検査する。テストと story は tsconfig.test.json が持つ。exclude の並びは tsconfig.test.json の include と
-// 揃える。ずれると、そのファイルはどちらの tsconfig にも入らないか、両方に入る (ADR-0047)
+// ブラウザで動くアプリのコード (DOM の型)。ページは Worker の SSR でも動くが、DOM の型で検査する。
+// server のファイルは tsconfig.worker.json が、テストと story は tsconfig.test.json が持つ。exclude の
+// *.server.ts(x) は tsconfig.worker.json の include と、付随ファイルの種別と src/test/** は
+// tsconfig.test.json の include と揃える。ずれると、そのファイルはどの tsconfig にも入らないか、2 つに入る
+// (ADR-0047)
 {
   "extends": ["./tsconfig.base.json", "./.void/tsconfig.json", "./tsconfig.paths.json"],
   "compilerOptions": {
     "lib": ["ES2024", "ESNext.Error", "DOM", "DOM.Iterable"],
-    "types": ["vite-plus/client"]
+    // global の型は types/ だけから引く。types/ の空の @cloudflare/workers-types が、void/env などの型が足す
+    // Workers の型を空にする。typeRoots を書くと types は node_modules を探さないので、types/app-globals が参照する
+    // (ADR-0047)
+    "typeRoots": ["./types"],
+    "types": ["app-globals"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "pages/**/*.ts", "pages/**/*.tsx"],
   "exclude": [
-    "pages/**/*.server.ts",
-    "pages/**/*.server.tsx",
+    "**/*.server.ts",
+    "**/*.server.tsx",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.test-d.ts",

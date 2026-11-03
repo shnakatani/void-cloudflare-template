@@ -41,6 +41,8 @@
 | `durable-objects/`             | 置けない     | `durable/scan.ts` の `scanDurableObjectModules` が、`.d.ts` 以外の直下の `.ts` をすべて durable object のモジュールとして読む。`_` を見ない                                                                                                                                                                                                                     |
 | `db/`                          | 置けない     | `cli/db.ts` の `collectSchemaModuleFiles` が `db/schema/` の `.ts` をすべて import し、`drizzle/discover.ts` の `schemaSpecifier` が `./db/schema/*.ts` を Drizzle Kit に渡す。`_` を見ない。`db/` の直下の他のファイルと `db/migrations/` は走査の対象が `schema.ts`・`seed.*`・`*.sql` なので、テストが拾われるかは確かめていない。ディレクトリ単位で置かない |
 
+- アプリのコードが使わない資源のモジュール (`void/kv`・`void/storage`・`void/ai` など) を、テストのファイルで import しない。Void の binding の推論はテストのファイルの import も読み、本番の Worker に binding が付く。推論の対象は [Void docs「Resource Inference」][] の Scanned Directories で、Void 1.5.0 の [Void の `plugin-inference.ts`][] の `inferProjectBindings` は名前の `_` も `.test.` も見ない。`pages/_probe.test.ts` だけが `void/kv` を import すると、`vp build` の `dist/ssr/wrangler.json` の `kv_namespaces` に `KV` が入った (2026-11-03、Void 1.4.0)
+- テストでだけ資源のモジュールを使うなら、`void.config.ts` の `inference.bindings` でその binding を `false` にする ([Void docs「Config」][] の `inference.bindings`)。上の probe に `inference: { bindings: { kv: false } }` を足すと、`kv_namespaces` は空になった (2026-11-03、Void 1.4.0)
 - D1 を読む query のテストは、query の関数と同じ `src/features/<domain>/` に `*.test.ts` で置き、unit project で走らせる。D1 は `src/test/app/d1.ts` の `createTestD1()` が Miniflare で作る。`db/` には置かない (上の表。手順は `docs/guides/database.md`「テストで D1 を使う」)
 - 種別を足すときは、置き場所と project を対で作る (「project を足す」)
 
@@ -295,9 +297,12 @@ story の project の `optimizeDeps` は、次の点で `browser` と違う。�
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vite+ は 1.0.0、Vitest は 5.0.1 に固定した版を指す。並列数の出典 (`maxWorkers` の docs、`pool.ts`、`resolveProjects.ts`) は Vitest 5.0.5 に固定した。Oxlint docs の「vitest/no-disabled-tests」と「vitest/warn-todo」は、2026-10-06 に原文と照らした。sanity-io/react-rx と starbeamjs/starbeam の設定は、2026-10-05 に読んだ commit に固定した。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vite+ は 1.0.0、Vitest は 5.0.1、Void は 1.5.0 に固定した版を指す。並列数の出典 (`maxWorkers` の docs、`pool.ts`、`resolveProjects.ts`) は Vitest 5.0.5 に固定した。Oxlint docs の「vitest/no-disabled-tests」と「vitest/warn-todo」は、2026-10-06 に原文と照らした。sanity-io/react-rx と starbeamjs/starbeam の設定は、2026-10-05 に読んだ commit に固定した。
 
 [Vite+ docs「Test」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/test.md
+[Void docs「Resource Inference」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/resource-inference.md
+[Void docs「Config」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/config.md
+[Void の `plugin-inference.ts`]: https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/src/plugin-inference.ts
 [Vite+ docs「Migrate」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/migrate.md
 [Vitest docs「Configuring Vitest」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/index.md
 [Vitest docs「Test」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/api/test.md
