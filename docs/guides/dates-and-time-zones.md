@@ -133,7 +133,7 @@ Void 1.4.0 の React の adapter は、部品をブラウザでだけ描く口�
 
 ### 自前の Suspense を省いたときに起きること
 
-Void 1.4.0 の React の adapter は、ページと layout を `fallback: null` の `<Suspense>` で包んで描く ([Void 1.4.0 の `pages-server.ts`][])。[React docs「browser」][] は、`use(browser())` の外に Suspense が無いと server の描画が失敗すると書く。Void では外側にこの境界が必ずあるので、描画は失敗せず、この境界が受ける。境界の中はページと layout のすべてなので、初めの HTML から `<main>` も live region も消える。Void は `renderToReadableStream` に `onBrowserBailout` を渡さないので、ブラウザに任せた境界は server のログにも出ない。
+Void 1.4.0 の React の adapter は、Pages Routing のページ (island のページを除く) を描くとき、ページと layout を `fallback: null` の `<Suspense>` で包む ([Void 1.4.0 の `pages-server.ts`][])。[React docs「browser」][] は、`use(browser())` の外に Suspense が無いと server の描画が失敗すると書く。このページでは外側にこの境界があるので、描画は失敗せず、この境界が受ける。境界の中はページと layout のすべてなので、初めの HTML から `<main>` も live region も消える。Void は `renderToReadableStream` に `onBrowserBailout` を渡さないので、ブラウザに任せた境界は server のログにも出ない。
 
 2026-11-03 に、Void 1.4.0・React 19.3.1 の `vp preview` (本番の CSP `script-src 'self'`) で、ブラウザの TZ を返す部品を置いた一時のページを開いて確かめた。ブラウザは Playwright 1.64.1 の Chromium 156 で、TZ を `Pacific/Kiritimati` にした。
 
