@@ -1,6 +1,6 @@
 # セキュリティヘッダ
 
-`void.config.ts` の `routing.headers` で付けるセキュリティヘッダ (CSP を含む)の変え方と、CSP を広げる前に試す手順と違反の集め方と、ヘッダが届く範囲、ヘッダごとの効き方を持つ。
+`void.config.ts` の `routing.headers` で付けるセキュリティヘッダ (CSP を含む)の変え方と、CSP を広げる前に試す手順と違反の集め方と、ヘッダが届く範囲、ヘッダごとの効き方、送らないヘッダの理由を持つ。
 
 | 決定                                                                      | ADR      |
 | ------------------------------------------------------------------------- | -------- |
@@ -104,9 +104,24 @@ SSR の page は 2026-11-02 に `/login` で取り直した。`/` は未ログ�
 
 `Strict-Transport-Security` は、HTTPS で受け取った応答でだけ効く。http の応答に載っても、ブラウザは無視する ([RFC 6797][] の 8.1 節: "If an HTTP response is received over insecure transport, the UA MUST ignore any present STS header field(s).")。`vp dev` と `vp preview` は http で応答するので、手元のブラウザが HTTPS に固定されることは無い。
 
+deploy した先への初めての http の訪問は、HSTS ではなく `void.config.ts` の `routing.alwaysUseHttps` が 308 で HTTPS へ移す。path・query・method は保たれ、localhost と loopback の address は http のまま応答する ([Void docs「Redirects」][] の HTTP to HTTPS)。redirect は Void の routing の Worker がアプリより先に返すので、308 の応答には `routing.headers` のヘッダが乗らない (Void 1.4.0 の `runtime/routing-worker.ts`)。
+
+### Permissions-Policy を送らない理由
+
+`Permissions-Policy` は、文書と、その中の `<iframe>` が使えるブラウザの機能 (camera、geolocation など) を許すか拒むかを決めるヘッダである ([MDN「Permissions-Policy」][])。このテンプレートは送らない。
+
+| 確かめたこと                                                                                                                                                        | 送らない理由への効き方                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [Cloudflare Workers の例「Set security headers」][] (2026-04-23 更新) が挙げる値は `interest-cohort=()` だけで、JavaScript と TypeScript の例ではコメントにしてある | FLoC を止める値で、MDN の directive の一覧に `interest-cohort` は無い (2026-11-03 に読んだ)。送っても何も止めない |
+| MDN は `Permissions-Policy` を Baseline でない (Limited availability)、Experimental と書く (2026-10-23 更新)                                                        | 効くブラウザが限られる                                                                                            |
+| テンプレートの画面は `<iframe>` を埋めず、ブラウザの機能を求める API を呼ばない。CSP の `script-src 'self'` で別の origin の script を実行させない                  | 拒む directive を並べても、いま止める呼び出しが無い                                                               |
+
+- 送らなければ、利用者が足した機能は directive ごとの既定の許可で動く。送り始めると、あとから足した機能は、その directive を許可の一覧に足すまで拒まれる。拒まれたことは画面に出ないことがある
+- 送るときは、使わない機能を拒む directive を並べ、「ヘッダを足す・変える」の手順で `EXPECTED_HEADERS` も揃える
+
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/guide/edge/headers.md` にある。MDN「Content-Security-Policy-Report-Only」は 2026-11-02 に読んだ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/guide/edge/` (`headers.md`・`redirects.md`) にある。MDN「Content-Security-Policy-Report-Only」は 2026-11-02 に読んだ。
 
 [Void docs「Custom Headers」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/headers.md
 [MDN「Content-Security-Policy」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy
@@ -118,3 +133,6 @@ SSR の page は 2026-11-02 に `/login` で取り直した。`/` は未ログ�
 [MDN「Cross-Origin-Resource-Policy」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Resource-Policy
 [MDN「Strict-Transport-Security」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Strict-Transport-Security
 [RFC 6797]: https://www.rfc-editor.org/rfc/rfc6797
+[Void docs「Redirects」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/redirects.md
+[MDN「Permissions-Policy」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Permissions-Policy
+[Cloudflare Workers の例「Set security headers」]: https://developers.cloudflare.com/workers/examples/security-headers/

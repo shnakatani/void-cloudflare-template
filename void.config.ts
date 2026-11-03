@@ -13,9 +13,20 @@ const CSP = `script-src ${SCRIPT_SRC}; object-src 'none'; base-uri 'none'; frame
 
 export default defineConfig({
   worker: {
-    // Cloudflare Workers の compatibility date。void init が書く値 (Void の docs「Configuration」の `worker`)。
-    // Void 1.4.0 の void init は、Void が知っている最新の日付 (LATEST_KNOWN_COMPAT_DATE) を書く
-    compatibility_date: "2026-02-24",
+    // Cloudflare Workers の compatibility date。手元で Worker を動かす workerd (dev と preview、output: "static" の
+    // build の prerender) がすべて受ける最新の日付にする (Cloudflare Workers「Best Practices」の Keep your
+    // compatibility date current)。それより新しい日付では、その workerd が起動しない。上げ方は
+    // docs/guides/dependencies-and-toolchain.md「依存を上げたときに見直すもの」の Void の行
+    compatibility_date: "2026-11-03",
+  },
+  cloudflare: {
+    // Workers Logs と Traces (Cloudflare Workers「Best Practices」の Enable Workers Logs and Traces)。率の理由は
+    // docs/guides/deployment.md「Workers Logs と Traces の率を決めた理由」
+    observability: {
+      enabled: true,
+      logs: { head_sampling_rate: 1 },
+      traces: { enabled: true, head_sampling_rate: 0.01 },
+    },
   },
   // すべてのページの <head> の既定。ページの head() とマージされ、ページの値が勝つ (Void の docs「Head Management」)。
   // lang と title は WCAG 3.1.1 と 2.4.2。title はホームと head() を持たないページの title になる。
@@ -33,6 +44,9 @@ export default defineConfig({
     ],
   },
   routing: {
+    // http の要求を 308 で HTTPS へ移す。HSTS は HTTPS の応答でしか効かないので、初めての http の訪問はこれが上げる。
+    // localhost と loopback は http のまま (Void の docs「Redirects」の HTTP to HTTPS)
+    alwaysUseHttps: true,
     headers: {
       "/*": [
         "X-Content-Type-Options: nosniff",
