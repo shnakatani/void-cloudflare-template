@@ -15,7 +15,7 @@ export function chunkLoadErrorDocumentLoad(
   if (!destination || !isSameOriginHttp(destination, current)) {
     return null;
   }
-  // 今の URL と hash を除いて同じ行き先への assign() は fragment の移動になり、文書を開かない (HTML の navigate)
+  // 今の URL と hash を除いて同じで hash を持つ行き先への assign() は、fragment の移動になって文書を開かない (HTML の navigate)
   if (withoutFragment(destination) === withoutFragment(current)) {
     return { kind: "reload" };
   }
