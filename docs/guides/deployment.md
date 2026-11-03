@@ -4,6 +4,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 
 | 決定                                                                                                                    | ADR      |
 | ----------------------------------------------------------------------------------------------------------------------- | -------- |
+| inline の script を許さない CSP を送り、Void の deferred props を使わない                                               | ADR-0051 |
 | DB は void/db と D1 で持ち、migration は auth の table ごと void db generate で生成して commit する                     | ADR-0052 |
 | 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                             | ADR-0053 |
 | 本番へは GitHub Actions から void deploy で Cloudflare へ出し、deploy しない repository では workflow を Disable にする | ADR-0061 |
