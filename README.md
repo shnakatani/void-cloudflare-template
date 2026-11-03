@@ -42,10 +42,10 @@ mise のシェル hook を入れる。hook の走らないシェルでの打ち�
 以降はリポジトリ直下で実行する。
 
 ```bash
-mise trust && mise install                        # .mise.toml を信頼して [env] と port を読ませ、[tools] のツールを入れる
+mise trust && mise install                        # .mise.toml を信頼して daemons の port を読ませ、[tools] のツールを入れる
 vp install                                        # 依存パッケージ
 vp exec playwright install chromium --only-shell  # vp install では入らない。無いと browser project のテストが落ちる
-printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" > .env  # vp preview と vp run verify の secret (docs/guides/auth.md「preview に secret を渡す」)
+printf '\nBETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env # vp preview と vp run verify の secret (docs/guides/auth.md「preview に secret を渡す」)
 vp exec void db seed --yes                        # dev の D1 を作り、ログインに使う見本のユーザーを入れる。email と password は db/seed.ts の docstring
 mise run serve                                    # dev server。port は worktree ごとに変わる (.mise.toml の daemons)
 mise run storybook                                # 部品とデザイントークンのカタログ (docs/guides/storybook.md)

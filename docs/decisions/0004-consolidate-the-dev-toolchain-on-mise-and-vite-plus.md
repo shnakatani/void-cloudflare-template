@@ -1,7 +1,7 @@
 # ADR-0004: 開発環境のツールチェーンは mise と Vite+ に寄せる
 
 - Status: Accepted
-- Date: 2026-11-02
+- Date: 2026-11-03
 - 関連: ADR-0005 (依存更新の待機)
 
 ## Context
@@ -17,7 +17,7 @@
 
 | ツール | 役割                                                                                                                    | 宣言する場所                                                                           |
 | ------ | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| mise   | Node.js と pnpm 以外のツール、環境変数、dev server と Storybook の port                                                 | `.mise.toml` の `[tools]` と `[env]` と `[daemons.*]` と `[tasks.*]`                   |
+| mise   | Node.js と pnpm 以外のツール、開発の道具が読む環境変数、dev server と Storybook の port                                 | `.mise.toml` の `[tools]` と `[env]` と `[daemons.*]` と `[tasks.*]`                   |
 | Vite+  | Node.js と pnpm の解決、dev server / build / lint / format / test / パッケージ操作の統一 CLI (`vp`)、タスク (Vite Task) | `package.json` と `pnpm-workspace.yaml` の `catalog:`、`vite.config.ts` の `run.tasks` |
 | pnpm   | パッケージマネージャ                                                                                                    | `package.json` の `packageManager`                                                     |
 
@@ -100,18 +100,33 @@ CI は mise を要さず、同じタスクを同じ順に、1 つずつ別の st
 | コマンドを workflow に直に並べる                                                                     | 採用案と同じ                                                                                                                      | コマンドが `vite.config.ts` と workflow の 2 か所に入り、食い違っても検出されない         | 却下     |
 | 1 つの step のまま、手順ごとにログを折り畳む (GitHub Docs「Workflow commands」の `::group::{title}`) | GitHub は失敗した step を開くが、その中の折り畳みを開くかは GitHub Docs に書かれていない                                          | Vite Task は `::group::` を出さない (vite-task 7d69d657 に無い)。各コマンドを包む形が要る | 却下     |
 
-### 値の置き場所を 3 つに分ける
+### 値の置き場所を分ける
 
-| 種別                       | 置き場所                                                  | 例                    |
-| -------------------------- | --------------------------------------------------------- | --------------------- |
-| 環境で変わらない値         | モジュール定数                                            | `src/lib/app-name.ts` |
-| 環境で変わるが秘密でない値 | `.mise.toml` の `[env]`                                   | 現時点で該当なし      |
-| 秘密                       | ローカルは ignore 済みの `.env`、本番は `void secret put` | `BETTER_AUTH_SECRET`  |
+| 種別                                     | 置き場所                                                                          | 例                    |
+| ---------------------------------------- | --------------------------------------------------------------------------------- | --------------------- |
+| 環境で変わらない値                       | モジュール定数                                                                    | `src/lib/app-name.ts` |
+| アプリが読む server の値                 | `env.ts` に宣言する。ローカルは ignore 済みの `.env`、本番は `void secret put`    | 現時点で該当なし      |
+| アプリが読むブラウザの値 (`VITE_*`)      | `env.ts` に宣言する。ローカルは `.env`、本番は build のシェルか schema の default | 現時点で該当なし      |
+| Void の auth が読む secret               | `env.ts` に宣言しない。ローカルの preview は `.env`、本番は deploy が作る         | `BETTER_AUTH_SECRET`  |
+| 開発の道具 (タスク、スクリプト) が読む値 | `.mise.toml` の `[env]`                                                           | 現時点で該当なし      |
+
+アプリが読む環境変数は Void の形に従い、ルートの `env.ts` に `defineEnv` で宣言して `void/env` の `env` で読む (Void docs「Environment variables」: "Declare your environment variables in `env.ts`, then read them through `env` from `void/env`. Use `.env` for local values and `void secret put` for production server values.")。
+宣言すると、Void が型 (`.void/env.d.ts`) を作り、`void env check` と `void secret put` と `void deploy` と Worker の起動のときに値を検証する (Void docs「Environment variables」の Validation and redaction と Production server values)。
+`env.ts` に宣言した server の値は Worker の secret にし、`void.config.ts` の `worker.vars` に置かない。production の build が弾く (Void docs「Configuration」の `worker`: "reject any `worker.vars` name declared as a server key in `env.ts`")。
+
+`BETTER_AUTH_SECRET` は `env.ts` に宣言しない。Void の auth が読み、deploy が無ければ作る (Void docs「Authentication」の Behavior: "Void creates `BETTER_AUTH_SECRET` on deploy if it is missing and reuses it on later deploys.")。dev は secret を要らない (同: "Local development needs no secret setup.")。Void の deploy は auth があると、この名前を `secrets.required` に自分で足し、本番に無い名前の検査からも外す (Void 1.5.0 の `cli/deploy-artifact-validation.ts`、2026-11-03)。docs は宣言を求めていない。
+
+必須で宣言すると、dev でも `.env` に値が無ければ `void env check` が落ちる。`string().optional()` で宣言すると、2026-11-03 に Void 1.5.0 で `void env check` は通った。それでも宣言しないのは、アプリのコードが読まない値を `env.ts` に持つ理由が無いからである。宣言する利点は `void secret put BETTER_AUTH_SECRET` が使えることだけで、宣言しないとそのコマンドは `secret: BETTER_AUTH_SECRET is not declared in env.ts.` で止まる。このテンプレートは secret を deploy が作る前提で、手で入れ替える手順を持たない。入れ替える運用にするなら、`.optional()` で宣言する。
+
+| 案                                                                        | 評価                                                                                                                       | 採否     |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- |
+| アプリの値を `env.ts` に宣言する                                          | Void の docs の形。型と検証を Void が持ち、deploy が本番の secret の欠けで止まる                                           | **採用** |
+| アプリの値を `.mise.toml` の `[env]` に置き、`ImportMetaEnv` で型を付ける | 型と未設定の検出を自前で持つ。mise の値は mise の環境を読んだシェルにしか届かず、CI と本番の Worker へは別に渡すことになる | 却下     |
 
 アプリ名のように環境ごとに値が変わらないものは環境変数にしない。
-`VITE_APP_NAME` を `.mise.toml` の `[env]` に置くと、値の定義・型宣言・未設定の検出・CI への受け渡しが芋づるで要り、CI が mise に依存する原因になる。
+環境変数にすると、値の定義・宣言・本番への受け渡しが芋づるで要る。
 
-毎回の解決にコストがかかる値も `[env]` へ置かず、読むタスクの command かスクリプトの中で導出する。`[env]` に置くと、mise が env を解決するたび (シェル hook の下ではディレクトリへ入るたび) にその処理が走る。2026-09-20 に、git のサブプロセスで値を導出する処理をトップレベルの `[env]` に置くと `mise hook-env` は 70ms、`[env]` から外すと 28ms だった。
+開発の道具が読む値のうち、毎回の解決にコストがかかる値は `[env]` へ置かず、読むタスクの command かスクリプトの中で導出する。`[env]` に置くと、mise が env を解決するたび (シェル hook の下ではディレクトリへ入るたび) にその処理が走る。2026-09-20 に、git のサブプロセスで値を導出する処理をトップレベルの `[env]` に置くと `mise hook-env` は 70ms、`[env]` から外すと 28ms だった。
 
 ### dev server と Storybook の port は mise の daemons の自動 port で worktree ごとに決める
 
@@ -164,12 +179,14 @@ Vite は使用中なら次の空き port へずらし (Vite docs の `server.por
 
 秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す (Void docs「Environment variables」: "Use `.env` for local values and `void secret put` for production server values")。`.env` 以外の dotenv ファイルを Void は扱わない。
 
-Void はルートの `.env` を読み、`vp preview` の起動のたびにそこにある名前を Worker の secret として渡す。`vp preview` の Worker が secret を受けるのはこの経路だけである (Void 1.5.0 の `plugin-cloudflare-preview.ts`、2026-11-03)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
+Void はルートの `.env` を読み、`vp preview` の起動のたびにそこにある名前を Worker の secret として渡す。`vp preview` の Worker が secret を受けるのはこの経路だけである (Void 1.5.0 の `plugin-cloudflare-preview.ts`、2026-11-03)。dev では、`env.ts` に宣言した `VITE_*` の値を Void が `.env` から読んでブラウザへ渡す (Void 1.5.0 の `plugin-env-schema.ts` の `applyClientValuesToViteEnv`)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
+
+2026-11-03 に Void 1.5.0 の dev で、`env.ts` に `VITE_PROBE` だけを宣言し、`.env` に `VITE_PROBE` と宣言しない `VITE_UNDECLARED` を置くと、ブラウザの `import.meta.env` には `VITE_PROBE` だけが入った。`envDir: false` のときは Vite が `.env` を読まず、build の `.env` のブラウザの値を消す処理が走らない (同 `stripLocalClientEnv` の早期 return)。
 
 `envDir: false` は `vite.config.ts` に 1 つだけ書く。
 テストの project は `vite.config.ts` の設定を継承するので (ADR-0037)、ビルドとテストで値が割れない。
 
-秘密が要るようになったときの足し方は `docs/guides/dependencies-and-toolchain.md`「秘密を足す」にある。
+環境変数の足し方は `docs/guides/dependencies-and-toolchain.md`「環境変数を足す」にある。
 
 ### runtime と package manager の版は `package.json` が持つ
 
@@ -313,6 +330,10 @@ Vite+ の `docs/guide/local-cli.md`「Best Practices」は、`vp` を呼ぶ scri
 ## 出典
 
 - Void の docs「Deployment」の Other runtimes (`node` で動く成果物は `target` を Node.js・Bun・Deno にしたときだけ): `node_modules/void/docs/guide/deployment.md`
+- アプリの環境変数を `env.ts` に宣言して `void/env` で読む形、ローカルと本番の値の渡し方、検証の契機: Void docs「Environment variables」(https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md)
+- `env.ts` に宣言した server の値を `worker.vars` に置くと production の build が弾くこと: Void docs「Configuration」の `worker` (https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/config.md)
+- `BETTER_AUTH_SECRET` を deploy が作ることと、dev が secret を要らないこと: Void docs「Authentication」の Behavior (https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md)
+- dev で `env.ts` に宣言した `VITE_*` を `.env` から読んでブラウザへ渡す処理と、`envDir: false` のときに build の `.env` の値を消す処理が走らないこと: Void 1.5.0 の `packages/void/src/plugin-env-schema.ts` の `applyClientValuesToViteEnv` と `stripLocalClientEnv` (https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/src/plugin-env-schema.ts)
 - Vite+ の runtime 解決順と `packageManager` による package manager shim、`vp env pin` の書き込み先: `node_modules/vite-plus/docs/guide/env.md`
 - `vp env pin` が範囲を exact の版に解決して書くこと: `node_modules/vite-plus/docs/guide/env.md`「Manage」の `vp env pin` の項と Examples (`vp env pin node@26  # Pin Node.js 26 to an exact version`)、Vite+ の `rfcs/dev-engines.md`「2.4 `vp env pin` write target」(https://github.com/voidzero-dev/vite-plus/blob/102fe8edad2c45690f24830feee30bfe242817ee/rfcs/dev-engines.md)、`resolve_version_for_pin` (https://github.com/voidzero-dev/vite-plus/blob/102fe8edad2c45690f24830feee30bfe242817ee/crates/vp_global_cli/src/commands/env/pin.rs)
 - pnpm に Node.js と pnpm の版を管理させない設定: Vite+ の `docs/guide/env.md`「Node.js Selection」の tip と「Package-Manager Selection」(https://github.com/voidzero-dev/vite-plus/blob/v1.4.0/docs/guide/env.md)

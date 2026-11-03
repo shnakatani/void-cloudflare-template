@@ -25,7 +25,8 @@ paths:
 ## script とタスク
 
 - タスクは `vite.config.ts` の `run.tasks` に置き、daemons の port (`SERVE_PORT` など) を読まない。`.mise.toml` の `[tasks.*]` は `interactive = true` を置き、worktree の port を `exec vp run <task> --port ${<NAME>_PORT:?…}` で渡すだけにし、コマンドを持たせない (ADR-0004)
-- mise の `[env]` の値を読むタスクは、値が届いていなければ止まる形にする。command の中で読むなら `${NAME:?…}`、コードで読むなら `requireEnv` を使う (`docs/guides/vite-configuration.md`「タスクを足す」)
+- mise の `[env]` には開発の道具が読む値だけを置き、アプリが読む値は `env.ts` に宣言する (`docs/guides/vite-configuration.md`「タスクを足す」)
+- mise の `[env]` の値を読むタスクは、値が届いていなければ止まる形にする。command の中では `${NAME:?…}` で読む (`docs/guides/vite-configuration.md`「タスクを足す」)
 - `vite.config.ts` の `run.cache: false` を外さず、gate を `vp run --cache` で打たない。キャッシュが効くと gate がリプレイで済まされ、親の環境変数が子へ届かない (ADR-0004)
 - `run.tasks` の command で TypeScript と JavaScript のスクリプトを走らせるときは `vpx <file>` を打ち、`node` と `vp node` を打たない。タスクの中の `vp node` は `Command 'node' not found` で落ち、`node` は tsconfig の `paths` を読まない (`docs/guides/vite-configuration.md`「タスクを足す」)
 - verify の手順は `vite.config.ts` の `verifySteps` にタスクとして足し、`.github/workflows/ci.yml` にも同じ位置に `vp run <タスク>` の step を足す。コマンドは workflow に写さない。step を足し忘れても CI は落ちず、その手順が CI で走らないだけになる (ADR-0004)
