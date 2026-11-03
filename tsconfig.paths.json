@@ -7,8 +7,7 @@
       // ルートの tsconfig.json もこのファイルを extends する。shadcn の CLI はルートの tsconfig.json の paths を読む
       "@/*": ["./src/*"],
       // .void/tsconfig.json の paths の写し。パスはこのファイルからの相対で書く。
-      // void/db は写さない (ADR-0047)
-      "void/routes": ["./.void/routes.d.ts"],
+      // void/db と void/routes は写さない (ADR-0047)
       "@schema": ["./db/schema.ts"],
       "@schema/*": ["./db/schema/*"]
     }
