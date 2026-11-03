@@ -62,7 +62,7 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 - `db.query.*` (relational query) を使わず、`db.select()`・`db.insert()`・`db.update()`・`db.delete()` で書く。`db` の型も実体も schema を持たない
 - ユーザーの行は、読み出しも更新も削除も `where` で `userId` に絞る。更新と削除は `and(eq(<table>.id, id), eq(<table>.userId, userId))` にする。Void の docs に、ユーザーで行を絞る仕組みや例は無い
 - 読み出した行は、読み出し口で valibot のスキーマの `v.safeParse` に通す (ADR-0013)
-- 続けて書く複数の文は `db.batch([...])` で 1 回にまとめて送る ([Void docs「D1 (SQLite)」][] の Batch Operations)。batch は transaction で、途中の文が失敗すると全体を戻す ([Cloudflare docs「D1 Database」][] の batch)。別々に `await` すると、途中で失敗したときに前の文だけが残る
+- 互いの結果を使わない複数の書き込みは `db.batch([...])` で 1 回にまとめて送る ([Void docs「D1 (SQLite)」][] の Batch Operations)。batch は transaction で、途中の文が失敗すると全体を戻す ([Cloudflare docs「D1 Database」][] の batch)。別々に `await` すると、途中で失敗したときに前の文だけが残る
 
 ### D1 の上限に収める
 
