@@ -111,3 +111,10 @@ patchedDependencies:
   # 確かめ方: use-page-action.test.tsx の「入力を変えずに欄を離れても残る」と「入力を変えずにもう一度送れる」。
   # 送信 (submitAction) を mock しても form-core は本物なので、vp run verify で捕まえる
   "@tanstack/form-core": patches/@tanstack__form-core.patch
+  # DrizzleQueryError の message と params から bind した値を外す。上流が 1.0.0-rc.5 で既定にした振る舞い
+  # (drizzle-team/drizzle-orm#5939 を閉じた commit 8e78e2b の errors.ts) を 0.45.4 の dist に写す。paramsInErrors の
+  # option は写さない。Void の void/db は drizzle に schema と casing しか渡さず、渡す口が無い (ADR-0055)
+  # 理由: 外すと、query の失敗を Void の onError と Better Auth が console.error に渡し、保存しようとした値と email がログに残る
+  # 撤去条件: void の drizzle-orm の範囲が 1.0.0-rc.5 以降になったら消す
+  # 確かめ方: src/test/drizzle-query-error.test.ts。miniflare の D1 で query を落とし、エラーに値が無いことを見る
+  drizzle-orm: patches/drizzle-orm.patch
