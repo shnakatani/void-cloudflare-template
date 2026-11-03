@@ -44,7 +44,7 @@ server のログの形は、Cloudflare と Void がそれぞれ案内してい�
 | Void の docs「Resource Clients」の Logging                                    | `void/log` の `logger.error(message, fields)` が 1 回の呼び出しを 1 行の JSON にして出す。Void 1.5.0 の `dist/runtime/log.mjs` は `console.error` に `{ msg, ...fields }` の文字列を渡し、Error の name・message・stack・cause を写す |
 | Void の docs「Projects」の `void project logs`                                | stack を出すには `console.error('Save failed:', error)` のように Error を直に渡す。hosted の Void の target の説明で、Cloudflare に直に出す target では `void project logs` が Cloudflare の検索に替わると書く                        |
 
-Workers Logs は、`logger` と `console.*` の行のほかに、要求ごとに 1 件の invocation log を残す。Request・Response と関連する metadata を持ち、Fetch の要求の message は `<Method> <URL>` になる。wrangler の設定の `observability.logs.invocation_logs = false` で止められる (Cloudflare の docs「Workers Logs」の Invocation Logs)。検索の条件は URL の query に書く (ADR-0057) ので、`logger` の fields に載せなくても、検索語は要求の URL として invocation log に載る。2026-11-03 に Void 1.5.0 の `vp preview` で `?q=<目印>` を付けた一覧の要求と保存の action を送ると、Local Explorer の observability の invocation の span (`url.full`) と `info` の行 (`GET <URL>`) の両方に目印が載った。同じ preview で `cloudflare.observability.logs.invocation_logs` を `false` にしても、ローカルの記録は止まらなかった。build の `dist/ssr/wrangler.json` には値がそのまま出た。本番で止まることは deploy していないので確かめていない。
+Workers Logs は、`logger` と `console.*` の行のほかに、要求ごとに 1 件の invocation log を残す。Request・Response と関連する metadata を持ち、Fetch の要求の message は `<Method> <URL>` になる。wrangler の設定の `observability.logs.invocation_logs = false` で止められる (Cloudflare の docs「Workers Logs」の Invocation Logs)。traces は Workers Logs と別の記録で、traces を有効にすると、Fetch Handler の span が要求の URL を `url.full` と `url.path` に持つ (Cloudflare の docs「Spans and attributes」の Fetch Handler)。traces の率は logs と別の `head_sampling_rate` で決まる (Cloudflare の docs「Traces」の Sampling)。検索の条件は URL の query に書く (ADR-0057) ので、`logger` の fields に載せなくても、検索語は要求の URL として invocation log に載り、traces を有効にしていれば trace を取った要求の span にも載る。2026-11-03 に Void 1.5.0 の `vp preview` で `?q=<目印>` を付けた一覧の要求と保存の action を送ると、Local Explorer の observability の invocation log の `info` の行 (`GET <URL>`) と、trace の root の span の `url.full` の両方に目印が載った。同じ preview で `cloudflare.observability.logs.invocation_logs` を `false` にしても、ローカルの記録は止まらなかった。build の `dist/ssr/wrangler.json` には値がそのまま出た。本番で止まることは deploy していないので確かめていない。
 
 drizzle-orm 0.45.4 の `DrizzleQueryError` は、driver の失敗を包み直すときに bind した値を `message` (`params: <値>` の行) と `params` に持つ (`errors.js`)。Void 1.4.0 と 1.5.0 の `void` は `drizzle-orm` を `^0.45.4` で持つ。この例外は次の 3 つの経路で server のログに出る。
 
@@ -118,10 +118,10 @@ server のログ。
 
 invocation log。
 
-| 案                                | 評価                                                                                                                                                                                                                                                                                              | 採否     |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Cloudflare の既定のまま残す       | 要求ごとの Request・Response の記録が、`logger` の行と並んで残る。Cloudflare の docs「Workers Best Practices」は、間欠の失敗を調べるために本番の前から logs を集めておくよう案内し、「Query Builder」の有効にする例も `invocation_logs: true` を書く。URL の query に載る値 (検索語) はログに残る | **採用** |
-| `invocation_logs: false` で止める | 検索語は Workers Logs に残らない。要求ごとの記録を失い、失敗を調べる手掛かりが `logger` と `console.*` の行だけになる。検索語は共有と再読み込みのために URL に書いている (ADR-0057)                                                                                                               | 却下     |
+| 案                                | 評価                                                                                                                                                                                                                                                                                                                                                            | 採否     |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Cloudflare の既定のまま残す       | 要求ごとの Request・Response の記録が、`logger` の行と並んで残る。Cloudflare の docs「Workers Best Practices」は、間欠の失敗を調べるために本番の前から logs を集めておくよう案内し、「Query Builder」の有効にする例も `invocation_logs: true` を書く。URL の query に載る値 (検索語) はログに残る                                                               | **採用** |
+| `invocation_logs: false` で止める | 検索語は Workers Logs に残らなくなるが、traces を有効にしていれば trace を取った要求の span の `url.full` に残る。失うのは要求ごとの Request・Response の記録である。Workers Issues の検出は Workers Logs にも traces にも依らない (Cloudflare の docs「Investigate issues」の Detected failures)。検索語は共有と再読み込みのために URL に書いている (ADR-0057) | 却下     |
 
 drizzle の bind した値。
 
@@ -139,7 +139,7 @@ drizzle の bind した値。
 - client に届く文言は `HTTPException` の `message`、`ValidationError` の文言、validator (valibot) の message の 3 つになる。どれにも秘密と個人情報を載せない
 - `HTTPException` は server のログに出ない。server で調べたい失敗は、投げる前に `logger.error` で残す
 - `logger.error` の message は固定の文言にし、値は fields に分ける。fields に秘密と個人情報 (ユーザーの入力、DB の行の値) を載せない。id は載せてよい
-- URL の query に載る値 (検索語など) は、invocation log に要求の URL ごと残る。fields から外して防げるのは、URL に載らない値 (action の body、DB の行) だけである。秘密は URL の query に載せない。URL に載る個人情報をログに残せないアプリは、`void.config.ts` の `cloudflare.observability.logs.invocation_logs` を `false` にする。Void は `cloudflare` の値を生成する Cloudflare の設定へそのまま渡す (Void の docs「Configuration」の `cloudflare`)
+- URL の query に載る値 (検索語など) は、invocation log に要求の URL ごと残り、traces を有効にしていれば trace の span の `url.full` にも残る。fields から外して防げるのは、URL に載らない値 (action の body、DB の行) だけである。秘密は URL の query に載せない。URL に載る個人情報を Cloudflare の記録に残せないアプリは、`void.config.ts` の `cloudflare.observability.logs.invocation_logs` を `false` にし、traces を有効にしているなら `cloudflare.observability.traces.enabled` も `false` にする。片方だけを止めても、もう片方に URL が残る。Void は `cloudflare` の値を生成する Cloudflare の設定へそのまま渡す (Void の docs「Configuration」の `cloudflare`)
 - Context の 3 つの経路の表のうち、Void の `onError` と Better Auth が出すログは Error をそのまま `console.error` に渡すので、複数行になり 1 行の JSON にならない
 - drizzle の query の失敗は、どの経路でも SQL の文 (値は `?`) と D1 の文言の cause をログに残し、`message` と `params` には bind した値が載らない。D1 が扱えない型の値 (`undefined` や object など) を bind したときだけ、D1 の文言 (`D1_TYPE_ERROR: Type '<型>' not supported for value '<値>'`) に値が載り、cause を通じてログに出る (cloudflare/workerd の `src/cloudflare/internal/d1-api.ts`)。上流の 1.0.0-rc.5 の既定も同じで、patch では消えない
 - drizzle-orm の `params` は常に `undefined` になる。`params` を読むコードを書かない。patch が効いていることは `src/test/drizzle-query-error.test.ts` が確かめる (`pnpm-workspace.yaml` の `patchedDependencies` のコメント)
@@ -160,6 +160,9 @@ drizzle の bind した値。
 - Cloudflare の docs「Workers Logs」の Logging structured JSON objects: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#logging-structured-json-objects (2026-11-03 に確認)
 - Cloudflare の docs「Workers Logs」の Invocation Logs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#invocation-logs (2026-11-03 に確認)
 - Cloudflare の docs「Query Builder」の Enable Query Builder: https://developers.cloudflare.com/workers/observability/query-builder/#enable-query-builder (2026-11-03 に確認)
+- Cloudflare の docs「Spans and attributes」の Fetch Handler: https://developers.cloudflare.com/workers/observability/traces/spans-and-attributes/#fetch-handler (2026-11-03 に確認)
+- Cloudflare の docs「Traces」の Sampling: https://developers.cloudflare.com/workers/observability/traces/#sampling (2026-11-03 に確認)
+- Cloudflare の docs「Investigate issues」の Detected failures: https://developers.cloudflare.com/workers/observability/issues/investigate/#detected-failures (2026-11-03 に確認)
 - Void の docs「Configuration」の `cloudflare`: `node_modules/void/docs/reference/config.md`
 - drizzle の `DrizzleQueryError`: drizzle-orm 0.45.4 の `errors.js`。値を既定で外した変更は commit `8e78e2b` (https://github.com/drizzle-team/drizzle-orm/commit/8e78e2b7a4fd036ef650f2eab4fa9e2a1340c991、2026-10-06) と、`changelogs/drizzle-orm/1.0.0-rc.5.md`
 - Better Auth の経路: better-auth 1.7.14 の `dist/api/index.mjs` (router の `onError`)、better-call 1.4.4 の `dist/router.mjs`

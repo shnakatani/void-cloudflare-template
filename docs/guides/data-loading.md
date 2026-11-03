@@ -46,7 +46,7 @@ production の Void は、loader と action の未知の例外の文言を clien
 
 - `console.error` に文字列と Error を並べて渡さない。Void の docs のその形は hosted の target 向けで、1 つの JSON にならない (ADR-0055)
 - fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。id は載せてよい (ADR-0055)
-- URL の query に載る値 (検索語など) は、Workers Logs の invocation log に要求の URL ごと残る。fields から外しても消えないので、秘密は URL の query に載せない (ADR-0055)
+- URL の query に載る値 (検索語など) は、Workers Logs の invocation log に要求の URL ごと残り、traces を有効にしていれば trace の span の `url.full` にも残る。fields から外しても消えないので、秘密は URL の query に載せない (ADR-0055)
 - loader と action から投げたまま Void に任せた例外と、Better Auth の `/api/auth/*` の失敗は、Error をそのまま `console.error` に渡すので複数行に出て、1 行の JSON にならない (ADR-0055)
 
 ### loader で読めなかったものを返す
