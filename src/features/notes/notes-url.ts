@@ -1,10 +1,11 @@
 import * as v from "valibot";
 import type { NavigationState } from "void/pages-client";
+import { routeUrl, type RouteQuery } from "void/routes";
 
 import { NOTES_PATH } from "./notes-path";
 import { noteIdSchema, noteListFilterSchema, type Note } from "./schema";
 
-/** 追加のダイアログを開く query の名前。値を持たない (`/notes?new`)。page の named action の名前と分ける */
+/** 追加のダイアログを開く query の名前。値は空 (`/notes?new=`)。page の named action の名前と分ける */
 const CREATE_KEY = "new";
 /** 編集のダイアログを開く query の名前。値は id (`/notes?edit=3`) */
 const EDIT_KEY = "edit";
@@ -37,40 +38,42 @@ export function parseNotesPageQuery(
   return { q, dialog: { kind: "closed" } };
 }
 
-function urlWith(query: string): string {
-  return query === "" ? NOTES_PATH : `${NOTES_PATH}?${query}`;
+/** 空の q は URL に書かない (`routeUrl` は undefined の値を省く) */
+function listQuery(q: string): RouteQuery {
+  return { [QUERY_KEY]: q === "" ? undefined : q };
 }
 
-/** 空の q は URL に書かない */
-function qParts(q: string): string[] {
-  return q === "" ? [] : [`${QUERY_KEY}=${encodeURIComponent(q)}`];
+/** `routeUrl` が組んだ URL の query (`?` を除く)。action の URL に載せる値を、ページの URL と同じ組み方にする */
+function searchOf(url: string): string {
+  const start = url.indexOf("?");
+  return start === -1 ? "" : url.slice(start + 1);
+}
+
+export function notesListUrl(q: string): string {
+  return routeUrl(NOTES_PATH, { query: listQuery(q) });
 }
 
 /** 一覧の query (`?` を除く)。一覧から送る削除の action の URL にも載せる */
 export function notesListQuery(q: string): string {
-  return qParts(q).join("&");
+  return searchOf(notesListUrl(q));
 }
 
-export function notesListUrl(q: string): string {
-  return urlWith(notesListQuery(q));
+export function noteCreateUrl(q: string): string {
+  return routeUrl(NOTES_PATH, { query: { [CREATE_KEY]: "", ...listQuery(q) } });
 }
 
 /** 追加のダイアログを開いた一覧の query (`?` を除く)。保存の action の URL にも載せる */
 export function noteCreateQuery(q: string): string {
-  return [CREATE_KEY, ...qParts(q)].join("&");
+  return searchOf(noteCreateUrl(q));
 }
 
-export function noteCreateUrl(q: string): string {
-  return urlWith(noteCreateQuery(q));
+export function noteEditUrl(id: Note["id"], q: string): string {
+  return routeUrl(NOTES_PATH, { query: { [EDIT_KEY]: id, ...listQuery(q) } });
 }
 
 /** 編集のダイアログを開いた一覧の query (`?` を除く)。保存の action の URL にも載せる */
 export function noteEditQuery(id: Note["id"], q: string): string {
-  return [`${EDIT_KEY}=${String(id)}`, ...qParts(q)].join("&");
-}
-
-export function noteEditUrl(id: Note["id"], q: string): string {
-  return urlWith(noteEditQuery(id, q));
+  return searchOf(noteEditUrl(id, q));
 }
 
 /** 同じ名前が重複した query は最初の値を採る。loader の `c.req.query()` (Hono) と同じ読み方で、`Object.fromEntries(searchParams)` は最後の値になる */

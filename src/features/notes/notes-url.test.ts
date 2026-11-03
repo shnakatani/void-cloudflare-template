@@ -48,14 +48,14 @@ describe("parseNotesPageQuery", () => {
 describe("URL の組み立て", () => {
   it.each([
     ["", "/notes"],
-    ["a b&c", "/notes?q=a%20b%26c"],
+    ["a b&c", "/notes?q=a+b%26c"],
   ])("一覧 (q=%j) は %s", (q, url) => {
     expect(notesListUrl(q)).toBe(url);
   });
 
   it("追加と編集の URL は q を保つ", () => {
-    expect(noteCreateUrl("")).toBe("/notes?new");
-    expect(noteCreateUrl("x")).toBe("/notes?new&q=x");
+    expect(noteCreateUrl("")).toBe("/notes?new=");
+    expect(noteCreateUrl("x")).toBe("/notes?new=&q=x");
     expect(noteEditUrl(3, "")).toBe("/notes?edit=3");
     expect(noteEditUrl(3, "x")).toBe("/notes?edit=3&q=x");
   });
