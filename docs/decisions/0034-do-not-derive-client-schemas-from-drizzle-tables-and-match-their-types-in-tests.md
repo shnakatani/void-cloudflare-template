@@ -14,15 +14,19 @@ drizzle は、テーブル定義から valibot のスキーマを作る関数を
 
 Void の docs は、request の validator をテーブル定義から作る形を案内する (Void docs「Database」の Schema-Derived Validators。`void/drizzle-valibot` の `createInsertSchema` を `db/schema.ts` でテーブルの後ろに書く)。`withValidator` の validator は server でだけ走るので、server の validator だけをテーブル定義から作っても client の bundle は増えない。ただしこのテンプレートは、同じ入力スキーマを form の項目ごとの validator と `v.parse` にも渡す。server の validator だけをテーブル定義から作ると、入力の定義が server (テーブル定義由来) と client (手書き) の 2 つに割れ、片方だけに制約を足す誤りを型検査も lint も止めない。
 
-スキーマをテーブル定義から作って client でも使うと、テーブル定義と drizzle の本体がクライアントの bundle に入る。2026-11-03 に、5 列 (整数の id、文字列 3 列、日付の文字列、`timestamp_ms` の日時) のテーブル 1 つを持つこのテンプレートで `vp build` を回し、クライアントの出力 (`.cloudflare/output/` の `assets/*.js` の合計と、増えた chunk の gzip 後の値。gzip 後は Vite の表示) を比べた (Void 1.5.0、drizzle-orm 0.45.4、`void/drizzle-valibot` が再 export する drizzle-valibot 0.4.2、valibot 1.5.0)。B と C は、テーブル定義の写しを `src/features/<domain>/` に一時的に置いてスキーマのモジュールから参照し、C はさらに `void/drizzle-valibot` の `createInsertSchema` を呼んだ。
+スキーマをテーブル定義から作って client でも使うと、テーブル定義と drizzle の本体がクライアントの bundle に入る。2026-11-03 に、7 列 (整数の id、文字列 3 列、日付の文字列、`timestamp_ms` の日時 2 列) のテーブル 1 つを持つこのテンプレートで `vp build` を回し、クライアントの出力 (`.cloudflare/output/v0/workers/default/assets/assets/*.js` の合計と、増えた chunk の gzip 後の値。gzip 後は Vite の表示) を比べた (Void 1.5.0、drizzle-orm 0.45.4、`void/drizzle-valibot` が再 export する drizzle-valibot 0.4.2、valibot 1.5.0)。
 
-| 状態                                          | js の合計 | 一覧のページの chunk (gzip 後) | A との差 (gzip) |
-| --------------------------------------------- | --------- | ------------------------------ | --------------- |
-| A. テンプレートのまま                         | 837,613 B | 34.09 kB                       | —               |
-| B. A にテーブル定義を足す                     | 854,067 B | 38.98 kB                       | +4.89 kB        |
-| C. B に `createInsertSchema` の呼び出しを足す | 862,441 B | 40.58 kB                       | +6.49 kB        |
+- B と C は、テーブル定義の写しを `src/features/<domain>/` に一時的に置き、入力スキーマの `v.metadata` から参照した
+- 写しは SQL の既定値と CHECK 制約を除いた。client では `void/db` が stub になり、`sql` を持たない
+- C はさらに、同じ `v.metadata` で `void/drizzle-valibot` の `createInsertSchema` を呼んだ
 
-増えたのは、スキーマを import するページの chunk だけだった。
+| 状態                                          | js の合計 | スキーマを import するページの chunk (gzip 後) | form の部品が共有する chunk (`use-app-form`、gzip 後) | A との差 (gzip)                |
+| --------------------------------------------- | --------- | ---------------------------------------------- | ----------------------------------------------------- | ------------------------------ |
+| A. テンプレートのまま                         | 836,695 B | 34.11 kB                                       | 100.57 kB                                             | —                              |
+| B. A にテーブル定義を足す                     | 853,774 B | 39.18 kB                                       | 100.57 kB                                             | +5.07 kB                       |
+| C. B に `createInsertSchema` の呼び出しを足す | 863,048 B | 40.73 kB                                       | 101.49 kB                                             | ページ +6.62 kB、共有 +0.92 kB |
+
+B で増えたのは、スキーマを import するページの chunk だけだった。C では、valibot を持つ form の共有の chunk も増え、それを読むページ (ログインを含む) も重くなる。
 
 上流もこの問題を認識しているが、公式の解決策は無い。
 
@@ -48,7 +52,7 @@ ADR-0013 は、手書きの型とスキーマを型テストで突き合わせ�
 | 案                                                                            | 評価                                                                                                                                                                                                                                                                                                                                      | 採否     |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | スキーマは valibot で書き、テーブル定義の読み出しの型と型テストで突き合わせる | クライアントの bundle は増えない。項目の有無、null を許すか、型のずれを `vp check` で止められる                                                                                                                                                                                                                                           | **採用** |
-| スキーマ全体をテーブル定義から作る (`void/drizzle-valibot`)                   | 公式の用法で出処も 1 つになるが、フロントがスキーマを実行時に使うので、ページの chunk が gzip で約 6.5 kB 増える (Context の C)。テーブル定義をクライアントへ出すことになり、drizzle-team/drizzle-orm#941 が挙げる DB のスキーマの漏えいに当たる                                                                                          | 却下     |
+| スキーマ全体をテーブル定義から作る (`void/drizzle-valibot`)                   | 公式の用法で出処も 1 つになるが、フロントがスキーマを実行時に使うので、ページの chunk が gzip で約 6.6 kB、form の共有の chunk が約 0.9 kB 増える (Context の C)。テーブル定義をクライアントへ出すことになり、drizzle-team/drizzle-orm#941 が挙げる DB のスキーマの漏えいに当たる                                                         | 却下     |
 | server の validator だけをテーブル定義から作り、client は手書きのまま         | Void docs「Database」の Schema-Derived Validators の形で、bundle は増えない。入力の定義が server と client の 2 つに割れ、片方だけに制約を足しても型検査も lint も止めない                                                                                                                                                                | 却下     |
 | コード生成 (第三者のツールか自作)                                             | valibot 向けのツールが無く、zod 向けのツールも型を落とす (Context)。自作すると、生成器という検査の道具を保守することになる                                                                                                                                                                                                                | 却下     |
 | 読み出し口のスキーマを `v.strictObject` にし、余分な列を実行時に弾く          | drizzle の `select()` はテーブル定義の列を名前で列挙するので (2026-09-28 に `toSQL()` で、テーブル定義の列を並べた `select` を確認し、`ALTER TABLE` で足した列が行に出ないことも確かめた)、読み出し口に届く余分な項目は、テーブル定義にあってスキーマに無い列だけである。それは型テストが `vp check` で止めるので、捕まえる範囲は増えない | 却下     |
