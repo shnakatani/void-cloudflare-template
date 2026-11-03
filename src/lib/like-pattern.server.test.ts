@@ -3,6 +3,7 @@ import { sqliteTable, text } from "void/schema-d1";
 
 import { createTestD1, type TestD1 } from "@/test/app/d1";
 
+import { CONTAINS_TEXT_MAX_BYTES } from "./like-pattern";
 import { likeContains } from "./like-pattern.server";
 
 const words = sqliteTable("words", { word: text("word").notNull() });
@@ -49,9 +50,10 @@ describe("likeContains", () => {
     expect(await matches(["Ä"], "ä")).toEqual([]);
   });
 
-  // % で包んで 50 bytes ちょうどの検索語 (like-pattern.test.ts の境界と同じ)
+  // % で包んで 50 bytes ちょうどの検索語 (like-pattern.test.ts の境界と同じ)。ASCII の行は定数から組み、
+  // 定数が D1 の上限より大きいと D1 が拒んで落ちる
   it.each([
-    ["ASCII", "a".repeat(48)],
+    ["ASCII", "a".repeat(CONTAINS_TEXT_MAX_BYTES)],
     ["日本語", "あ".repeat(16)],
     ["エスケープする記号", "%".repeat(24)],
     ["サロゲートペア", "😀".repeat(12)],
@@ -63,13 +65,13 @@ describe("likeContains", () => {
     expect(() => likeContains(words.word, "あ".repeat(17))).toThrow("53 bytes > 50 bytes");
   });
 
-  // LIKE_PATTERN_MAX_BYTES が D1 の上限と一致することを、D1 そのものに 51 bytes を送って確かめる。
+  // 定数が D1 の上限より小さいと、定数より 1 byte 長いパターンを D1 が受けて落ちる。
   // 上限は LIKE を行に当てるときに判定されるので、行の無い table では落ちない
-  it("D1 は 51 bytes のパターンを拒む", async () => {
+  it("D1 は上限より 1 byte 長いパターンを拒む", async () => {
     await d1.db.insert(words).values({ word: "a" });
     const query = d1.d1
       .prepare("select word from words where word like ?")
-      .bind(`%${"a".repeat(49)}%`);
+      .bind(`%${"a".repeat(CONTAINS_TEXT_MAX_BYTES + 1)}%`);
     await expect(query.all()).rejects.toThrow("LIKE or GLOB pattern too complex");
   });
 });
