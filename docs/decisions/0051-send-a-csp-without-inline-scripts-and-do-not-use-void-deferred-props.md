@@ -84,16 +84,16 @@ Void 1.4.0 の React の adapter は、deferred props を次の形で描く。
 
 ## 出典
 
-Void の docs と source は v1.4.0 に固定した版を指し、同じ docs が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。React は 19.3.1 (`node_modules` の `react-dom/cjs/react-dom-client.development.js`) を読んだ。
+Void の docs と source は v1.5.0 に固定した版を指し、同じ docs が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。React は 19.3.1 (`node_modules` の `react-dom/cjs/react-dom-client.development.js`) を読んだ。
 
-- Void の docs「Custom Headers」(`routing.headers` は静的な値。"Header rules do not apply to ISR cache responses"): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/edge/headers.md
-- Void の docs「Revalidation」: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/edge/revalidation.md
-- Void の docs「Edge Prerendering」: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/edge/prerendering.md
-- Void の `routing-worker.ts` (ISR の `handle` に、middleware を含む `app.fetch` を描画として渡す): https://github.com/voidzero-dev/void/blob/v1.4.0/packages/void/src/runtime/routing-worker.ts
-- Void の ISR の `core.ts` (`serializeHeaders` が header を保存し、`isrCacheResponse` が保存した header で応答を組む) と `runtime.ts` (キャッシュに当たると描画を呼ばずに返す): https://github.com/voidzero-dev/void/tree/v1.4.0/packages/isr/src
-- Void の `pages-server.ts` (`renderToReadableStream` に `nonce` を渡さない。deferred props を解決しない Promise にして描く): https://github.com/voidzero-dev/void/blob/v1.4.0/packages/react/src/runtime/pages-server.ts
-- Void の `page-streams.ts` (fallback を描いたところで stream を打ち切る): https://github.com/voidzero-dev/void/blob/v1.4.0/packages/react/src/runtime/page-streams.ts
-- Void の `pages-client.ts` (`hydrateRoot` に options を渡さない): https://github.com/voidzero-dev/void/blob/v1.4.0/packages/react/src/runtime/pages-client.ts
+- Void の docs「Custom Headers」(`routing.headers` は静的な値。"Header rules do not apply to ISR cache responses"): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/headers.md
+- Void の docs「Revalidation」: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/revalidation.md
+- Void の docs「Edge Prerendering」: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/prerendering.md
+- Void の `routing-worker.ts` (ISR の `handle` に、middleware を含む `app.fetch` を描画として渡す): https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/src/runtime/routing-worker.ts
+- Void の ISR の `core.ts` (`serializeHeaders` が header を保存し、`isrCacheResponse` が保存した header で応答を組む) と `runtime.ts` (キャッシュに当たると描画を呼ばずに返す): https://github.com/voidzero-dev/void/tree/v1.5.0/packages/isr/src
+- Void の `pages-server.ts` (`renderToReadableStream` に `nonce` を渡さない。deferred props を解決しない Promise にして描く): https://github.com/voidzero-dev/void/blob/v1.5.0/packages/react/src/runtime/pages-server.ts
+- Void の `page-streams.ts` (fallback を描いたところで stream を打ち切る): https://github.com/voidzero-dev/void/blob/v1.5.0/packages/react/src/runtime/page-streams.ts
+- Void の `pages-client.ts` (`hydrateRoot` に options を渡さない): https://github.com/voidzero-dev/void/blob/v1.5.0/packages/react/src/runtime/pages-client.ts
 - MDN「Content Security Policy (CSP)」の Nonces: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP
 - React「Minified React error #419」(react.dev の題): https://react.dev/errors/419
 - web.dev「Mitigate cross-site scripting (XSS) with a strict Content Security Policy (CSP)」(`object-src`・`base-uri` を含む strict CSP の形): https://web.dev/articles/strict-csp
