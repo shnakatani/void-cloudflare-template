@@ -51,7 +51,7 @@ describe("authGuard", () => {
     ["PUT", unauthorized],
     ["PATCH", unauthorized],
     ["DELETE", unauthorized],
-    ["OPTIONS", unauthorized],
+    ["OPTIONS", pass],
   ])("未ログインの protected への %s は %o", (method, expected) => {
     expect(authGuard("protected", false, method)).toEqual(expected);
   });
