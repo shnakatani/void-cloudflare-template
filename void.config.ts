@@ -18,6 +18,15 @@ export default defineConfig({
     // preview が起動しない。上げ方は docs/guides/dependencies-and-toolchain.md「依存を上げたときに見直すもの」の Void の行
     compatibility_date: "2026-10-30",
   },
+  cloudflare: {
+    // Workers Logs と Traces (Cloudflare Workers「Best Practices」の Enable Workers Logs and Traces)。率の理由は
+    // docs/guides/deployment.md「Workers Logs と Traces の率を決めた理由」
+    observability: {
+      enabled: true,
+      logs: { head_sampling_rate: 1 },
+      traces: { enabled: true, head_sampling_rate: 0.01 },
+    },
+  },
   // すべてのページの <head> の既定。ページの head() とマージされ、ページの値が勝つ (Void の docs「Head Management」)。
   // lang と title は WCAG 3.1.1 と 2.4.2。title はホームと head() を持たないページの title になる。
   // titleTemplate は使わない。この title にも掛かり、ホームが「アプリ名 — アプリ名」になる。ページ名は
