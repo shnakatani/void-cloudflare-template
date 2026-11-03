@@ -142,6 +142,7 @@ drizzle の bind した値。
 - client に届く文言は `HTTPException` の `message`、`ValidationError` の文言、validator (valibot) の message の 3 つになる。どれにも秘密と個人情報を載せない
 - `HTTPException` は server のログに出ない。server で調べたい失敗は、投げる前に `logger.error` で残す
 - `logger.error` の message は固定の文言にし、値は fields に分ける。fields に秘密と個人情報 (ユーザーの入力、DB の行の値) を載せない。id は載せてよい
+- `logger` は message を `msg` の鍵に書く。Cloudflare の Best Practices の例の鍵は `message` で、「Query Builder」の Filter は key の例に `$metadata.message` を挙げる。Workers Logs が `msg` を一覧の message に使うかは docs に書かれていない (2026-11-03、deploy して確かめていない)
 - URL の query に載る値 (検索語など) は、invocation log に要求の URL ごと残り、traces を有効にしていれば trace の span の `url.full` にも残る。fields から外して防げるのは、URL に載らない値 (action の body、DB の行) だけである。秘密は URL の query に載せない。URL に載る個人情報を Cloudflare の記録に残せないアプリは、`void.config.ts` の `cloudflare.observability.logs.invocation_logs` を `false` にし、traces を有効にしているなら `cloudflare.observability.traces.enabled` も `false` にする。片方だけを止めても、もう片方に URL が残る。Void は `cloudflare` の値を生成する Cloudflare の設定へそのまま渡す (Void の docs「Configuration」の `cloudflare`)
 - Better Auth の logger の level は既定の `"warn"` のままにする (Better Auth の docs「Options」の `logger`)。root の `auth.ts` で `logger.level` を `"info"` か `"debug"` にすると、登録済みの email でのサインアップで、Better Auth が email を埋め込んだ行を出す (better-auth 1.7.14 の `dist/api/routes/sign-up.mjs`)。drizzle の patch はこの行に効かない
 - Context の 3 つの経路の表のうち、Void の `onError` と Better Auth が出すログは Error をそのまま `console.error` に渡すので、複数行になり 1 行の JSON にならない
