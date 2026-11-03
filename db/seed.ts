@@ -5,10 +5,16 @@ import { noteSeeds } from "../src/features/notes/note-seeds";
 
 /**
  * `vp exec void db seed` が、dev の D1 を作り直して migration を当てたあとに呼ぶ (`docs/guides/database.md`「見本のデータを入れる」)。
- * 見本の行の持ち主として、`dev@example.com` / `dev-password` でログインできる user を作る。
+ * `dev@example.com` / `dev-password` でログインできる user を作る。
  * `void db seed` は jiti で読み、tsconfig の `paths` を解決しないので、`@/` で import しない
  */
-export default defineSeed<typeof import("./schema")>(({ db, schema }) => {
+export default defineSeed<typeof import("./schema")>((context) => {
+  const { db } = context;
+  // `db/schema.ts` に table が 1 つも無いと、`void/seed` の `SeedContext` は DB の種類を決められず、`db` を
+  // sqlite・PostgreSQL・MySQL の union で渡す。D1 の `db` (better-sqlite3 の drizzle) に絞り、table を消しても型が通るようにする
+  if (!("run" in db)) {
+    throw new Error("db/seed.ts は D1 (sqlite) の db だけを扱う");
+  }
   // auth の table は `db/schema.ts` に無く、seed の `schema` にも入らないので SQL で入れる。
   // 列は Better Auth の email の sign-up が入れる行と同じにする (account の accountId は user の id、providerId は credential)
   db.run(sql`
@@ -19,7 +25,7 @@ export default defineSeed<typeof import("./schema")>(({ db, schema }) => {
     insert into account (id, accountId, providerId, userId, password, createdAt, updatedAt)
     values ('seed-dev-account', ${DEV_USER_ID}, 'credential', ${DEV_USER_ID}, ${DEV_PASSWORD_HASH}, ${SEEDED_AT}, ${SEEDED_AT})
   `);
-  db.insert(schema.notes).values(noteSeeds(DEV_USER_ID)).run();
+  db.insert(context.schema.notes).values(noteSeeds(DEV_USER_ID)).run();
 });
 
 const DEV_USER_ID = "seed-dev-user";

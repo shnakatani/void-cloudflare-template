@@ -65,8 +65,10 @@ function actionUrlWithPageQuery<U extends ActionUrl>(url: U, pageQuery: string |
   }
   // Void 1.4.0 の `.void/routes.d.ts` が生成する `ActionUrl` は `<page>` か `<page>?<action 名>` だけを許し、query を載せた URL を型に持たない。
   // 載せた URL を `ParseActionUrl` に通すと action 名が `create&new` になり、送る値の型が消えるので、型は元の `U` のまま渡す
+  // action を持つページが 1 つも無いと `ActionUrl` は never になり、`U` のまま文字列の method を呼べないので string で受け直す
+  const base: string = url;
   // oxlint-disable-next-line typescript/consistent-type-assertions -- ActionUrl が query を載せた URL を許さない (上のコメント)
-  return `${url}${url.includes("?") ? "&" : "?"}${pageQuery}` as U;
+  return `${base}${base.includes("?") ? "&" : "?"}${pageQuery}` as U;
 }
 
 /**
