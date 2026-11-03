@@ -31,10 +31,11 @@ paths:
 ## 保護と user
 
 - 守るページは、その path の定数を `src/features/auth/access.ts` の `PROTECTED_PATHS` に足し、`scripts/checks/runtime/auth-redirect.ts` の期待値にも 1 行足す。一覧に無い path は未ログインでも開き、何も落ちない (`docs/guides/auth.md`「保護する path を足す」)
+- middleware は守る path への未ログインの要求のうち、画面を開く要求 (`GET`・`HEAD`) を `/login` へ送り、`OPTIONS` (CORS の preflight を含む) を通し、それ以外の method を 401 で止める。守るページの loader と action も `requireAuth(c)` で user を読む。`auth-redirect.ts` に書き込みの要求の行を path ごとには足さない (`docs/guides/auth.md`「保護する path を足す」)
 - 守るページを足したら、`scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` にも `signedIn: true` で 1 行足す。足さないと、そのページの HTML に CSP で止まる script があっても落ちない (`docs/guides/auth.md`「保護する path を足す」)
 - 守るページを prerender しない。`.md` のページと loader の無い island のページを守る path の下に置かない (ADR-0053)
 - page の loader と action に `defineHandler(middleware, handler)` で middleware を渡さない。保護は global の middleware に置く (`docs/guides/auth.md`「page の loader に middleware を渡さない理由」)
-- `routes/` の `POST`・`PUT`・`PATCH`・`DELETE` で、ログインした user の行を書く handler は、書く前に `requireAuth(c)` で user を読む。`routes/` には page の action の origin の判定が掛からず、別の origin からの要求は session の cookie を捨てられて user が無いだけで、止まらない (ADR-0060)
+- `routes/` の `POST`・`PUT`・`PATCH`・`DELETE` で、ログインした user の行を書く handler は、書く前に `requireAuth(c)` で user を読む。`routes/` には page の action の origin の判定が掛からず、別の origin からの要求は session の cookie を捨てられて user が無いだけで、守る path (`PROTECTED_PATHS`) の外では止まらない (ADR-0060)
 - Void の session でない cookie を読む handler には origin の判定 (Hono の `csrf()` など) を足す。`GET` の handler で書かない (ADR-0060)
 - `shared` に足す項目は `SharedUser` と middleware の詰め替えの両方に足し、`Date` は文字列か数値にする (`docs/guides/auth.md`「全ページで user を読む」)
 

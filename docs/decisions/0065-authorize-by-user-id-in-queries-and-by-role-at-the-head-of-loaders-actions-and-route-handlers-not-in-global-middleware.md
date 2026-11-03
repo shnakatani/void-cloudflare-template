@@ -8,16 +8,16 @@
 
 認証 (誰か) は ADR-0053 が決める。この ADR は認可 (その人に許すか) を、どこで判定し、拒んだときに何を返すかを決める。テンプレートの認可は「行は作った user だけが読み書きできる」の 1 種類で、ロールによる出し分けはまだ無い。足すときに、判定の場所が人ごとに割れないようにしておく。
 
-| 事実                                                                                                                                                                                                      | 出典                                                                                 |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `requireAuth(c)` は user を返すか 401 を throw する。`AuthUser` は Better Auth の plugin と `user.additionalFields` が足す項目 (`admin()` の `role` など) を含む                                          | Void docs「Authentication」の Server Usage、Void docs「Auth API」の `AuthUser`       |
-| Better Auth の `admin()` plugin は user に `role`・`banned`・`banReason`・`banExpires` を足す。`defaultRole` の既定は `user`、`adminRoles` の既定は `["admin"]`。複数のロールはコンマ区切りの文字列で持つ | Better Auth docs「Admin」(2026-11-03 に読んだ)                                       |
-| Better Auth の server の API (`auth.api.*`。`userHasPermission` を含む) を呼ぶ公開の口は Void に無い                                                                                                      | ADR-0053 の検討した選択肢                                                            |
-| `routes/` の handler には `defineHandler(middleware, handler)` で route ごとの middleware を渡せる。page の loader と action に渡すと Void 1.5.0 までは壊れる                                             | Void docs「Server Routing」の Per-route middleware、ADR-0053 (voidzero-dev/void#564) |
-| global の middleware はすべての要求に掛かり、path を区分に分けて redirect する。どちらの一覧にも無い path は public で、足し忘れても何も落ちない                                                          | ADR-0053                                                                             |
-| loader で `throw new HTTPException(403, { message })` すると、応答は `text/plain` の本文が `message` の 403 になる。ページは描かれない                                                                    | ADR-0055 の Context の表                                                             |
-| action の throw (401・403・500 など) は `usePageAction` の `run` が toast に出す                                                                                                                          | ADR-0016                                                                             |
-| query の関数は `db` と `userId` を引数で受け、読み出し・更新・削除の `where` を `userId` に絞る。別の user の行は見つからないものとして扱う                                                               | ADR-0055、`docs/guides/database.md`「query を書く」                                  |
+| 事実                                                                                                                                                                                                                                                                                | 出典                                                                                 |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `requireAuth(c)` は user を返すか 401 を throw する。`AuthUser` は Better Auth の plugin と `user.additionalFields` が足す項目 (`admin()` の `role` など) を含む                                                                                                                    | Void docs「Authentication」の Server Usage、Void docs「Auth API」の `AuthUser`       |
+| Better Auth の `admin()` plugin は user に `role`・`banned`・`banReason`・`banExpires` を足す。`defaultRole` の既定は `user`、`adminRoles` の既定は `["admin"]`。複数のロールはコンマ区切りの文字列で持つ                                                                           | Better Auth docs「Admin」(2026-11-03 に読んだ)                                       |
+| Better Auth の server の API (`auth.api.*`。`userHasPermission` を含む) を呼ぶ公開の口は Void に無い                                                                                                                                                                                | ADR-0053 の検討した選択肢                                                            |
+| `routes/` の handler には `defineHandler(middleware, handler)` で route ごとの middleware を渡せる。page の loader と action に渡すと Void 1.5.0 までは壊れる                                                                                                                       | Void docs「Server Routing」の Per-route middleware、ADR-0053 (voidzero-dev/void#564) |
+| global の middleware はすべての要求に掛かり、path を区分に分けて、画面を開く要求 (`GET`・`HEAD`) は redirect し、`OPTIONS` (CORS の preflight を含む) は通し、それ以外の method の未ログインの要求は 401 で止める。どちらの一覧にも無い path は public で、足し忘れても何も落ちない | ADR-0053                                                                             |
+| loader で `throw new HTTPException(403, { message })` すると、応答は `text/plain` の本文が `message` の 403 になる。ページは描かれない                                                                                                                                              | ADR-0055 の Context の表                                                             |
+| action の throw (401・403・500 など) は `usePageAction` の `run` が toast に出す                                                                                                                                                                                                    | ADR-0016                                                                             |
+| query の関数は `db` と `userId` を引数で受け、読み出し・更新・削除の `where` を `userId` に絞る。別の user の行は見つからないものとして扱う                                                                                                                                         | ADR-0055、`docs/guides/database.md`「query を書く」                                  |
 
 ## Decision
 
@@ -31,7 +31,7 @@
 | 所有していない行の読み書き | 読み出しは query の関数が行を返さず、loader は「見つからない」の値で返す (ADR-0057)。更新と削除は 0 件になって query の関数が throw し、action は 500 (`public/500.html`) を返し、throw の文言は server のログに残る (ADR-0055)。存在しない行と同じ判定で同じ応答になり、他人の行が在ることを応答から読めないので、所有の失敗には 403 を返さない |
 
 - ロールの判定を loader・action・handler に直に書かず、`src/features/auth/` の純粋関数 (user を受けて boolean を返す) を呼ぶ。`role` はコンマ区切りの文字列なので、分割して比べる
-- path のサブツリーをまるごと 1 つのロールに閉じるときは、`src/features/auth/access.ts` の区分を足して middleware で redirect してよい (ADR-0053 の形)。それでも loader・action・handler の先頭の判定は外さない。path の一覧に足し忘れた経路は public になる
+- path のサブツリーをまるごと 1 つのロールに閉じるときは、`src/features/auth/access.ts` の区分を足して middleware で止めてよい。method ごとの扱いは ADR-0053 の `protected` の行にならう。それでも loader・action・handler の先頭の判定は外さない。path の一覧に足し忘れた経路は public になる
 - 画面の出し分け (`useShared()` の user のロールでボタンを隠すなど) は見せ方であって判定ではない。server の判定を省かない
 
 ### 検討した選択肢

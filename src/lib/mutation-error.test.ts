@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { VoidActionError } from "void/pages-client";
 
-import { curateMutationErrorMessage, MUTATION_ERROR_FALLBACK_MESSAGE } from "./mutation-error";
+import {
+  curateMutationErrorMessage,
+  MUTATION_ERROR_FALLBACK_MESSAGE,
+  SESSION_EXPIRED_MESSAGE,
+} from "./mutation-error";
+
+function actionError(status: number): VoidActionError {
+  return new VoidActionError({ body: "Unauthorized", status, statusText: "", url: "/x?create" });
+}
 
 /**
  * mutation の失敗の toast で使うエラー文言整形の境界網羅テスト。
@@ -54,6 +63,17 @@ describe("curateMutationErrorMessage", () => {
   it("非 Error 値 (undefined) でも固定文言を返し raw error を warn に残す", () => {
     expect(curateMutationErrorMessage(undefined)).toBe(MUTATION_ERROR_FALLBACK_MESSAGE);
     expect(warnSpy).toHaveBeenCalledExactlyOnceWith("[mutation] failed", { error: undefined });
+  });
+
+  it("action の 401 (session 切れ) はログインし直しを案内し、raw error を warn に残す", () => {
+    const error = actionError(401);
+
+    expect(curateMutationErrorMessage(error)).toBe(SESSION_EXPIRED_MESSAGE);
+    expect(warnSpy).toHaveBeenCalledExactlyOnceWith("[mutation] failed", { error });
+  });
+
+  it.each([403, 500])("action の %d は固定文言に丸める", (status) => {
+    expect(curateMutationErrorMessage(actionError(status))).toBe(MUTATION_ERROR_FALLBACK_MESSAGE);
   });
 
   it("固定文言は日本語で、原因ではなく次の行動を伝える", () => {

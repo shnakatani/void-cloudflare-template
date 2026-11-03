@@ -24,14 +24,44 @@ export function pathAccess(pathname: string): PathAccess {
   return "public";
 }
 
-export function authRedirectPath(access: PathAccess, signedIn: boolean): string | null {
+/** 画面を開く要求の method。redirect の行き先を描くのは、この要求だけである */
+const DOCUMENT_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD"]);
+
+/**
+ * 通す method。CORS の preflight は資格情報を付けずに送られるので、常に未ログインに見える。応答が ok status
+ * (200-299) でないと preflight が失敗し、ログインした別の origin の本来の要求が送られない (Fetch Standard の
+ * 「HTTP responses」と「CORS-preflight fetch」)。preflight とそれ以外の `OPTIONS` は見分けず、すべて通す。
+ * 後ろの middleware か route の handler に答えさせる
+ */
+const OPTIONS_METHOD = "OPTIONS";
+
+/** middleware が要求に取る扱い。`redirect` は `path` へ送り、`unauthorized` は 401 で止め、`pass` は通す */
+export type AuthGuard =
+  | { readonly kind: "redirect"; readonly path: string }
+  | { readonly kind: "unauthorized" }
+  | { readonly kind: "pass" };
+
+const PASS: AuthGuard = { kind: "pass" };
+
+/**
+ * middleware が要求に取る扱いを決める。
+ *
+ * 送るのは画面を開く要求 (GET・HEAD) だけにする。OPTIONS (CORS の preflight を含む) は通す。保護する path への、
+ * それ以外の method の未ログインの要求は 401 で止める。
+ * 書き込みの要求を redirect すると、Void の `action()` は行き先のページを成功として受け取り、保存していないのに
+ * 成功の通知が出て、入力が消える (ADR-0053)
+ */
+export function authGuard(access: PathAccess, signedIn: boolean, method: string): AuthGuard {
+  if (method === OPTIONS_METHOD) return PASS;
+  const opensDocument = DOCUMENT_METHODS.has(method);
   switch (access) {
     case "protected":
-      return signedIn ? null : LOGIN_PATH;
+      if (signedIn) return PASS;
+      return opensDocument ? { kind: "redirect", path: LOGIN_PATH } : { kind: "unauthorized" };
     case "guest-only":
-      return signedIn ? HOME_PATH : null;
+      return signedIn && opensDocument ? { kind: "redirect", path: HOME_PATH } : PASS;
     case "public":
-      return null;
+      return PASS;
     default: {
       const unhandled: never = access;
       throw new Error(`unhandled PathAccess: ${String(unhandled)}`);

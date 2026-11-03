@@ -111,7 +111,7 @@ function routeParams(params: unknown): Record<string, string> | undefined {
  * | 422 のフィールドのエラー | `onValidationError` に渡して `false`。渡していないときと、エラーが空のときは、警告を残して toast に出す |
  * | それ以外の `ok: false` | 固定の文言の toast に出して `false` |
  * | 取り消し (`AbortError`。送信中の遷移、`router.refresh()`、次の action) | 何も出さずに `false`。Void の `useForm` も同じく握る |
- * | それ以外の throw (401・403・500・502・ネットワーク) | 生の error を警告に残し、固定の文言の toast に出して `false` |
+ * | それ以外の throw (401・403・500・502・ネットワーク) | 生の error を警告に残し、toast に出して `false`。401 はログインし直しを案内する文言、ほかは固定の文言 (`curateMutationErrorMessage`) |
  *
  * 失敗の通知を `run` が持つので、呼び出し側が書き忘れても無通知にならない。
  * throw を error boundary へ渡さないのは、Action の reject は `useTransition` を呼んだ部品から境界へ投げられ、

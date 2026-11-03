@@ -14,7 +14,7 @@ import {
   noteUpdateSchema,
 } from "@/features/notes/schema";
 
-// /notes は middleware が未ログインを /login へ送る (src/features/auth/access.ts)。requireAuth は、そこを抜けた要求を 401 で止める
+// /notes への未ログインの要求は middleware が止める (src/features/auth/access.ts)。requireAuth は user を読み、middleware を抜けた要求も 401 で止める
 export const loader = defineHandler((c) => loadNotesPage(db, requireAuth(c).id, c.req.query()));
 
 export type Props = InferProps<typeof loader>;

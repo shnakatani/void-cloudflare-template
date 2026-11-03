@@ -40,6 +40,7 @@ Void 1.4.0 は、この要求を 2 か所で扱う。2026-11-02 に `vp preview`
 ## Consequences
 
 - 別の origin の frontend からこのアプリの API を呼ぶなら、その origin を `auth.ts` の `trustedOrigins` に足す。足さないと、その frontend の書き込みはログインしていない要求になる (Void の docs「Authentication」の Behavior)
+- 守る path (ADR-0053 の `PROTECTED_PATHS`) への、`trustedOrigins` に無い別の origin からの書き込みの要求は、page の action の判定より先に、ADR-0053 の middleware が 401 で止める。cookie を捨てられて未ログインになるためで、403 ではなく 401 が返る。`trustedOrigins` の origin からログインした cookie を付けて送ると、middleware を通り、page の action の判定が 403 を返す
 - `GET` の要求は cookie を捨てる判定も page の action の判定も通らない。書き込みを `GET` の handler に置くと、別の origin から session のまま走る
 
 ## 出典
