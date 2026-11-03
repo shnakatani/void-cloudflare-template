@@ -7,6 +7,7 @@ import { createNote } from "./queries.server";
 
 const USER_A = "user-a";
 const USER_B = "user-b";
+const SEARCH_MARKER = "search-term-marker";
 
 describe("loadNotesPage", () => {
   let testD1: TestD1;
@@ -50,12 +51,40 @@ describe("loadNotesPage", () => {
     expect(data.dialog).toEqual({ kind: "edit-not-found", id: null });
   });
 
-  it("読み込みに失敗したら throw せず、一覧は null、編集は読み込めないダイアログを返し、error を残す", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("読み込みに失敗したら throw せず、一覧は null、編集は読み込めないダイアログを返す", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     await testD1.d1.exec("DROP TABLE notes");
     const data = await loadNotesPage(testD1.db, USER_A, { edit: "1" });
     expect(data.notes).toBeNull();
     expect(data.dialog).toEqual({ kind: "edit-failed", id: 1 });
-    expect(error).toHaveBeenCalledTimes(2);
+  });
+
+  it("読み込みの失敗を 1 行の JSON で残し、stack と原因を持ち、検索語を載せない", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await testD1.d1.exec("DROP TABLE notes");
+    await loadNotesPage(testD1.db, USER_A, { q: SEARCH_MARKER, edit: "1" });
+
+    const lines = error.mock.calls.map((args: unknown[]) => {
+      expect(args).toHaveLength(1);
+      expect.assert(typeof args[0] === "string");
+      return args[0];
+    });
+    for (const line of lines) {
+      expect(line).not.toContain("\n");
+      expect(line).not.toContain(SEARCH_MARKER);
+    }
+    const failure = {
+      error: expect.objectContaining({
+        stack: expect.stringMatching(/\n {4}at /),
+        cause: expect.objectContaining({ message: expect.stringContaining("no such table") }),
+      }),
+    };
+    expect(lines.map((line) => JSON.parse(line))).toEqual(
+      expect.arrayContaining([
+        { msg: "[notes] 一覧を読み込めない", ...failure },
+        { msg: "[notes] 編集する 1 件を読み込めない", id: 1, ...failure },
+      ]),
+    );
+    expect(lines).toHaveLength(2);
   });
 });
