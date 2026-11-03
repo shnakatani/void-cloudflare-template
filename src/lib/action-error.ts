@@ -1,5 +1,3 @@
-import * as v from "valibot";
-
 /**
  * page の action の失敗 (`VoidActionError`) の、このアプリが読む部分。
  * Void はこの class を `void/pages-client` (docs の User-Facing Imports に無い path) でしか export しないので、
@@ -28,23 +26,26 @@ export function isAbortError(error: unknown): boolean {
 }
 
 /**
- * Void の `ValidationError` が 422 の body に載せる形 (Void docs「Actions & Forms」の Validation Errors)。
- * `v.record` は配列も object として通すので、配列を先に除く
- */
-const fieldErrorsBodySchema = v.object({
-  errors: v.pipe(
-    v.unknown(),
-    v.check((errors) => !Array.isArray(errors)),
-    v.record(v.string(), v.string()),
-  ),
-});
-
-/**
  * 422 の body からフィールドのエラー (`{ <field 名>: <文言> }`) を取り出す。形が違えば `null`。
+ * Void の `ValidationError` は `{ errors: { <field 名>: <文言> } }` を返す (Void docs「Actions & Forms」の Validation Errors)。
  * Void の `getValidationErrors` は `errors` が配列でない object なら値を見ずに返すが、文言でない値は field に描けないので、
- * 値まで文字列であることを確かめる
+ * 値まで文字列であることを確かめる。valibot で書かないのは、この module が `mutation-error.ts` 経由で layout の
+ * chunk に入り、valibot を使わないページにも valibot を運ぶため
  */
 export function fieldErrorsOf(body: unknown): Record<string, string> | null {
-  const parsed = v.safeParse(fieldErrorsBodySchema, body);
-  return parsed.success ? parsed.output.errors : null;
+  if (typeof body !== "object" || body === null || !("errors" in body)) {
+    return null;
+  }
+  const { errors } = body;
+  if (typeof errors !== "object" || errors === null || Array.isArray(errors)) {
+    return null;
+  }
+  const fieldErrors: Record<string, string> = {};
+  for (const [name, message] of Object.entries(errors)) {
+    if (typeof message !== "string") {
+      return null;
+    }
+    fieldErrors[name] = message;
+  }
+  return fieldErrors;
 }
