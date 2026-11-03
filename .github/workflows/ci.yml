@@ -54,8 +54,8 @@ jobs:
         env:
           REPORT_URL: ${{ steps.upload-report.outputs.artifact-url }}
       - run: vp run verify:time-zones
-      # preview の Worker は BETTER_AUTH_SECRET をルートの .env からだけ受ける。build が .env を dist/ssr/.dev.vars へ
-      # 写すので verify:build より前に書く。dist/ は artifact に上げない (docs/guides/auth.md「preview に secret を渡す」)
+      # preview の Worker は BETTER_AUTH_SECRET をルートの .env からだけ受ける。vp preview が起動のたびに読むので、
+      # preview を起動する検査より前に書く (docs/guides/auth.md「preview に secret を渡す」)
       - run: echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" > .env
       - run: vp run verify:build
       - run: vp run verify:security-headers

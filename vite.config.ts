@@ -22,7 +22,7 @@ const verifySteps = {
 };
 
 export default defineConfig({
-  // Vite の .env 読み込みを切る (ADR-0004、vitejs/vite#19373)。Void は別に、ルートの .env を読んで build が dist/ssr/.dev.vars へ写す。
+  // Vite の .env 読み込みを切る (ADR-0004、vitejs/vite#19373)。Void は別に、vp preview の起動のたびにルートの .env を読んで Worker に渡す。
   // BETTER_AUTH_SECRET はここ経由で preview の Worker に届く (docs/guides/auth.md「preview に secret を渡す」)
   envDir: false,
   staged: {
