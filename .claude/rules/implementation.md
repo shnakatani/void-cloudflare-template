@@ -9,6 +9,7 @@ paths:
   - "db/**"
   - "email/**"
   - "durable-objects/**"
+  - "env.ts"
 ---
 
 # 実装ワークフロー
@@ -154,6 +155,14 @@ lint では見ないのでレビューで見る。
 - 食い違いを `suppressHydrationWarning` で抑えない。食い違った文字列がそのまま出る (`docs/guides/dates-and-time-zones.md`「タイムゾーンを明示して整形する理由」)
 - ブラウザの TZ や今日で描く部品 (Popover の外の Calendar など) は、部品の中で `use(browser())` を呼び、すぐ外を自前の `<Suspense>` で包む。省くと Void がページを包む Suspense が受け、初めの HTML からページごと消え、何も報告されない (`docs/guides/dates-and-time-zones.md`「ブラウザでだけ描く部品を組む」)
 - 呼び出し側が Suspense を置くとは限らない hook でブラウザの値を返すときは、`use(browser())` を呼ばず、`useSyncExternalStore` の `getServerSnapshot` で server の描画と hydration の間の値を返す (`docs/guides/dates-and-time-zones.md`「ブラウザでだけ描く部品を組む」)
+
+## 環境変数は env.ts で宣言する
+
+- アプリが読む環境変数はルートの `env.ts` の `defineEnv` に宣言し、`void/env` の `env` で読む。`process.env`・`import.meta.env` で読まず、`src/env.d.ts` の `ImportMetaEnv` に宣言しない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
+- server の値はローカルは `.env`、本番は `void secret put` で渡し、`void.config.ts` の `worker.vars` に置かない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
+- `VITE_` で始まる値はブラウザに埋め込まれるので秘密を置かない。本番の値は build のシェルか schema の `default` で渡し、build は `.env` の値を読まない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
+- `BETTER_AUTH_SECRET` は `env.ts` に宣言しない。宣言すると、secret の要らない dev でも `.env` に値が要る (ADR-0004)
+- 宣言と `.env` を変えたら `vp exec void env check` を打つ。dev の server は欠けを警告にしか出さない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
 
 ## 依存はバレルから引かない
 

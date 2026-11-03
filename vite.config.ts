@@ -22,8 +22,9 @@ const verifySteps = {
 };
 
 export default defineConfig({
-  // Vite の .env 読み込みを切る (ADR-0004、vitejs/vite#19373)。Void は別に、vp preview の起動のたびにルートの .env を読んで Worker に渡す。
-  // BETTER_AUTH_SECRET はここ経由で preview の Worker に届く (docs/guides/auth.md「preview に secret を渡す」)
+  // Vite の .env 読み込みを切り、ルートの .env の読み手を Void だけにする (ADR-0004、vitejs/vite#19373)。
+  // Void は dev で env.ts に宣言した VITE_* だけを .env からブラウザへ渡し、vp preview の起動のたびに .env を
+  // Worker に渡す。BETTER_AUTH_SECRET はここ経由で preview の Worker に届く (docs/guides/auth.md「preview に secret を渡す」)
   envDir: false,
   staged: {
     // --no-error-on-unmatched-pattern: staged が ignorePatterns の中のファイルだけのとき対象ゼロを error にしない

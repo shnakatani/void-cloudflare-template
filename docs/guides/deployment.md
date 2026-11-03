@@ -84,7 +84,8 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 ### 本番の秘密を足す
 
-- 本番の server 側の値は `vp exec void secret put <NAME>` で渡す。`.env` は deploy されない ([Void docs「Environment variables」][]、[Void docs「Cloudflare」][] の Databases and secrets)。ローカルの値の置き方は `docs/guides/dependencies-and-toolchain.md`「秘密を足す」にある
+- 本番の server 側の値は、`env.ts` に宣言してから `vp exec void secret put <NAME>` で渡す。`void secret put` は値を `env.ts` の宣言で検証してから送る。`.env` は deploy されない ([Void docs「Environment variables」][]、[Void docs「Cloudflare」][] の Databases and secrets)。宣言とローカルの値の置き方は `docs/guides/dependencies-and-toolchain.md`「環境変数を足す」にある
+- 宣言した値が本番に揃っているかは `vp exec void env check --remote` で確かめる。deploy も同じ検証を走らせ、必須の server の値が本番に無ければ upload しない ([Void CLI reference「Secrets and Environment」][] の `void env check`)
 - `.void/project.json` の無い作業ツリー (clone し直したもの、`git worktree add` で作ったもの、別の machine のもの) では、`void secret` の前に `vp exec void connect --platform cloudflare` を打つ。`void secret` は `--platform` を受けず、connect が保存する向き先だけを読む ([Void CLI reference「Secrets and Environment」][])。打たないと ``Not logged in. Run `void account login` first.`` で止まる (Void 1.4.0 の `cli/secret.ts`。理由は「向き先を clone ごとに connect で保存する理由」)
 - ブラウザへ出す `VITE_*` の値は build のときに要るので、workflow の Deploy の step の `env` に渡す ([Void docs「Deployment」][] の Environment variables)
 

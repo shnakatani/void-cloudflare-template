@@ -4,6 +4,7 @@
 
 | 決定                                                                                                                                                       | ADR      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 開発環境のツールチェーンは mise と Vite+ に寄せる                                                                                                          | ADR-0004 |
 | mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                                             | ADR-0016 |
 | tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ                                   | ADR-0047 |
 | Void のページの context に依存する部品は、export された router・navigation・shared の context を通して story とブラウザテストで描く                        | ADR-0048 |
@@ -133,10 +134,10 @@ export default defineAuth(({ defaults }) => ({
 `vp preview` と `vp run verify` の成果物の検査は、`BETTER_AUTH_SECRET` が無いと要求ごとに 500 を返す。dev は無くても固定の値で動く ([Void docs「Authentication」][] の Behavior)。
 
 ```bash
-printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" > .env
+printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
 ```
 
-- secret はルートの `.env` に書く。`vp preview` は起動のたびに `.env` を読み、そこにある名前を Worker の secret として渡す。build は値を成果物に写さないので、`.env` を書き換えたら preview を起動し直せばよく、build し直さなくてよい (Void 1.5.0 の `plugin-cloudflare-preview.ts`。2026-11-03 に、`.env` を外して起動した preview が要求ごとに 500 を返すことを確かめた)
+- secret はルートの `.env` に足す。`env.ts` には宣言しない (ADR-0004)。`vp preview` は起動のたびに `.env` を読み、そこにある名前を Worker の secret として渡す。build は値を成果物に写さないので、`.env` を書き換えたら preview を起動し直せばよく、build し直さなくてよい (Void 1.5.0 の `plugin-cloudflare-preview.ts`。2026-11-03 に、`.env` を外して起動した preview が要求ごとに 500 を返すことを確かめた)
 - 渡す名前は `.env` の行から決まるので、shell の環境変数だけに置いた secret は preview の Worker に届かない
 - ルートに `.dev.vars` を置かない。Void は `void/env supports one local file: .env` で起動を止める
 - `.env` は ignore 済み。CI は `vp run verify:security-headers` より前の step で、`openssl rand` の値を `.env` に書く (`.github/workflows/ci.yml`)

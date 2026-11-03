@@ -56,14 +56,27 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 - symlink なので、Void を上げると中身も上がる。`skills-lock.json` には載せない。`skills-lock.json` は GitHub から写した skill (`shadcn`・`valibot`) の hash を持つもので、symlink の skill は Void の版が中身を決める
 - symlink の先は `node_modules` の中なので、`vp install` の前は辿れない。辿れないことを壊れたと取らず、`vp install` のあとに見る
 
-### 秘密を足す
+### 環境変数を足す
 
-秘密は Void の形で渡す。ローカルの値はルートの `.env` に置き、本番の server 側の値は `void secret put` で渡す ([Void docs「Environment variables」][])。本番へ渡す前に要る手順は `docs/guides/deployment.md`「本番の秘密を足す」にある。
+アプリが読む環境変数は、ルートの `env.ts` に `defineEnv` で宣言し、`void/env` の `env` で読む ([Void docs「Environment variables」][]、ADR-0004)。開発の道具 (タスク、スクリプト) だけが読む値は `.mise.toml` の `[env]` に置く (`docs/guides/vite-configuration.md`「タスクを足す」)。
 
+1. `env.ts` の `defineEnv` に、名前と型を足す。型は `void/env` の `string()`・`number()`・`boolean()`・`url()`・`email()`・`oneOf([...])`・`json<T>()` か、Standard Schema の validator で書く。`.optional()` と `.default(value)` を付けられる。秘密を `default` に書かない ([Void docs「Environment variables」][] の Define the schema)
+2. コードでは `import { env } from "void/env"` で読み、`env.<名前>` を使う。`process.env`・`import.meta.env` で読まない。`env.ts` の検証と型を通らない。`src/env.d.ts` の `ImportMetaEnv` には宣言しない
+3. ローカルの値はルートの `.env` に書く。dev の server、`vp preview`、`void db` などが同じ `.env` を読み、shell の値がそれに勝つ。値に `#` を含むときは引用符で囲む ([Void docs「Environment variables」][] の Local development)
+4. `vp exec void env check` を打ち、`.env` と shell の値が宣言を満たすかを確かめる。欠けた値と不正な値で exit 1 になる。dev の server は欠けを警告にしか出さない ([Void CLI reference「Secrets and Environment」][] の `void env check`)
+5. 本番へ出すなら `docs/guides/deployment.md`「本番の秘密を足す」の手順で値を渡す
+
+| 値の種類     | 判別                        | ローカル | 本番                                                            |
+| ------------ | --------------------------- | -------- | --------------------------------------------------------------- |
+| server の値  | 名前が `VITE_` で始まらない | `.env`   | `void secret put`。`void.config.ts` の `worker.vars` に置かない |
+| ブラウザの値 | 名前が `VITE_` で始まる     | `.env`   | build のシェルの環境変数か、schema の `default`                 |
+
+- `VITE_` で始まる値はブラウザの JavaScript に埋め込まれるので、秘密を置かない。build は `.env` のブラウザの値を読まない。手元の値が黙って本番の設定になるのを防ぐためである ([Void docs「Environment variables」][] の Client values)
+- server の値を `worker.vars` に置くと、production の build が弾く ([Void docs「Configuration」][] の `worker`)
+- `BETTER_AUTH_SECRET` は `env.ts` に宣言しない (ADR-0004)。preview への渡し方は `docs/guides/auth.md`「preview に secret を渡す」にある
 - `.env` は Git に入れない。`.gitignore` の `.env` / `.env.*` が覆う
-- Void は `vp preview` の起動のたびに `.env` を読み、build の成果物には値を写さない (Void 1.5.0)。`.env` 以外の dotenv ファイル (`.env.local`・`.env.production`・`.dev.vars`) は扱わない ([Void docs「Environment variables」][] の Local development)。暗号化した env ファイルを commit する形は、Void が読まないので使えない
+- `.env` 以外の dotenv ファイル (`.env.local`・`.env.production`・`.dev.vars`) は Void が扱わない ([Void docs「Environment variables」][] の Local development)。暗号化した env ファイルを commit する形は、Void が読まないので使えない
 - Vite の `.env` 読み込みは `envDir: false` で切ってあり、`.env` の読み手は Void の 1 つである (ADR-0004)
-- いま `.env` が持つ `BETTER_AUTH_SECRET` の渡し方は `docs/guides/auth.md`「preview に secret を渡す」にある
 
 ### Dependabot の alerts を有効にする
 
@@ -255,8 +268,10 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 [dependabot-core「pnpm_lockfile_updater.rb」]: https://github.com/dependabot/dependabot-core/blob/d4120cab39d50362a51b1c4fb307e818fed15868/npm_and_yarn/lib/dependabot/npm_and_yarn/file_updater/pnpm_lockfile_updater.rb#L285-L295
 [gitignore(5)]: https://git-scm.com/docs/gitignore
 [git-add(1)]: https://git-scm.com/docs/git-add
-[Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
+[Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md
 [Void docs「Edge Prerendering」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/prerendering.md
+[Void docs「Configuration」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/config.md
+[Void CLI reference「Secrets and Environment」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/secrets.md
 [Vite+ docs「Package Management」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/install.md
 [Vite+ docs「Environment」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/env.md
 [Vite+ docs「Commit Hooks」]: https://github.com/voidzero-dev/vite-plus/blob/v1.0.0/docs/guide/commit-hooks.md
