@@ -56,7 +56,7 @@ export function NoteSearchField({
           </InputGroupAddon>
         </InputGroup>
         {error === null ? null : (
-          // FieldError は role="alert" で、打鍵の途中に読み上げが割り込むので使わない (ADR-0026)。
+          // FieldError は role="alert" で、打鍵の途中に読み上げが割り込むので使わない (ADR-0057)。
           // 文言の幅で検索欄を広げない。広げると、打っている最中に入力欄が横へ動く
           <p id={errorId} className="w-0 min-w-full text-sm text-destructive">
             {error}
