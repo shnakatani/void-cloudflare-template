@@ -1,11 +1,13 @@
 # デプロイ
 
-Cloudflare の自分のアカウントへ本番を出す手順と、`.github/workflows/void-deploy.yml` を有効にする・止める手順と、その形にしている理由を持つ。
+Cloudflare の自分のアカウントへ本番を出す手順と、`.github/workflows/void-deploy.yml` を有効にする・止める手順と、本番の Worker の設定 (配信先、ログ、要求の body の上限) と、その形にしている理由を持つ。
 
 | 決定                                                                                                                    | ADR      |
 | ----------------------------------------------------------------------------------------------------------------------- | -------- |
 | DB は void/db と D1 で持ち、migration は auth の table ごと void db generate で生成して commit する                     | ADR-0052 |
+| 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                             | ADR-0053 |
 | 本番へは GitHub Actions から void deploy で Cloudflare へ出し、deploy しない repository では workflow を Disable にする | ADR-0061 |
+| D1 の read replication は Void の既定のまま有効にし、要求をまたぐ読みの遅れを受け入れる                                 | ADR-0067 |
 
 ## how-to
 
@@ -33,6 +35,39 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 - Worker の version に preview の URL が無いときは、repository の変数に `CLOUDFLARE_WORKERS_SUBDOMAIN` を置く。Cloudflare Access が readiness の URL を守るときは、`production` の secret に `CF_ACCESS_CLIENT_ID` と `CF_ACCESS_CLIENT_SECRET` を置く。workflow はどちらも渡している ([Void docs「Cloudflare」][] の Deploying from CI)
 - Access が route か Custom Domain を守り、`workers_dev` が `false` なら、その origin を `CF_ACCESS_READINESS_ORIGIN` として workflow の Deploy の step の `env` に足す。`void.config.ts` に書いた値は無視される ([Void docs「Cloudflare」][] の Cloudflare Access)
 - secret を置く前の push では、Deploy の step が ``Cloudflare authentication is required. Set CLOUDFLARE_API_TOKEN in CI, or run `void cloudflare login` in an interactive terminal.`` で失敗する (Void 1.4.0 の `cli/cloudflare-auth.ts`)。出さない repository なら「deploy しない repository で workflow を止める」に従う
+
+### 本番の配信先を custom domain にする
+
+本番は custom domain か route で配る。workers.dev は試しに出す先で、本番の置き場にしない ([Cloudflare docs「workers.dev」][]、[Cloudflare Workers「Best Practices」][] の Set up custom domains or routes correctly)。
+
+1. domain の zone を、deploy したアカウントの Cloudflare に置く。custom domain は Cloudflare が zone に DNS の record と証明書を作る ([Void CLI reference「Custom Domains」][] の `void domain add`)
+2. `.void/project.json` の無い作業ツリーでは、先に `vp exec void connect --platform cloudflare` を打つ。`void domain` は `--platform` を受けず、connect が保存する向き先を読む (Void 1.4.0 の `cli/domain-args.ts` と `cli/domain.ts`。理由は「向き先を clone ごとに connect で保存する理由」)
+3. 次を打つ。route はその場で Worker に反映される。`void.lock.json` が変わるので commit する ([Void docs「Configuration」][] の `cloudflare`)
+
+   ```bash
+   vp exec void domain add app.example.com
+   ```
+
+4. custom domain で開けることを確かめてから、`void.config.ts` の `cloudflare` に `workers_dev: false` を足して deploy する。書かないと、Void は dashboard の workers.dev の状態をそのまま残す (Void 1.4.0 の `deploy-cloudflare/src/version.ts` の `readCloudflareTriggerConfig`)。`workers_dev: false` で止まるのは `<Worker>.<subdomain>.workers.dev` だけで、Version URL と Preview URL は残る ([Cloudflare docs「workers.dev」][] の Disabling workers.dev)
+
+- Cloudflare Access が custom domain を守るなら、「本番へ初めて出す」の `CF_ACCESS_READINESS_ORIGIN` の行に従う
+- 配信先を staging と production に分けるときも、Wrangler の名前つきの環境 (`env`) は使わない (「名前つきの環境を使わない理由」)
+
+### Workers Logs と Traces の率を変える
+
+- `void.config.ts` の `cloudflare.observability` の `head_sampling_rate` を書き換えて deploy する。logs と traces で別の率を持てる ([Cloudflare docs「Traces」][] の Sampling)。いまの率の理由は「Workers Logs と Traces の率を決めた理由」
+- 止めるときは `enabled: false` を書く。`observability` ごと消すと、Void は deploy で設定を送らず、Worker は前の値のまま残る (Void 1.4.0 の `deploy-cloudflare/src/version.ts` の `readCloudflareTriggerConfig`。1.5.0 も同じ)
+
+### 上限より大きな body を受ける route を足す
+
+`middleware/00.body-limit.ts` の上限は、`routes/` の handler・page の action・auth の endpoint のすべてに、それぞれより先に掛かる (Void 1.4.0 の `router/compile.ts` は global の middleware を `/api/auth/*` の handler より前に登録する)。
+
+- file の upload のように上限を超える body を受ける route を足すときは、その path を `middleware/00.body-limit.ts` で上限から外し、handler で body を stream で読む。全部を読むと、128 MB の memory を超えて Worker が落ちる ([Cloudflare Workers「Best Practices」][] の Stream request and response bodies、[Cloudflare docs「Workers Limits」][] の Memory)
+- 上限の値を上げて済ませない。上限は全 route に 1 つの値で掛かるので、上げると、body を全部読むほかの route と auth の endpoint も同じ大きさの body を受けるようになる
+
+### read replication を切ったアプリを deploy する
+
+- D1 の read replication を切ったアプリは、provision が走る deploy のたびに Void が replication を `auto` に戻す。走る条件は ADR-0067。その deploy のあとに `docs/guides/database.md`「D1 の read replication を切る」の手順で確かめ直し、切り直す (Void 1.4.0 と 1.5.0 の `cli/provision.ts` の `enableD1ReadReplicationViaApi`)
 
 ### deploy しない repository で workflow を止める
 
@@ -80,9 +115,49 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 - `.void/` は commit しない。Void の docs は `.void/` を生成物とローカルの状態の置き場として ignore する ([Void docs「Project Structure」][] の `.void/`)。`.void/project.json` だけを commit する形は、Void platform の CI が project を選ぶためのもので ([Void docs「First Deployment」][])、Cloudflare へ出す workflow は `--platform cloudflare` を渡すので要らない。テンプレートの `.gitignore` も `void init` の出力どおり `.void` を ignore する
 - clone ごとに connect を打つことになるが、アカウントは commit した `void.lock.json` から読まれ、選び直しにはならない (Void 1.4.0 の `cli/cloudflare-connect.ts` は設定にあるアカウントを優先する)
 
+### Workers Logs と Traces の率を決めた理由
+
+[Cloudflare Workers「Best Practices」][] の Enable Workers Logs and Traces は、本番へ出す前に logs と traces を有効にし、`head_sampling_rate` で量を抑えるよう案内する。率は同じ節の例の値にした。
+
+| 対象   | 率           | 理由                                                                                                                                                                                                                                                                                    |
+| ------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| logs   | `1` (すべて) | ときどき起きる失敗は、起きた要求のログが残っていないと調べられない (同じ節)。率を下げると、`console.error` に残した失敗も同じ率で落ちる                                                                                                                                                 |
+| traces | `0.01` (1%)  | 2026-12-01 から、traces は logs と同じ取り込みの枠を使う。Free の枠は 1 日 0.5 GB で、超えるとその日の取り込みが止まる ([Cloudflare docs「Observability pricing」][])。traces の既定の率は `1` なので ([Cloudflare docs「Traces」][] の Sampling)、書かないと traces が logs の枠を食う |
+
+- `observability.enabled: true` だけでは traces は付かない。traces は `traces.enabled` で有効にする ([Cloudflare docs「Traces」][] の How to enable tracing)
+- `cloudflare.observability` は、Void が生成する Cloudflare の設定と `dist/ssr/wrangler.json` にそのまま出る ([Void docs「Configuration」][] の `cloudflare`。2026-11-03、Void 1.4.0 の `vp build` で確かめた)。deploy は、書いた値を Worker の設定へ送る (Void 1.4.0 と 1.5.0 の `cli/cf-version-runner.ts` と `cli/cf-worker-settings.ts`)
+- 料金と枠は 2026-11-03 に読んだ docs の値で、Workers Logs の料金は 2026-11-30 までは別の表による ([Cloudflare docs「Workers Logs」][] の Pricing)
+
+### 要求の body の上限を 100 KiB にする理由
+
+[Cloudflare Workers「Best Practices」][] の Stream request and response bodies は、全部を読む body (JSON の payload など) には、読む前に上限を課すよう案内する。Worker の memory は isolate ごとに 128 MB で、1 つの isolate が並行する多くの要求を受ける ([Cloudflare docs「Workers Limits」][] の Memory)。
+
+- page の action の validator と Better Auth の endpoint は、body を全部読んでから扱う。どちらも、フォームの値の JSON を受ける
+- Cloudflare が要求の body に掛ける上限は、zone の plan で決まり、Free と Pro で 100 MB ([Cloudflare docs「Workers Limits」][] の Request and response limits)。memory の 128 MB を守る値ではない
+- フォームの JSON の大きさは、入力欄の上限 (スキーマの `v.maxCodePoints`) の合計の 6 倍と項目の名前で上から押さえられる。UTF-8 は 1 code point を最大 4 byte で書き、JSON が `\uXXXX` に escape する文字は 6 byte になる。100 KiB (102,400 byte) は、入力欄の上限が合わせておよそ 17,000 code point (102,400 ÷ 6) までのフォームを受ける
+- 100 KiB は memory の 128 MB の 0.08% で、並行する要求が上限ちょうどの body を同時に読んでも memory を圧迫しない
+- 実装は Hono の `bodyLimit` を global の middleware に置く形で、[Void docs「Hono」][] の Built-in Middleware の書き方に従う。`Content-Length` の無い body は、読んだ量が上限を超えた時点で止める ([Hono docs「Body Limit Middleware」][])
+
+### 静的な asset も Worker を通る理由と課金
+
+このアプリでは、`dist/client/` の静的な asset (hash 付きの JavaScript、`public/` のファイル) への要求もすべて Worker を起こす。build の `dist/ssr/wrangler.json` は `assets.run_worker_first` を `["/**"]` にする (2026-11-03、Void 1.4.0 の `vp build`)。
+
+- Void は、hash 付きの JavaScript を Worker を通さずに配る形を、global の middleware が無く、ヘッダ・redirect・rewrite の rule が無いアプリにだけ組む ([Void docs「Static Assets Caching」][] の Native Cloudflare deployments、Void 1.4.0 の `asset-worker-bypass.ts`)。このアプリは global の middleware (ADR-0053、`middleware/00.body-limit.ts`) とヘッダの rule (`docs/guides/security-headers.md`) を持つので、この形にならない。Void 1.5.0 の docs は条件の一覧を削ったが、`asset-worker-bypass.ts` は 1.4.0 と同じである
+- Worker を起こさない asset の要求は無料で数に上限が無い。`run_worker_first` に当たる要求は Worker の要求として数えて課金され、Workers Free の要求の上限を超えると asset の要求も 429 になる ([Cloudflare docs「Static Assets Billing and Limitations」][])
+- Worker が例外を投げると、asset の要求も失敗する。2026-11-03 に Void 1.4.0 の `vp preview` で、`BETTER_AUTH_SECRET` の無い状態の `/robots.txt` が auth の middleware の例外で 500 になった
+- 外す形にはしない。外すには global の middleware とヘッダの rule をやめることになり、ページの保護 (ADR-0053) とセキュリティヘッダ (ADR-0051) を失う
+- asset も Worker を通るので、`routing.alwaysUseHttps` の redirect は asset の要求にも掛かる。[Void docs「Redirects」][] の HTTP to HTTPS が zone の Always Use HTTPS を勧めるのは、Worker を通さずに配る asset のためで、このアプリでは要らない
+
+### 名前つきの環境を使わない理由
+
+[Cloudflare Workers「Best Practices」][] の Configure environments deliberately は、Wrangler の環境 (`env`) で staging と production を別の Worker に分ける形を案内する。Void はこの形に対応しない。[Void docs「Cloudflare」][] の Scope and limitations は "Named Cloudflare environments aren't supported. Use a separate Void project config for each target." と書く。
+
+- staging を足すときは、Void の project の設定を出す先ごとに分ける。分けた設定の置き方 (ファイルの名前、CI での選び方) を Void の docs は書いていない (2026-11-03、Void 1.4.0 と 1.5.0)
+- `.github/workflows/void-deploy.yml` は main を `production` の 1 つへ出す (ADR-0061)。テンプレートは staging を持たない
+
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指す。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。Cloudflare docs と Hono docs は 2026-11-03 に読んだ (Workers「Best Practices」は 2026-10-12 更新)。
 
 [Void docs「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/deployment.md
 [Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/integrations/cloudflare.md
@@ -97,3 +172,16 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 [GitHub Docs「Deployments and environments」]: https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
 [GitHub Docs「Secrets reference」]: https://docs.github.com/en/actions/reference/security/secrets
 [GitHub Docs「Disabling and enabling a workflow」]: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows
+[Void docs「Configuration」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/config.md
+[Void CLI reference「Custom Domains」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/domains.md
+[Void docs「Hono」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/integrations/hono.md
+[Void docs「Static Assets Caching」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/edge/static-assets.md
+[Void docs「Redirects」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/edge/redirects.md
+[Cloudflare Workers「Best Practices」]: https://developers.cloudflare.com/workers/best-practices/workers-best-practices/
+[Cloudflare docs「workers.dev」]: https://developers.cloudflare.com/workers/configuration/routing/workers-dev/
+[Cloudflare docs「Workers Limits」]: https://developers.cloudflare.com/workers/platform/limits/
+[Cloudflare docs「Workers Logs」]: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+[Cloudflare docs「Traces」]: https://developers.cloudflare.com/workers/observability/traces/
+[Cloudflare docs「Observability pricing」]: https://developers.cloudflare.com/observability/pricing/
+[Cloudflare docs「Static Assets Billing and Limitations」]: https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/
+[Hono docs「Body Limit Middleware」]: https://hono.dev/docs/middleware/builtin/body-limit
