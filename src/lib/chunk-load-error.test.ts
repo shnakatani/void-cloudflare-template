@@ -44,11 +44,15 @@ describe("chunkLoadErrorDocumentLoad", () => {
     ).toBeNull();
   });
 
-  it("送信の行き先は action の URL で、開くページではないので開かない", () => {
-    const location = new URL("/b?create", home);
+  // redirect の先の chunk が読めない送信。server は書き込みを終えていて、redirect の先は client に見えない
+  it("送信中は、action の URL (action を持つページ) の文書を開く", () => {
+    const location = new URL("/b?create&new=", home);
     expect(
-      chunkLoadErrorDocumentLoad({ state: "submitting", location, method: "POST" }, home),
-    ).toBeNull();
+      chunkLoadErrorDocumentLoad(
+        { state: "submitting", location, method: "POST" },
+        new URL("/b?new=", home),
+      ),
+    ).toEqual({ kind: "assign", url: location });
   });
 
   it.each([

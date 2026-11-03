@@ -49,6 +49,20 @@ describe("ChunkLoadErrorRecovery", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
+  it("送信中に redirect の先の chunk が読めなければ、action の URL の文書を開く", async () => {
+    const actionUrl = new URL("/b?create&new=", window.location.origin);
+    const screen = await renderRecovery({
+      state: "submitting",
+      location: actionUrl,
+      method: "POST",
+    });
+    await expect.element(screen.getByRole("heading", { name: "ホーム" })).toBeVisible();
+
+    dispatchPreloadError();
+
+    expect(vi.mocked(loadDocument).mock.calls).toEqual([[{ kind: "assign", url: actionUrl }]]);
+  });
+
   it("idle で描いたあとに始まった遷移でも、event の時点の行き先の文書を開く", async () => {
     // layout は idle で mount され、遷移はそのあとに始まる。mount の時点の値を読む実装はここで落ちる
     const screen = await renderRecovery({ state: "idle", location: null, method: null });

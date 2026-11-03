@@ -5,13 +5,15 @@ export type DocumentLoad = { kind: "assign"; url: URL } | { kind: "reload" };
 
 /**
  * ページの chunk が読めなかったときに、文書ごと開く行き先と開き方を選ぶ (ADR-0049「chunk の読み込みの失敗」)。
- * GET の遷移の行き先だけを開く。送信 (`"submitting"`) の `location` は action の URL で、開くページではない
+ * 送信 (`"submitting"`) の `location` は action の URL で、server はもう書き込みを終えている。redirect の先は
+ * client に見えないので、action の URL を GET で開く。Void は GET の action の名前の key を素の query として
+ * 無視し、action を持つページを描く
  */
 export function chunkLoadErrorDocumentLoad(
   navigation: NavigationState,
   current: URL,
 ): DocumentLoad | null {
-  const destination = navigation.state === "loading" ? navigation.location : null;
+  const destination = navigation.state === "idle" ? null : navigation.location;
   if (!destination || !isSameOriginHttp(destination, current)) {
     return null;
   }
