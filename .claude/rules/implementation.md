@@ -85,13 +85,16 @@ lint では見ないのでレビューで見る。
 
 ## 遷移の行き先は path の定数で渡す
 
-型検査も lint も行き先を見ないのでレビューで見る (ADR-0059)。
+`Link` の `href` の文字列は型検査も lint も見ないのでレビューで見る (ADR-0059)。
 
-- アプリのページへ遷移する `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。Void 1.4.0 では在らない path を書いても、押すまで 404 に気付けない (ADR-0059)
+- アプリのページへ遷移する `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。`href` の文字列は在らない path でも型検査を通り、押すまで 404 に気付けない (ADR-0059)
+- path の定数は `"<path>" satisfies RoutePath` (`void/routes` の型) で書く。当てないと、ページを動かしたあとも古い path のまま型検査を通る (ADR-0059)
+- ページを足す・動かす・消したら、`vp exec void prepare` を打つか dev server を起動してから `vp check` を打つ。`vp check` は route の型を作り直さず、古い型のまま通る (ADR-0059)
 - `c.redirect` には、path の定数か URL を組む関数の値を `new URL(<値>, c.req.url).href` で絶対 URL にして渡す。相対の path は要求の query を行き先に混ぜる (`docs/guides/auth.md`「redirect を絶対 URL で書く理由」)
-- query を持つ URL は、query の組み方を持つ関数で組み、呼び出し側で `?` と `&` を連結しない (ADR-0059)
-- path の定数は URL を組む関数と別のモジュールに置き、そのモジュールは path の定数のほかを import しない。同じモジュールに置くと、リンクだけを描くページの client の chunk に検証のスキーマが入る (ADR-0059)
-- ページのファイルを動かしたら、その path の定数を直す。定数と `pages/` の対応は何も検査しない (ADR-0059)
+- query を持つ URL は、path の定数を `routeUrl(<定数>, { query })` (`void/routes`) に渡して組む関数で組み、呼び出し側で `?` と `&` を連結しない (ADR-0059)
+- `tsconfig.paths.json` に `void/routes` の `paths` を写さない。unit project で `void/routes` が `.d.ts` に解決し、`routeUrl is not a function` で壊れる (ADR-0047)
+- `router.visit` にも `routeUrl()` の文字列を渡し、行き先の object を渡さない。`Link` の `href` と `c.redirect` は文字列しか受けない (ADR-0059)
+- path の定数は URL を組む関数と別のモジュールに置き、そのモジュールは path の定数と型のほかを import しない。同じモジュールに置くと、リンクだけを描くページの client の chunk に検証のスキーマが入る (ADR-0059)
 
 ## ページのデータは loader の props で読む
 
@@ -118,7 +121,7 @@ lint では見ないのでレビューで見る。
 
 lint では見ないのでレビューで見る。
 
-- 追加と編集のダイアログは一覧のページの query (`<一覧>?new`、`<一覧>?edit=<id>`) で開き、Root は `QueryDialog` (`src/components/screens/query-dialog.tsx`) で描く。Dialog の Root を手で書かない。閉じる遷移、閉じ終わるまでの描画、中身の作り直し、開閉の読み上げ、読み込み中を書き写すことになる (ADR-0056)
+- 追加と編集のダイアログは一覧のページの query (`<一覧>?new=`、`<一覧>?edit=<id>`) で開き、Root は `QueryDialog` (`src/components/screens/query-dialog.tsx`) で描く。Dialog の Root を手で書かない。閉じる遷移、閉じ終わるまでの描画、中身の作り直し、開閉の読み上げ、読み込み中を書き写すことになる (ADR-0056)
 - `QueryDialog` の `blocksClose` には、そのダイアログ自身の保存の pending だけを渡し、キャンセルのボタンも同じ値で `disabled` にする。閉じる遷移が保存の送信を取り消す (ADR-0056)
 - `dialogKey` は種類と値の id から作る。id を含めないと、開いたまま別の値へ移ったとき form が前の値のまま残る (ADR-0056)
 - ダイアログを開くリンクに `prefetch` を渡さない。hover の時点の値でダイアログが開き、編集のフォームが古い値で始まる (ADR-0056)

@@ -164,7 +164,7 @@ Vite は使用中なら次の空き port へずらし (Vite docs の `server.por
 
 秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す (Void docs「Environment variables」: "Use `.env` for local values and `void secret put` for production server values")。`.env` 以外の dotenv ファイルを Void は扱わない。
 
-Void はルートの `.env` を読み、build が `dist/ssr/.dev.vars` へ写す。`vp preview` の Worker が secret を受けるのはこの経路だけである (Void 1.4.0 の観測)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
+Void はルートの `.env` を読み、`vp preview` の起動のたびにそこにある名前を Worker の secret として渡す。`vp preview` の Worker が secret を受けるのはこの経路だけである (Void 1.5.0 の `plugin-cloudflare-preview.ts`、2026-11-03)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
 
 `envDir: false` は `vite.config.ts` に 1 つだけ書く。
 テストの project は `vite.config.ts` の設定を継承するので (ADR-0037)、ビルドとテストで値が割れない。

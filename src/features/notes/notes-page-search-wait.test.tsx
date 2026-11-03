@@ -40,7 +40,7 @@ describe("NotesPage の検索の待ち", () => {
     await field.fill("ab");
     await screen.getByRole("link", { name: /を追加/ }).click();
     await waitPastSearchDebounce();
-    expect(router.visits.map((visit) => visit.url)).toEqual(["/notes?new&q=x"]);
+    expect(router.visits.map((visit) => visit.url)).toEqual(["/notes?new=&q=x"]);
     await expect.element(field).toHaveValue("x");
   });
 

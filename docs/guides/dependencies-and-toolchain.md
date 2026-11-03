@@ -61,7 +61,7 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 秘密は Void の形で渡す。ローカルの値はルートの `.env` に置き、本番の server 側の値は `void secret put` で渡す ([Void docs「Environment variables」][])。本番へ渡す前に要る手順は `docs/guides/deployment.md`「本番の秘密を足す」にある。
 
 - `.env` は Git に入れない。`.gitignore` の `.env` / `.env.*` が覆う
-- Void は `vp build` で `.env` を `dist/ssr/.dev.vars` へ写す。`.env` 以外の dotenv ファイル (`.env.local`・`.env.production`・`.dev.vars`) は扱わない ([Void docs「Environment variables」][] の Local development)。暗号化した env ファイルを commit する形は、Void が読まないので使えない
+- Void は `vp preview` の起動のたびに `.env` を読み、build の成果物には値を写さない (Void 1.5.0)。`.env` 以外の dotenv ファイル (`.env.local`・`.env.production`・`.dev.vars`) は扱わない ([Void docs「Environment variables」][] の Local development)。暗号化した env ファイルを commit する形は、Void が読まないので使えない
 - Vite の `.env` 読み込みは `envDir: false` で切ってあり、`.env` の読み手は Void の 1 つである (ADR-0004)
 - いま `.env` が持つ `BETTER_AUTH_SECRET` の渡し方は `docs/guides/auth.md`「preview に secret を渡す」にある
 

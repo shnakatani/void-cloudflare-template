@@ -125,7 +125,7 @@ describe("追加のダイアログ", () => {
     await expect
       .poll(() => vi.mocked(submitAction))
       .toHaveBeenCalledExactlyOnceWith(
-        ...savedWith("/notes?create&new&q=x", {
+        ...savedWith("/notes?create&new=&q=x", {
           title: "買い物リスト",
           body: "牛乳とパン",
           dueDate: null,
@@ -175,7 +175,7 @@ describe("追加のダイアログ", () => {
     await expect
       .poll(() => vi.mocked(submitAction))
       .toHaveBeenCalledExactlyOnceWith(
-        ...savedWith("/notes?create&new", {
+        ...savedWith("/notes?create&new=", {
           title: "買い物リスト",
           body: "牛乳\nパン",
           dueDate: null,
@@ -214,7 +214,7 @@ describe("追加のダイアログ", () => {
     await expect
       .poll(() => vi.mocked(submitAction))
       .toHaveBeenCalledExactlyOnceWith(
-        ...savedWith("/notes?create&new", {
+        ...savedWith("/notes?create&new=", {
           title: "買い物リスト",
           body: "",
           dueDate: expectedDueDate,
@@ -341,7 +341,7 @@ describe("追加のダイアログ", () => {
   it("追加のリンクは一覧の q を保った追加の URL を指す", async () => {
     const { screen } = await renderNotesPage({ q: "x" });
 
-    await expect.element(createLink(screen)).toHaveAttribute("href", "/notes?new&q=x");
+    await expect.element(createLink(screen)).toHaveAttribute("href", "/notes?new=&q=x");
   });
 
   it("追加のリンクを押すと、一覧の scroll の位置を保って追加の URL へ移る", async () => {
@@ -352,7 +352,7 @@ describe("追加のダイアログ", () => {
     await expect
       .poll(() => router.visits)
       .toEqual([
-        { url: "/notes?new&q=x", options: expect.objectContaining({ preserveScroll: true }) },
+        { url: "/notes?new=&q=x", options: expect.objectContaining({ preserveScroll: true }) },
       ]);
   });
 

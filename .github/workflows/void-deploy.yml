@@ -1,4 +1,4 @@
-# void init --github (Void 1.4.0) が Cloudflare 向けに生成する workflow を、テンプレートの CI の作法に合わせたもの。
+# void init --github (Void 1.5.0) が Cloudflare 向けに生成する workflow を、テンプレートの CI の作法に合わせたもの。
 # 生成物との差と、deploy しない repository で Disable にする扱いは ADR-0061
 name: Deploy to Cloudflare
 on:

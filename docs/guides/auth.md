@@ -132,14 +132,13 @@ export default defineAuth(({ defaults }) => ({
 
 ```bash
 printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" > .env
-vp build
 ```
 
-- secret はルートの `.env` に書き、書いたあと `vp build` し直す。build が `.env` を `dist/ssr/.dev.vars` に写し、preview の Worker はそこからだけ secret を受ける (2026-11-02、Void 1.4.0 で観測)
-- shell の環境変数では届かない。shell に別の値を置いて build しても、`dist/ssr/.dev.vars` には `.env` の値が入った (2026-11-02)。Void の docs は shell の値が `.env` より優先すると書くが ([Void docs「Environment variables」][] の Local development)、build の写しには当てはまらなかった
+- secret はルートの `.env` に書く。`vp preview` は起動のたびに `.env` を読み、そこにある名前を Worker の secret として渡す。build は値を成果物に写さないので、`.env` を書き換えたら preview を起動し直せばよく、build し直さなくてよい (Void 1.5.0 の `plugin-cloudflare-preview.ts`。2026-11-03 に、`.env` を外して起動した preview が要求ごとに 500 を返すことを確かめた)
+- 渡す名前は `.env` の行から決まるので、shell の環境変数だけに置いた secret は preview の Worker に届かない
 - ルートに `.dev.vars` を置かない。Void は `void/env supports one local file: .env` で起動を止める
-- `.env` は ignore 済み。`dist/` も secret を持つので、CI の artifact に上げない。CI は `vp run verify:build` の前の step で、`openssl rand` の値を `.env` に書く (`.github/workflows/ci.yml`)
-- secret が `dist/ssr/.dev.vars` に無いと、`scripts/lib/preview-server.ts` が preview を起動する前に止まる
+- `.env` は ignore 済み。CI は `vp run verify:security-headers` より前の step で、`openssl rand` の値を `.env` に書く (`.github/workflows/ci.yml`)
+- secret が `.env` に無いと、`scripts/lib/preview-server.ts` が preview を起動する前に止まる
 - deploy では、Void が無ければ作り、次の deploy から使い回す ([Void docs「Authentication」][] の Behavior)
 
 ## explanation
@@ -167,7 +166,7 @@ Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か�
 
 ### page の loader に middleware を渡さない理由
 
-Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.4.0 では loader が 500、action が空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は 2026-11-02 に merge された。2026-11-03 の時点で最新の v1.5.0 は、その merge より前に公開され、修正を含まない)。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置く (ADR-0053)。
+Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.5.0 までは loader が 500、action が空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は 2026-11-02 に merge された。2026-11-03 の時点で最新の v1.5.0 は、その merge より前に公開され、修正を含まない)。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置く (ADR-0053)。
 
 ### 遷移を待たずに Action を終える理由
 
@@ -177,10 +176,9 @@ Void の docs も、programmatic な遷移を `router.visit("/users");` と awai
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。Better Auth docs は 2026-11-02 に読んだ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指す。Better Auth docs は 2026-11-02 に読んだ。
 
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
-[Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
 [Void docs「Sending Email」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/email/sending.md
 [Void docs「Server Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/server-routing.md
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/overview.md

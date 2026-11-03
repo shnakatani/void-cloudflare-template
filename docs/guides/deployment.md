@@ -55,8 +55,8 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 ### schema を変えて出す
 
 - `docs/guides/database.md`「schema を変える」のとおりに migration を生成して commit する (ADR-0052)。deploy は `db/migrations/` の未適用の分を当て、schema に migration の無い変更があると止まる ([Void docs「Deployment」][] の Migrations)
-- deploy は migration を当てる前に D1 の復元点を保存し、`void db restore` の command を表示する。CI では Deploy の step のログに出る。Workers Free では 7 日、Workers Paid では 30 日で失効する ([Void docs「Deployment」][] の Migrations)
-- 当てた migration は rollback で戻らない。戻すときは、`vp exec void project rollback --platform cloudflare` でコードを戻し、deploy が表示した `void db restore` の command を `vp exec` を付けて打って D1 を戻し、migration を直してから出し直す。restore は復元点より後の書き込みをすべて捨てる ([Void docs「Deployment」][] の Migrations)
+- deploy は migration を当てる前に D1 の復元点を保存し、`void db restore` の command を表示する。CI では Deploy の step のログに出る。Workers Free では 7 日、Workers Paid では 30 日で失効する ([Void CLI reference「void db restore」][])
+- 当てた migration は rollback で戻らない。戻すときは、`vp exec void project rollback --platform cloudflare` でコードを戻し、deploy が表示した `void db restore` の command を `vp exec` を付けて打って D1 を戻し、migration を直してから出し直す。restore は復元点より後の書き込みをすべて捨てる ([Void CLI reference「void db restore」][])
 
 ### Void を上げたら workflow を生成物と比べる
 
@@ -82,13 +82,14 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指し、同じ内容が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指す。
 
 [Void docs「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/deployment.md
 [Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/integrations/cloudflare.md
 [Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
 [Void CLI reference「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/deploy.md
 [Void CLI reference「Database」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md
+[Void CLI reference「void db restore」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md#void-db-restore
 [Void CLI reference「Secrets and Environment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/secrets.md
 [Void docs「Project Structure」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/structure.md
 [Void docs「First Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/platform/installation/first-deployment.md

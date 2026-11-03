@@ -15,10 +15,13 @@ export type PreviewServer = {
   stop(): Promise<void>;
 };
 
-/** `vp build` が書き、`vp preview` が Worker の設定として読むファイル */
+/**
+ * `vp build` のたびに書かれる Worker の設定。`vp preview` が読むのは `.cloudflare/output/` の Build Output で、
+ * Void がこのファイルへ同じ設定を写す (Void 1.5.0 の `plugin-cloudflare.ts`)。更新日時をビルドの時点として読む
+ */
 const BUILD_OUTPUT = join(REPO_ROOT, "dist", "ssr", "wrangler.json");
-/** build が `.env` を写す先。preview の Worker はこのファイルからだけ secret を受ける (docs/guides/auth.md「preview に secret を渡す」) */
-const DEV_VARS = join(REPO_ROOT, "dist", "ssr", ".dev.vars");
+/** `vp preview` が起動のたびに読み、Worker に secret として渡すファイル。成果物には写らない (docs/guides/auth.md「preview に secret を渡す」) */
+const LOCAL_ENV = join(REPO_ROOT, ".env");
 /** `routing.headers` を持つ設定。ヘッダの rule は `vp build` のときに成果物へ取り込まれる */
 const VOID_CONFIG = join(REPO_ROOT, "void.config.ts");
 const HOST = "127.0.0.1";
@@ -36,12 +39,12 @@ function delay(ms: number): Promise<void> {
 }
 
 function assertAuthSecret(): void {
-  const text = existsSync(DEV_VARS) ? readFileSync(DEV_VARS, "utf8") : "";
+  const text = existsSync(LOCAL_ENV) ? readFileSync(LOCAL_ENV, "utf8") : "";
   const hasSecret = text.split("\n").some((line) => /^BETTER_AUTH_SECRET=.+/.test(line.trim()));
   if (!hasSecret) {
     // 無いと preview は要求ごとに 500 を返し、どの検査も原因の読めない status で落ちる
     throw new CheckFailure(
-      "dist/ssr/.dev.vars に BETTER_AUTH_SECRET が無い。ルートの .env に書いてから vp build し直す (docs/guides/auth.md「preview に secret を渡す」)",
+      "ルートの .env に BETTER_AUTH_SECRET が無い。書いてから検査し直す (docs/guides/auth.md「preview に secret を渡す」)",
     );
   }
 }

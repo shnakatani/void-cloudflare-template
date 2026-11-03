@@ -149,11 +149,12 @@ vite.config.ts.timestamp-*
 # Turbo Repo
 .turbo
 
-# void init 1.4.0 (--framework react --starter sqlite) の出力
+# void init 1.5.0 (--framework react --starter sqlite) の出力
 node_modules
 dist
 .void
 .wrangler
+.cloudflare
 .void-wrangler.jsonc
 .env
 .env.*
