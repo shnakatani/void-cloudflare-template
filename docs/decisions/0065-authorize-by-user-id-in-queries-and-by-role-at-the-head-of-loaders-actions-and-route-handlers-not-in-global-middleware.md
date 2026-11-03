@@ -54,7 +54,7 @@
 - 所有の判定は query の関数のテストで、別の user の `userId` を渡して行が返らないことを確かめる (ADR-0054)。ロールの判定は純粋関数の単体テストで、経路 (loader・action・handler が判定を呼ぶこと) は preview を HTTP で叩いて確かめる
 - 別の user の行への更新と削除の action は、文書の要求でも `X-VoidPages` の要求でも 500 と `public/500.html` を返し、行は変わらず、server のログに query の throw の文言が残った (2026-11-03、Void 1.4.0 の preview を HTTP で叩いた)
 - loader で `userId` を渡し間違えても、型検査も lint も気付かない。別の user の行が読めるかは、preview を HTTP で叩く検査か、dev で 2 人の user を使って確かめる
-- loader の判定が外れた応答は HTTP の 200 で届く (ADR-0057 と同じ)。権限が無いことに server で気付く手掛かりが要るなら、値を返す前に `console.warn` に残す
+- loader の判定が外れた応答は HTTP の 200 で届く (ADR-0057 と同じ)。権限が無いことに server で気付く手掛かりが要るなら、値を返す前に `void/log` の `logger.warn` に残す (ADR-0055)
 - 判定の付け忘れを止める機械の仕組みは持たない。loader・action・handler を足したらレビューで見る
 - 再評価の条件: Void が page の loader と action に route ごとの middleware を渡せるようになったら (voidzero-dev/void#564 の修正を含む版)、ロールの判定を middleware に寄せられるかを比べ直す。Void が `auth.api.*` を公開したら、`userHasPermission` を比べ直す
 
