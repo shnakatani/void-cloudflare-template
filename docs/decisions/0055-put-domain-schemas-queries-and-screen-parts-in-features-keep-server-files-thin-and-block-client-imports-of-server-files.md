@@ -107,7 +107,7 @@ drizzle の bind した値。
 | Void が drizzle-orm を 1.0.0-rc.5 以降に上げるのを待つ                                                                          | 待つ間、3 つの経路から値がログに残る。2026-11-03 の時点で、Void の upstream に `DrizzleQueryError` の issue と、drizzle-orm を 1.0.0-rc.5 以降に上げる PR は無い                                                                                                                                                                                                                   | 却下     |
 
 - patch は上流の commit `8e78e2b` のうち `errors.ts` の変更を、0.45.4 の `errors.js`・`errors.cjs` と型の宣言に写す。driver ごとの throw の箇所はどれも `DrizzleQueryError` の constructor を通るので、constructor で値を捨てれば足りる
-- 上流が同時に足した `paramsInErrors` (値をエラーに残す option) は写さない。Void の `db` は drizzle に `schema` と `casing` しか渡さず (Void 1.4.0 の `dist/dispatch-*.mjs` の `void/db` の virtual module)、`createDb` も option を受けない (`dist/runtime/db.mjs`) ので、テンプレートから渡す口が無い
+- 上流が同時に足した `paramsInErrors` (値をエラーに残す option) は写さない。Void の `db` は drizzle に `schema` と `casing` しか渡さず (Void 1.5.0 の `dist/dispatch-*.mjs` の `void/db` の virtual module)、`createDb` も option を受けない (`dist/runtime/db.mjs`) ので、テンプレートから渡す口が無い
 
 ## Consequences
 
