@@ -143,8 +143,8 @@ function sendPageAction(
  * | それ以外の throw (401・403・500・502・ネットワーク) | 生の error を警告に残し、toast に出して `false`。401 はログインし直しを案内する文言、ほかは固定の文言 (`curateMutationErrorMessage`) |
  *
  * redirect の先のページの chunk が読めない送信も、`TypeError` の throw としてここに届き、toast に出る。server は書き込みを
- * 終えているので、`ChunkLoadErrorRecovery` が `vite:preloadError` で action の URL の文書を開き、toast は文書が替わるまでしか
- * 出ない (ADR-0049「chunk の読み込みの失敗」)。
+ * 終えているので、`ChunkLoadErrorRecovery` が `vite:preloadError` で action を持つページの path の文書を開き、toast は文書が
+ * 替わるまでしか出ない (ADR-0049「chunk の読み込みの失敗」)。
  *
  * 失敗の通知を `run` が持つので、呼び出し側が書き忘れても無通知にならない。
  * throw を error boundary へ渡さないのは、Action の reject は `useTransition` を呼んだ部品から境界へ投げられ、

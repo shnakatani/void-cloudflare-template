@@ -49,18 +49,19 @@ describe("ChunkLoadErrorRecovery", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it("送信中に redirect の先の chunk が読めなければ、action の URL の文書を開く", async () => {
-    const actionUrl = new URL("/b?create&new=", window.location.origin);
+  it("送信中に redirect の先の chunk が読めなければ、action を持つページの path の文書を query なしで開く", async () => {
     const screen = await renderRecovery({
       state: "submitting",
-      location: actionUrl,
+      location: new URL("/b?create&new=", window.location.origin),
       method: "POST",
     });
     await expect.element(screen.getByRole("heading", { name: "ホーム" })).toBeVisible();
 
     dispatchPreloadError();
 
-    expect(vi.mocked(loadDocument).mock.calls).toEqual([[{ kind: "assign", url: actionUrl }]]);
+    expect(vi.mocked(loadDocument).mock.calls).toEqual([
+      [{ kind: "assign", url: new URL("/b", window.location.origin) }],
+    ]);
   });
 
   it("idle で描いたあとに始まった遷移でも、event の時点の行き先の文書を開く", async () => {

@@ -9,10 +9,10 @@ import { chunkLoadErrorDocumentLoad, loadDocument } from "@/lib/chunk-load-error
  * root の layout の `AppErrorBoundary` の外に置き、DOM を描かない。
  *
  * Void 1.5.0 は chunk の失敗を受けると前のページへ戻すだけなので、Vite の build が dynamic import の失敗で出す
- * `vite:preloadError` を受ける。Void は遷移の開始と同時にページの chunk を読み始め、event はデータの応答を待たずに
- * 届くが、その時点の `useNavigation()` は遷移の開始を描き終えていて行き先を持つ。redirect で別のページが選ばれる
- * 遷移でも開き、server の redirect を経て選ばれたページと URL に着く。`preventDefault()` は呼ばず、元の失敗は
- * Void へそのまま流す
+ * `vite:preloadError` を受ける。GET の遷移では Void は遷移の開始と同時にページの chunk を読み始め、event はデータの
+ * 応答を待たずに届く。送信では応答を受けてから chunk を読む。どちらも event の時点の `useNavigation()` は遷移の開始を
+ * 描き終えていて、待っていた遷移を持つ。redirect で別のページが選ばれる GET の遷移でも開き、server の redirect を経て
+ * 選ばれたページと URL に着く。`preventDefault()` は呼ばず、元の失敗は Void へそのまま流す
  */
 export function ChunkLoadErrorRecovery(): null {
   const navigation = useNavigation();

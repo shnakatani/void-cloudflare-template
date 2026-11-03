@@ -152,7 +152,7 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 
 - `usePageAction` を通さずに `action()` を呼ぶと、`ok: false` が通知の無い失敗になり、throw は境界に届くか消える。lint で検出できないため、レビューで見る
 - `void/pages-client` の import は `src/hooks/use-page-action.ts` の `sendPageAction` だけに置く (型の import は ADR-0048 の偽の router と、`NavigationState` を読む部品が持つ)。Void を上げたら、`ActionOptions` が `preserveScroll` と `viewTransition` を受けるか、`submitAction` と `interpolateRouteParams` が `void/pages-client` に残っているかを見る。前者なら `sendPageAction` を `action()` に替え、後者が消えたら `action()` に戻して scroll の口を探し直す
-- redirect の先のページの chunk が読めない送信は、`submitAction` が `TypeError` で reject し、`run` は通信の失敗と見分けられずに toast に出す。server は書き込みを終えているので、`vite:preloadError` を受けた部品が action の URL の文書を開き、toast は文書が替わるまでしか出ない。開くのは `useNavigation()` が `"submitting"` を描く送信 (form からの送信) だけで、`ActionButton` から `run` を先に呼ぶ送信では toast が残る (ADR-0049「chunk の読み込みの失敗」、ADR-0017「前提となる仕様」)
+- redirect の先のページの chunk が読めない送信は、`submitAction` が `TypeError` で reject し、`run` は通信の失敗と見分けられずに toast に出す。server は書き込みを終えているので、`vite:preloadError` を受けた部品が action を持つページの path の文書を query なしで開き、toast は文書が替わるまでしか出ない。開くのは `useNavigation()` が `"submitting"` を描く送信 (form からの送信) だけで、`ActionButton` から `run` を先に呼ぶ送信では toast が残る (ADR-0049「chunk の読み込みの失敗」、ADR-0017「前提となる仕様」)
 - 401・403・500 も toast で伝わり、画面は差し替わらない。Error Boundary (ADR-0050) が `usePageAction` の送信から受けるのは `onSuccess` の throw だけになる。認証切れの 401 も画面を差し替えずに toast で伝え、入力を残す。ログインへ送ると入力が消える (ADR-0053)。画面ごと差し替えたい失敗を扱うときは、`run` の失敗の分岐に足す
 - `pageQuery` の渡し忘れは lint でも型でも止まらない。渡し忘れると、検証の失敗でページの query が落ち、エラーも出ない。レビューで見る
 - 取り消された送信がサーバーで走るかは、取り消した時点で要求がサーバーに届いていたかで分かれる。分かれ方と、後の送信が前を取り消すときの見え方は ADR-0017 が持つ

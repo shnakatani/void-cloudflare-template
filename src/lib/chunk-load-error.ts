@@ -5,16 +5,17 @@ export type DocumentLoad = { kind: "assign"; url: URL } | { kind: "reload" };
 
 /**
  * ページの chunk が読めなかったときに、文書ごと開く行き先と開き方を選ぶ (ADR-0049「chunk の読み込みの失敗」)。
- * 送信 (`"submitting"`) の `location` は action の URL で、server はもう書き込みを終えている。redirect の先は
- * client に見えないので、action の URL を GET で開く。Void は GET の action の名前の key を素の query として
- * 無視し、action を持つページを描く。Action の最初の await より前に始めた送信は `"submitting"` が描かれず
- * (ADR-0017)、ここには `"idle"` で届く
+ * GET の遷移は `location` (行き先) をそのまま開く。送信 (`"submitting"`) の `location` は action の URL で、server は
+ * もう書き込みを終えているが、redirect の先は client に見えない。action の URL の query はダイアログを開く key
+ * (ADR-0056) も運ぶので、そのまま開くと入力が空のダイアログが開き直り、保存した入力をもう一度送らせる。どの key が
+ * ダイアログを開くかは client に分からないので、query と hash をすべて除いた action を持つページの path を開く。
+ * Action の最初の await より前に始めた送信は `"submitting"` が描かれず (ADR-0017)、ここには `"idle"` で届く
  */
 export function chunkLoadErrorDocumentLoad(
   navigation: NavigationState,
   current: URL,
 ): DocumentLoad | null {
-  const destination = navigation.state === "idle" ? null : navigation.location;
+  const destination = destinationOf(navigation);
   if (!destination || !isSameOriginHttp(destination, current)) {
     return null;
   }
@@ -23,6 +24,28 @@ export function chunkLoadErrorDocumentLoad(
     return { kind: "reload" };
   }
   return { kind: "assign", url: destination };
+}
+
+function destinationOf({ state, location }: NavigationState): URL | null {
+  if (location === null) {
+    return null;
+  }
+  switch (state) {
+    case "idle":
+      return null;
+    case "loading":
+      return location;
+    case "submitting": {
+      const page = new URL(location);
+      page.search = "";
+      page.hash = "";
+      return page;
+    }
+    default: {
+      const unhandled: never = state;
+      throw new Error(`unhandled navigation state: ${String(unhandled)}`);
+    }
+  }
 }
 
 /**
