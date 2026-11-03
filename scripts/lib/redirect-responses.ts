@@ -1,5 +1,9 @@
-/** 1 つの path に求める応答。`location` は origin を除いた行き先で、無ければ `location` を見ない */
+/**
+ * 1 つの要求に求める応答。`method` が無ければ GET で、違反の報告は path だけで名指す。
+ * `location` は origin を除いた行き先で、無ければ `location` を見ない
+ */
 export interface ExpectedResponse {
+  readonly method?: "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
   readonly path: string;
   readonly status: number;
   readonly location?: string;
@@ -31,18 +35,18 @@ export function findRedirectViolations(
 
   const violations: string[] = [];
   for (const { expected, actual } of checks) {
+    const target =
+      expected.method === undefined ? expected.path : `${expected.method} ${expected.path}`;
     if (actual.status !== expected.status) {
       violations.push(
-        `${expected.path}: status が ${actual.status.toString()} で、${expected.status.toString()} ではない`,
+        `${target}: status が ${actual.status.toString()} で、${expected.status.toString()} ではない`,
       );
       continue;
     }
     if (expected.location === undefined) continue;
     const location = `${origin}${expected.location}`;
     if (actual.location !== location) {
-      violations.push(
-        `${expected.path}: location が ${String(actual.location)} で、${location} ではない`,
-      );
+      violations.push(`${target}: location が ${String(actual.location)} で、${location} ではない`);
     }
   }
   return violations;

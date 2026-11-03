@@ -24,6 +24,17 @@ describe("findRedirectViolations", () => {
     ).toEqual(["/private: status が 200 で、302 ではない"]);
   });
 
+  it("GET 以外の要求の違反は method を付けて名指す", () => {
+    expect(
+      findRedirectViolations(ORIGIN, [
+        {
+          expected: { method: "POST", path: "/private?create", status: 401 },
+          actual: { status: 302, location: `${ORIGIN}/login` },
+        },
+      ]),
+    ).toEqual(["POST /private?create: status が 302 で、401 ではない"]);
+  });
+
   it("相対の path の行き先を落とす", () => {
     expect(
       findRedirectViolations(ORIGIN, [
