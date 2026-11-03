@@ -27,25 +27,23 @@ Void 1.4.0 は Better Auth を管理して持つ。`void/auth` から import す
 | page の loader で `requireAuth(c)`                                                 | login へ送らず、素の text の 401 を返す                                                                                                                                                                                                       |
 | loader ごとに `getUser()` を見て redirect する                                     | 動くが、守るページの loader ごとに書くことになる                                                                                                                                                                                              |
 
-action の要求を redirect すると、Void 1.4.0 の client は redirect を辿った先のページを action の成功として受け取る。`pages/navigation-engine.ts` は `fetch` が redirect を辿った応答を行き先の GET の結果として扱い、`submitAction` (`pages/client.ts`) は `ok: true` を返す。2026-11-03 に `vp preview` で、action を持つ守るページのダイアログから、session の cookie を消して送ると、action の `POST` が 302、`GET /login` が 200 で、書き込んでいないのに `onSuccess` の完了の文言が読み上げられ、入力がダイアログごと消えた。action が 401 を返すと、client は 401 を throw する (Void の docs「Actions & Forms」の Validation Errors、`pages/action-result.ts` の `categorizeActionError`)。
+action の要求を redirect すると、Void 1.4.0 の client は redirect を辿った先のページを action の成功として受け取る。`pages/navigation-engine.ts` は `fetch` が redirect を辿った応答を行き先の GET の結果として扱い、`submitAction` (`pages/client.ts`) は `ok: true` を返す。2026-11-03 に `vp preview` で、action を持つ守るページのダイアログから、session の cookie を消して送ると、action の `POST` が 302、`GET /login` が 200 で、書き込んでいないのに `onSuccess` の完了の文言が読み上げられ、入力がダイアログごと消えた。action の要求に 401 を返すと、client は 401 を throw する (Void の docs「Actions & Forms」の Validation Errors、`pages/action-result.ts` の `categorizeActionError`)。middleware は `next()` を呼ばずに応答を返して要求を止められる (Void の docs「Server Routing」の Per-route middleware: "Each can short-circuit (return a response without calling `next()`)"。同じ docs の Global middleware は、`basicAuth()` で要求を止める gate を global に置く例を書く)。`requireAuth(c)` の 401 は `HTTPException(401, { message: 'Unauthorized' })` の throw で、Void の `onError` がその応答を返す (Void 1.4.0 の `runtime/auth.ts`、`runtime/routing-errors.ts`)。
 
 `c.redirect("/login")` のように相対の path を渡すと、要求の query が行き先に混ざる (voidzero-dev/void#648、open)。2026-11-02 に `vp preview` で、`/?q=x` から相対の path で送ると `location` が `/login?q=x` になった。絶対 URL を渡すと混ざらない。
 
 ## Decision
 
-**認証は Void が管理する Better Auth の既定 (email とパスワード) だけで組む。ページの保護と全ページへの user は `middleware/01.auth.ts` の global の middleware に置く。middleware が redirect するのは画面を開く要求 (`GET`・`HEAD`) だけにし、action の要求は action の `requireAuth(c)` の 401 で止める。**
+**認証は Void が管理する Better Auth の既定 (email とパスワード) だけで組む。ページの保護と全ページへの user は `middleware/01.auth.ts` の global の middleware に置く。middleware が redirect するのは画面を開く要求 (`GET`・`HEAD`) だけにし、守る path へのそれ以外の method の未ログインの要求は、middleware が 401 で止める。**
 
 - 確認メールとパスワードの再設定は入れない。足すときはルートの `auth.ts` に書く (`docs/guides/auth.md`「確認メールとパスワードの再設定を足す」)
-- middleware は `src/features/auth/access.ts` の `pathAccess` で path を 3 つに分け、`authRedirectPath` が決めた行き先へ絶対 URL で redirect する。`authRedirectPath` は `GET`・`HEAD` 以外の method で `null` を返し、`POST`・`PUT`・`PATCH`・`DELETE` は redirect せずに通す
-- 守るページの action は `requireAuth(c)` で user を読む。未ログインの action は 401 になり、`usePageAction` の toast がログインし直しを案内する (ADR-0016)
+- middleware は `src/features/auth/access.ts` の `pathAccess` で path を 3 つに分け、`authGuard` が返す扱い (`redirect`・`unauthorized`・`pass`) に従う。redirect は絶対 URL で送り、401 は `HTTPException(401, { message: "Unauthorized" })` を投げて `requireAuth(c)` と同じ応答にする
+- 守るページの loader と action も `requireAuth(c)` で user を読む。未ログインの action の 401 は、`usePageAction` の toast がログインし直しを案内する (ADR-0016)
 
-下の表は `GET`・`HEAD` の要求の行き先である。
-
-| 区分                               | 未ログイン  | ログイン済み |
-| ---------------------------------- | ----------- | ------------ |
-| `protected` (`PROTECTED_PATHS`)    | `/login` へ | そのまま     |
-| `guest-only` (`/login`・`/signup`) | そのまま    | `/` へ       |
-| `public` (どちらにも無い path)     | そのまま    | そのまま     |
+| 区分                               | 未ログイン                                         | ログイン済み                                      |
+| ---------------------------------- | -------------------------------------------------- | ------------------------------------------------- |
+| `protected` (`PROTECTED_PATHS`)    | `GET`・`HEAD` は `/login` へ。ほかの method は 401 | そのまま                                          |
+| `guest-only` (`/login`・`/signup`) | そのまま                                           | `GET`・`HEAD` は `/` へ。ほかの method はそのまま |
+| `public` (どちらにも無い path)     | そのまま                                           | そのまま                                          |
 
 - middleware は `shared` に `{ auth: { user } }` を入れる。`user` は `AuthUser` を詰め替えた `SharedUser` (`id`・`email`・`name`) か `null` で、型は `src/features/auth/shared.ts` が持つ
 - 画面は `useShared<AppShared>()` で読む。augmentation は worker の program にだけあるので、型引数で渡す (ADR-0047)
@@ -53,22 +51,24 @@ action の要求を redirect すると、Void 1.4.0 の client は redirect を�
 
 ### 検討した選択肢
 
-| 案                                                         | 評価                                                                                                                                         | 採否     |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| global の middleware で path を見て redirect する          | 1.4.0 で loader と action の両方の前に走り、守る処理を書く場所が 1 つになる。守る path は一覧に足す必要がある                                | **採用** |
-| middleware が action の要求も redirect する                | client が redirect の行き先のページを成功として受け取り、保存していない操作に成功を通知して入力を消す (2026-11-03 の実測)                    | 却下     |
-| `usePageAction` が行き先がログインのページなら失敗とみなす | 行き先の URL から認証切れを推し量る。`usePageAction` を通さない送信 (Void の `useForm`) は成功のまま残り、Void の docs の 401 の形から外れる | 却下     |
-| page の loader・action に middleware を渡す                | voidzero-dev/void#564 で壊れる                                                                                                               | 却下     |
-| 画面を開く要求を loader の `requireAuth(c)` で止める       | 未ログインの人に素の 401 を返し、login へ送れない                                                                                            | 却下     |
-| loader ごとに `getUser()` を見て redirect                  | 守るページを足すたびに loader に書き、書き忘れたページが開く。action も別に守ることになる                                                    | 却下     |
-| `shared` に `AuthUser` をそのまま入れる                    | `Date` の項目が browser で文字列になり、型が実体と食い違う (voidzero-dev/void#606)。画面が使わない項目も page data に載る                    | 却下     |
-| ログインを page の action から server 側で行う             | Better Auth の server の API (`auth.api.*`) を呼ぶ公開の口が Void に無い                                                                     | 却下     |
-| 確認メールとパスワードの再設定を既定で入れる               | メールを送る経路と、その画面が要る。テンプレートを使う側で送り方が決まっていない                                                             | 却下     |
+| 案                                                                                                         | 評価                                                                                                                                                        | 採否     |
+| ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| global の middleware で path を見て、画面を開く要求は redirect し、ほかの method は 401 で止める           | 1.4.0 で loader と action の両方の前に走り、守る処理を書く場所が 1 つになる。守る path は一覧に足す必要がある                                               | **採用** |
+| middleware は画面を開く要求だけを redirect し、ほかの method は通して handler の `requireAuth(c)` に任せる | 守りが handler ごとの書き方に移る。`requireAuth(c)` を書き忘れた handler (page の action、`routes/`) は、守る path の下でも未ログインのまま書き込みまで届く | 却下     |
+| middleware が action の要求も redirect する                                                                | client が redirect の行き先のページを成功として受け取り、保存していない操作に成功を通知して入力を消す (2026-11-03 の実測)                                   | 却下     |
+| `usePageAction` が行き先がログインのページなら失敗とみなす                                                 | 行き先の URL から認証切れを推し量る。`usePageAction` を通さない送信 (Void の `useForm`) は成功のまま残り、Void の docs の 401 の形から外れる                | 却下     |
+| page の loader・action に middleware を渡す                                                                | voidzero-dev/void#564 で壊れる                                                                                                                              | 却下     |
+| 画面を開く要求を loader の `requireAuth(c)` で止める                                                       | 未ログインの人に素の 401 を返し、login へ送れない                                                                                                           | 却下     |
+| loader ごとに `getUser()` を見て redirect                                                                  | 守るページを足すたびに loader に書き、書き忘れたページが開く。action も別に守ることになる                                                                   | 却下     |
+| `shared` に `AuthUser` をそのまま入れる                                                                    | `Date` の項目が browser で文字列になり、型が実体と食い違う (voidzero-dev/void#606)。画面が使わない項目も page data に載る                                   | 却下     |
+| ログインを page の action から server 側で行う                                                             | Better Auth の server の API (`auth.api.*`) を呼ぶ公開の口が Void に無い                                                                                    | 却下     |
+| 確認メールとパスワードの再設定を既定で入れる                                                               | メールを送る経路と、その画面が要る。テンプレートを使う側で送り方が決まっていない                                                                            | 却下     |
 
 ## Consequences
 
-- 保護する path は `src/features/auth/access.ts` の `PROTECTED_PATHS` に足す。どちらの一覧にも無い path は `public` で、未ログインでも開く (fail-open)。足し忘れても何も落ちないので、守る path ごとに `scripts/checks/runtime/auth-redirect.ts` の期待値に 1 行足す。action を持つページは、未ログインの action が 401 になる行も足す
-- action の 401 は、action の handler が `requireAuth(c)` を読むことに頼る。handler が `getUser()` で読んで `null` のまま書くと、未ログインの要求が書き込みまで届く
+- 保護する path は `src/features/auth/access.ts` の `PROTECTED_PATHS` に足す。どちらの一覧にも無い path は `public` で、未ログインでも開く (fail-open)。足し忘れても何も落ちないので、守る path ごとに `scripts/checks/runtime/auth-redirect.ts` の期待値に 1 行足す
+- 一覧に無い path の handler では、`requireAuth(c)` だけが未ログインの要求を止める。handler が `getUser()` で読んで `null` のまま書くと、未ログインの要求が書き込みまで届く
+- 守る path への別の origin からの書き込みの要求は、Void の page の action の origin の判定 (403、ADR-0060) より先に、middleware の 401 で止まる。Void の auth の middleware が session の cookie を捨てるので、cookie を付けて送っても 401 になる (2026-11-03、`vp preview`)
 - 守るページを prerender しない。`.md` のページと、loader の無い island のページは自動で prerender されるので (Void の docs「Edge Prerendering」)、守る path の下に置かない。prerender は build の時点の HTML と page data (`/_void/pages/<path>.json`) を静的な出力に書く (Void 1.4.0 の `prerender-render.ts`)。その配信が middleware の判定を通るかは確かめていない
 - `SharedContext` には page data の `shared ?? {}` が入る (`@void/react` 1.4.0 の `runtime/pages-client.ts`)。`pages/layout.tsx` は描画の先頭で `.auth` を分割代入するので、middleware を通らずに描かれたページでは layout が throw する。layout の中の `AppErrorBoundary` はまだ mount されていないので、この throw を受ける境界は無い。いまは middleware がすべての要求で `shared` を入れる
 - `vp preview` と deploy には `BETTER_AUTH_SECRET` が要る。preview への渡し方は `docs/guides/auth.md`「preview に secret を渡す」
@@ -83,8 +83,9 @@ action の要求を redirect すると、Void 1.4.0 の client は redirect を�
 - Void の docs「Actions & Forms」の Validation Errors: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
 - Void の docs「Layouts & Shared Data」の Shared Data: `node_modules/void/docs/guide/pages-routing/layouts.md`
 - Void の docs「Server Routing」の Global middleware と Per-route middleware: `node_modules/void/docs/guide/server-routing.md`
+- Void の docs「Hono」の Utilities (`HTTPException`): `node_modules/void/docs/integrations/hono.md`
 - Void の docs「Edge Prerendering」: `node_modules/void/docs/guide/edge/prerendering.md`
-- Void 1.4.0 のソース: `packages/void/src/runtime/better-auth-shared.ts`、`router/compile.ts`、`prerender-render.ts`、`pages/navigation-engine.ts`、`pages/client.ts`、`pages/action-result.ts`、`packages/react/src/runtime/pages-client.ts`
+- Void 1.4.0 のソース: `packages/void/src/runtime/auth.ts`、`runtime/routing-errors.ts`、`runtime/better-auth-shared.ts`、`router/compile.ts`、`prerender-render.ts`、`pages/navigation-engine.ts`、`pages/client.ts`、`pages/action-result.ts`、`packages/react/src/runtime/pages-client.ts`
 - Better Auth の docs「Email & Password」(Require Email Verification、Email Enumeration Protection、Request Password Reset): https://www.better-auth.com/docs/authentication/email-password
 - voidzero-dev/void#564 と、その修正の voidzero-dev/void#624 (2026-11-02 に merge。2026-11-03 の時点で最新の v1.5.0 に含まれない)
 - voidzero-dev/void#606、voidzero-dev/void#648 (2026-11-03 の時点で open)
