@@ -36,8 +36,10 @@ export function AppDevtools() {
         // axe-core を開発中の画面へ当てる。テスト側の強制 (src/test/a11y/a11y.ts) は書いたケースしか
         // 見ないため、画面を触りながら気付ける経路を別に持つ。
         // panel は host から theme と devtoolsOpen を受け取るので plugin 形で渡す。
-        // 独自ルール click-handler-on-non-interactive の serious は、React DOM が portal の容器 (body など) に付ける
-        // 空の onclick を数えた誤検出 (2026-11-03、@tanstack/devtools-a11y 0.2.2。ルールは panel の Settings でしか切れない)
+        // 独自ルール click-handler-on-non-interactive は、React DOM が portal の容器 (body など) に付ける
+        // 空の onclick を数える (2026-11-03、@tanstack/devtools-a11y 0.2.2 のソース)。Run Audit の serious 2 件
+        // (html > body と #_R_ai_) はこのルールの名前で、要素ごとの原因までは確かめていない。
+        // ルールは panel の Settings でしか切れない
         a11yDevtoolsPlugin(),
       ]}
     />
