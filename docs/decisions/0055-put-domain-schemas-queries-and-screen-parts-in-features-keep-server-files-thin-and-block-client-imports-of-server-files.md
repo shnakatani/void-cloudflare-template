@@ -143,6 +143,7 @@ drizzle の bind した値。
 - `HTTPException` は server のログに出ない。server で調べたい失敗は、投げる前に `logger.error` で残す
 - `logger.error` の message は固定の文言にし、値は fields に分ける。fields に秘密と個人情報 (ユーザーの入力、DB の行の値) を載せない。id は載せてよい
 - URL の query に載る値 (検索語など) は、invocation log に要求の URL ごと残り、traces を有効にしていれば trace の span の `url.full` にも残る。fields から外して防げるのは、URL に載らない値 (action の body、DB の行) だけである。秘密は URL の query に載せない。URL に載る個人情報を Cloudflare の記録に残せないアプリは、`void.config.ts` の `cloudflare.observability.logs.invocation_logs` を `false` にし、traces を有効にしているなら `cloudflare.observability.traces.enabled` も `false` にする。片方だけを止めても、もう片方に URL が残る。Void は `cloudflare` の値を生成する Cloudflare の設定へそのまま渡す (Void の docs「Configuration」の `cloudflare`)
+- Better Auth の logger の level は既定の `"warn"` のままにする (Better Auth の docs「Options」の `logger`)。root の `auth.ts` で `logger.level` を `"info"` か `"debug"` にすると、登録済みの email でのサインアップで、Better Auth が email を埋め込んだ行を出す (better-auth 1.7.14 の `dist/api/routes/sign-up.mjs`)。drizzle の patch はこの行に効かない
 - Context の 3 つの経路の表のうち、Void の `onError` と Better Auth が出すログは Error をそのまま `console.error` に渡すので、複数行になり 1 行の JSON にならない
 - Workers Issues を有効にするアプリでは、`logger.error` の行は error level の行として検出されるが、Cloudflare が Error の引数から取る stack の項目は付かない。Issues の stack の表示を Workers Logs の項目より先にするなら、Decision の server のログの選び方から見直す
 - drizzle の query の失敗は、どの経路でも SQL の文 (値は `?`) と D1 の文言の cause をログに残し、`message` と `params` には bind した値が載らない。D1 が扱えない型の値 (`undefined` や object など) を bind したときだけ、D1 の文言 (`D1_TYPE_ERROR: Type '<型>' not supported for value '<値>'`) に値が載り、cause を通じてログに出る (cloudflare/workerd の `src/cloudflare/internal/d1-api.ts`)。上流の 1.0.0-rc.5 の既定も同じで、patch では消えない
@@ -172,4 +173,5 @@ drizzle の bind した値。
 - Void の docs「Configuration」の `cloudflare`: `node_modules/void/docs/reference/config.md`
 - drizzle の `DrizzleQueryError`: drizzle-orm 0.45.4 の `errors.js`。値を既定で外した変更は commit `8e78e2b` (https://github.com/drizzle-team/drizzle-orm/commit/8e78e2b7a4fd036ef650f2eab4fa9e2a1340c991、2026-10-06) と、`changelogs/drizzle-orm/1.0.0-rc.5.md`
 - Better Auth の経路: better-auth 1.7.14 の `dist/api/index.mjs` (router の `onError`)、better-call 1.4.4 の `dist/router.mjs`
+- Better Auth の docs「Options」の `logger`: https://www.better-auth.com/docs/reference/options#logger (2026-11-03 に確認、1.7 の docs)
 - oxc の docs「no-restricted-imports」: https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-restricted-imports.html (2026-11-02 に確認)
