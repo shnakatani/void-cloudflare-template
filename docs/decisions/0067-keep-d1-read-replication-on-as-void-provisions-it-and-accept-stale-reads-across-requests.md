@@ -8,7 +8,7 @@
 
 Void 1.4.0 は、D1 の database を provision するときに read replication を有効にする。Void の docs「D1 (SQLite)」の Read replication は "Void enables D1 read replication when it provisions a database." と書く。
 
-D1 の replica は primary の変更を非同期に受け取る。Cloudflare の docs「Global read replication」は "D1 asynchronously replicates changes from the primary database instance to all read replicas. This means that at any given time, a read replica may be arbitrarily out of date." と書く。1 つの session の中の query は、この遅れの影響を受けない ("Sessions API ensures sequential consistency for all queries in a session.")。
+D1 の replica は primary の変更を非同期に受け取る。Cloudflare の docs「Global read replication」は "D1 asynchronously replicates changes from the primary database instance to all read replicas. This means that at any given time, a read replica may be arbitrarily out of date." と書く。1 つの session の中の query は、sequential consistency を保つ ("Sessions API ensures sequential consistency for all queries in a session.")。session をまたぐ query には、この保証が無い。
 
 ### Void が張る session
 
@@ -26,12 +26,12 @@ Void の docs「D1 (SQLite)」は "Authentication session checks start on the pr
 
 要求の中では、書いた行を後の読みが返す (Cloudflare の docs の Read my own writes)。次の要求は新しい session で始まるので、前の要求の書き込みをまだ持たない replica から読むことがある。下の表の「起こりうること」は、ソースと docs から組み立てた推論で、deploy した環境では測っていない。
 
-| 場面                                       | 要求の分かれ方                                                                                                                                       | 起こりうること                                                                                       |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| action で保存して redirect する (ADR-0056) | action の POST が 3xx を返し、ブラウザが redirect を追って行き先を GET する (`pages/navigation-engine.ts`)。GET は別の要求になる                     | 行き先の loader が古い replica から読み、保存した行が出ない                                          |
-| action が何も返さない                      | Void が同じ要求の中で GET を描き直す (`pages/protocol.ts`)                                                                                           | 同じ session で読むので、保存した行が出る                                                            |
-| ログインと登録の直後                       | sign-in (登録は sign-up) の要求が session の行を primary に書く。続く保護された path への遷移は別の要求になる                                        | middleware の `getUser()` が古い replica から読んで session の行を見つけず、ログインの画面へ戻す     |
-| ログアウトと session の失効のあと          | sign-out は session の行を消し、同じ応答で cookie も消す (Better Auth 1.7.14 の `api/routes/sign-out.ts`)。同じブラウザの後の要求は token を送らない | 消した token をまだ送る要求 (先に出ていた別のタブの要求、写した token) を、古い replica が受け入れる |
+| 場面                                       | 要求の分かれ方                                                                                                                                       | 起こりうること                                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| action で保存して redirect する (ADR-0056) | action の POST が 3xx を返し、ブラウザが redirect を追って行き先を GET する (`pages/navigation-engine.ts`)。GET は別の要求になる                     | 行き先の loader が古い replica から読み、保存した行が出ない                                              |
+| action が何も返さない                      | Void が同じ要求の中で GET を描き直す (`pages/protocol.ts`)                                                                                           | 同じ session で読むので、保存した行が出る                                                                |
+| ログインと登録の直後                       | sign-in (登録は sign-up) の要求が session の行を primary に書く。続く保護された path への遷移は別の要求になる                                        | middleware の `getUser()` が古い replica から読んで session の行を見つけず、ログインの画面へ戻す         |
+| ログアウトと session の失効のあと          | sign-out は session の行を消し、同じ応答で cookie も消す (Better Auth 1.7.14 の `api/routes/sign-out.ts`)。同じブラウザの後の要求は token を送らない | 消した token をまだ送る要求 (写した token、別の端末から失効させた session) を、古い replica が受け入れる |
 
 遅れの大きさについて、docs は上の "may be arbitrarily out of date" のほかに数値を書いていない。Cloudflare の blog「Sequential consistency without borders」(2025-04-10、beta の時点) は、primary が変更を確定してから replica が確定するまでの confirm lag を、2 つの database で 30 ms から 75 ms と測っている。同じ blog は、replica を経由して primary へ送った書き込みでは、理屈の上では遅れがほとんど見えないと書く ("In such a case, it looks like there’s no replica lag at all!")。
 
