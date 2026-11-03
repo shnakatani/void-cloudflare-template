@@ -1,5 +1,6 @@
 import { useNavigation } from "@void/react";
-import { useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
+import type { NavigationState } from "void/pages-client";
 
 import { chunkLoadErrorDocumentLoad, loadDocument } from "@/lib/chunk-load-error";
 
@@ -13,9 +14,15 @@ import { chunkLoadErrorDocumentLoad, loadDocument } from "@/lib/chunk-load-error
  */
 export function ChunkLoadErrorRecovery(): null {
   const navigation = useNavigation();
+  // 文書を開いた遷移。Void は遷移を始めるたびに `useNavigation()` の値を作り直し、遷移の間は同じ値を保つ
+  const openedFor = useRef<NavigationState | null>(null);
   const onPreloadError = useEffectEvent(() => {
+    if (openedFor.current === navigation) {
+      return;
+    }
     const load = chunkLoadErrorDocumentLoad(navigation, new URL(window.location.href));
     if (load) {
+      openedFor.current = navigation;
       loadDocument(load);
     }
   });
