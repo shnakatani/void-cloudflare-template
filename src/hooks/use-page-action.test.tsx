@@ -10,7 +10,8 @@ import { ActionButton } from "@/components/action/button";
 import { ActionForm, ActionFormSubmit } from "@/components/action/form";
 import { Toaster } from "@/components/ui/toast";
 import { useAppForm } from "@/hooks/use-app-form";
-import { MUTATION_ERROR_FALLBACK_MESSAGE } from "@/lib/mutation-error";
+import { MUTATION_ERROR_FALLBACK_MESSAGE, SESSION_EXPIRED_MESSAGE } from "@/lib/mutation-error";
+import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 import { expectAbsent, expectRemoved } from "@/test/assert/absent";
 
 import { usePageAction, usePageActionForm } from "./use-page-action";
@@ -20,6 +21,10 @@ declare module "void/routes" {
   interface PageActionMap {
     "/page-action-test": { body: { title: string; memo: string } };
     "/page-action-named-test": { actions: { save: { body: { title: string } } } };
+    "/page-action-params-test/:id": {
+      actions: { save: { body: { title: string } } };
+      params: { id: string };
+    };
   }
 }
 
@@ -116,6 +121,24 @@ describe("usePageAction", () => {
     );
   });
 
+  // Void の `ValidationError` は `{ errors: { <field 名>: <文言> } }` を返す (docs「Actions & Forms」の Validation Errors)。
+  // その形でない 422 の body をフィールドに写すと、何も描かれないか文字列でない値が field に入る
+  it.each([
+    { note: "errors が配列", body: { errors: ["必須です"] } },
+    { note: "errors の値が文字列でない", body: { errors: { title: 5 } } },
+    { note: "body が文字列", body: "Unprocessable Content" },
+  ])("422 の body の $note なら、フィールドに写さず toast に出す", async ({ body }) => {
+    vi.mocked(submitAction).mockResolvedValue({ ok: false, error: actionError(422, body) });
+    const onValidationError = vi.fn();
+    const { result } = await renderHook(() => usePageAction(ACTION_URL, { onValidationError }), {
+      wrapper: WithToaster,
+    });
+
+    await expect(result.current.run({ title: "", memo: "" })).resolves.toBe(false);
+    await expect.element(page.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
+    expect(onValidationError).not.toHaveBeenCalled();
+  });
+
   it("422 のフィールドのエラーが空なら、警告を残して toast に出す", async () => {
     vi.mocked(submitAction).mockResolvedValue({
       ok: false,
@@ -178,6 +201,24 @@ describe("usePageAction", () => {
     expect(submitAction).toHaveBeenCalledExactlyOnceWith(
       expect.anything(),
       "/page-action-named-test?save&new&q=%E4%BC%9A",
+      expect.objectContaining({ data: { title: "a" } }),
+    );
+  });
+
+  it("動的な page の params を path の segment に展開し、ページの query はそのまま後ろに載せる", async () => {
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
+    const { result } = await renderHook(() =>
+      usePageAction("/page-action-params-test/:id?save", {
+        params: { id: "a/b" },
+        pageQuery: "q=%E4%BC%9A",
+      }),
+    );
+
+    await result.current.run({ title: "a" });
+
+    expect(submitAction).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      "/page-action-params-test/a%2Fb?save&q=%E4%BC%9A",
       expect.objectContaining({ data: { title: "a" } }),
     );
   });
@@ -329,6 +370,48 @@ function NoteForm() {
     </ActionForm>
   );
 }
+
+// 上の describe は `submitAction` を mock する。ここでは Void の `submitAction` を通し、Void が作る失敗
+// (422 の body、throw する `VoidActionError`) を `run` が読めることを見る。router の `visit` だけを差し替える
+describe("usePageAction が Void の submitAction から受ける失敗", () => {
+  beforeEach(async () => {
+    const actual = await vi.importActual<typeof import("void/pages-client")>("void/pages-client");
+    vi.mocked(submitAction).mockImplementation(actual.submitAction);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  function renderWithRouter(
+    router: ReturnType<typeof createFakeRouter>,
+    onValidationError = vi.fn(),
+  ) {
+    return renderHook(() => usePageAction(ACTION_URL, { onValidationError }), {
+      wrapper: ({ children }) => (
+        <VoidRouterProvider router={router}>
+          <Toaster>{children}</Toaster>
+        </VoidRouterProvider>
+      ),
+    });
+  }
+
+  it("検証の失敗で描き直したページのデータの errors を、onValidationError に渡す", async () => {
+    const router = createFakeRouter();
+    vi.spyOn(router, "visit").mockResolvedValue({ errors: { title: "必須です" } });
+    const onValidationError = vi.fn();
+    const { result } = await renderWithRouter(router, onValidationError);
+
+    await expect(result.current.run({ title: "", memo: "" })).resolves.toBe(false);
+    expect(onValidationError).toHaveBeenCalledExactlyOnceWith({ title: "必須です" });
+  });
+
+  it("Void が throw する 401 は、ログインし直しを案内する toast に出す", async () => {
+    const router = createFakeRouter();
+    vi.spyOn(router, "visit").mockRejectedValue(actionError(401, null));
+    const { result } = await renderWithRouter(router);
+
+    await expect(result.current.run({ title: "a", memo: "" })).resolves.toBe(false);
+    await expect.element(page.getByText(SESSION_EXPIRED_MESSAGE)).toBeVisible();
+  });
+});
 
 const LABEL_OF: Record<string, string> = { title: "タイトル", memo: "メモ" };
 

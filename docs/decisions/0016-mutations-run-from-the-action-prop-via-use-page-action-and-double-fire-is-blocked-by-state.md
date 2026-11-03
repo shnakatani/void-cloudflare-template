@@ -6,7 +6,7 @@
 
 ## Context
 
-mutation は、page の action (`.server.ts` の `action` / `actions`) を呼んでサーバーへ書き込む操作を指す。Void の client は `action()` (`@void/react`) で page の action を呼ぶ。`action()` は中で `submitAction` (`void/pages-client`) を呼び、決着も失敗の分かれ方も `submitAction` が決める (`packages/void/src/pages/client.ts` の `createActionClient`。v1.4.0 のソースで確認)。
+mutation は、page の action (`.server.ts` の `action` / `actions`) を呼んでサーバーへ書き込む操作を指す。Void の client は `action()` (`@void/react`) で page の action を呼ぶ。`action()` は `createActionClient({ _resolveOnShell: true })` が返す関数で、`submitAction(router, interpolateRouteParams(url, params), { method, data, _resolveOnShell: true })` を呼ぶだけである。決着も失敗の分かれ方も `submitAction` (`void/pages-client`) が決める (Void 1.5.0 の `dist/pages/client.mjs` の `createActionClient` と `submitAction`、`@void/react` 1.5.0 の `dist/action-*.mjs`)。
 
 ### 制約: `action()` の失敗は 2 つの経路に分かれる
 
@@ -45,15 +45,15 @@ Error Boundary は画面ごと差し替わる。`action()` の throw を Action 
 
 `AbortError` は、後から始めた visit が commit 前の visit を abort した結果である (ADR-0017「前提となる仕様」)。部品が消えた後の reject が消えるのは、投げる先の部品が無いためと推論している (react.dev は unmount のときを書いていない)。
 
-### 制約: Action の中の送信は `_resolveOnShell` を付けて決着させる
+### 制約: `action()` は `preserveScroll` と `viewTransition` を受けない
 
-- Void 1.4.0 の `action()` は、Action の中で await すると決着しない。`_resolveOnShell` を付けた送信は shell の到着で決着する (ADR-0015「`action()` は shell の到着で resolve する」)
-- `action()` の options (`ActionOptions`) は `data`・`method`・`params` だけで、`preserveScroll` を渡せない (2026-11-02、Void 1.4.0 の `dist/pages/client.d.mts` と、main の 541b508 の `packages/void/src/pages/client.ts`)。Void は `preserveScroll` の無い commit で先頭へ scroll するので、同じページに残る action のあとに画面が先頭へ戻る (Void docs「Scroll Restoration」の New navigation)
-- そのため `usePageAction` は `action()` を通さず、`submitAction` に `method`・`data`・`preserveScroll`・`_resolveOnShell: true` を渡す。`@void/react` 1.4.0 の `useForm` と同じ呼び方である (`packages/react/src/runtime/use-form.ts`)。redirect はブラウザが同じ visit の中で辿るので、渡した `preserveScroll` は redirect 先の commit に効く (`packages/void/src/pages/navigation-engine.ts` の `loadNavigationShell`。v1.4.0 のソースで確認)
+- Void 1.5.0 の `action()` は、`_resolveOnShell: true` を既定で付け、Action の中で await しても shell の到着で決着する (ADR-0015「`action()` は shell の到着で resolve する」)。`_resolveOnShell` は `VisitOptions` の `@internal` の option で、docs に無い
+- `action()` の options (`ActionOptions`) は `data`・`method`・`params` だけで、`preserveScroll` と `viewTransition` を渡せない (Void 1.5.0 の `dist/pages/client.d.mts`)。Void は `preserveScroll` の無い commit で先頭へ scroll するので (Void docs「Scroll Restoration」の New navigation)、同じページに残る action のあとに画面が先頭へ戻り、画面の下の行から移した focus が画面の外へ出る。2026-11-03 に dev で、一覧の上のダイアログからの保存を `useForm` で送ると scroll の `y` が 1934 から 0 に戻り、`preserveScroll: true` を渡す `submitAction` では 1885 から 1934 に保たれた。`viewTransition` を渡せないと、送信の後の描き直しが遷移と同じクロスフェードになる (ADR-0058)
+- redirect はブラウザが同じ visit の中で辿るので、渡した `preserveScroll` は redirect 先の commit に効く (Void 1.5.0 の `dist/pages/client.mjs` の `loadNavigationShell`)
 
-### 制約: `usePageAction` が使う `void/pages-client` の 4 つの export は docs に無い
+### 制約: `submitAction` と `interpolateRouteParams` は docs の User-Facing Imports に無い
 
-`getValidationErrors`・`isAbortError`・`submitAction`・`interpolateRouteParams` (`void/pages-client`) は `node_modules/void/docs/` のどこにも載らない。`@void/react` の adapter が使う内部用で、`void/pages-client` の型 (`dist/pages/client.d.mts`) には出ている (2026-11-02、Void 1.4.0)。Void を上げたら確かめる。`getValidationErrors` と `isAbortError` が消えたら、`VoidActionError.body` を自前で読む形と `error.name === "AbortError"` の判定に戻す。`submitAction` が消えたら、`action()` に戻して `preserveScroll` を渡す口を探し直す。`submitAction` の options の `_resolveOnShell` も `@internal` で docs に無い。Void を上げたら、`ActionButton` の Action で `run` を await して決着することを dev で確かめる (ADR-0015)。
+`void/pages-client` は `node_modules/void/docs/reference/api.md`「User-Facing Imports」の表に無く、`submitAction`・`interpolateRouteParams`・`getValidationErrors`・`isAbortError`・`VoidActionError` の class は、`@void/react` の adapter が使う内部用として `void/pages-client` の型 (`dist/pages/client.d.mts`) に出ているだけである (2026-11-03、Void 1.5.0)。`@void/react` は `action`・`useForm`・`useRouter` などを export し、`VoidActionError` は export せず、`useForm` などの型に現れるだけである。
 
 ### 制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない
 
@@ -74,7 +74,17 @@ Error Boundary は画面ごと差し替わる。`action()` の throw を Action 
 `src/components/ui/` を包み、`action` prop を受ける部品を置く。ファイル名は包む先と同名にする (`button.tsx` → `ActionButton`)。
 置くのは `button.tsx`、`alert-dialog.tsx`、`form.tsx`、`dialog.tsx` で、ボタンからの操作、確認ダイアログを挟む操作、フォームからの送信、フォームを持つダイアログの器に当たる。`form.tsx` だけは `ui/` に対応部品が無く、素の `<form>` を包む。
 `dialog.tsx` の `ActionDialogContent` は `DialogContent` の中を `display: contents` の `ActionForm` で包む。form の置き場所の比較は `docs/guides/forms-and-inputs.md`「フォームを `DialogContent` の中に置く理由」にある。
-React の `<form action>` + `useFormStatus` と、Void の `Form` / `useForm` は使わない。理由は 2 つある。submit の経路を TanStack Form の `handleSubmit` (FormData を経由しない) にし、form の値と検証を TanStack Form に持たせるため (Void の `useForm` は値とエラーを自分の state に持ち、`Form` は native の form action で送る。`actions-and-forms.md`「`useForm` API」)。決着前の二重 submit を部品側の dedupe で塞ぐため。`ActionForm` の context は `useFormStatus` と同じ形で pending を子孫へ渡す。
+React の `<form action>` + `useFormStatus` と、Void の `Form` / `useForm` は使わない。submit の経路を TanStack Form の `handleSubmit` (FormData を経由しない) にし、form の値と検証を TanStack Form に持たせる (Void の `useForm` は値とエラーを自分の state に持ち、`Form` は native の form action で送る。`actions-and-forms.md`「`useForm` API」)。決着前の二重 submit は部品側の dedupe で塞ぐ。`ActionForm` の context は `useFormStatus` と同じ形で pending を子孫へ渡す。
+
+Void の `Form` と `useForm` で、一覧の上のダイアログからの保存を 2026-11-03 に dev (Void 1.5.0) で組んで観測した結果は次のとおりで、このテンプレートの form の要件 (失敗の toast と入力の保持、scroll、client の検証、通知の数) を満たせない。
+
+| 要件                                    | `Form` + `useForm`                                                                                                                                                                                            | `useForm` + 素の `<form action={form.post}>` |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 401・403・500 を toast に出し入力を残す | throw が `useActionState` から境界へ届き、全画面のエラーになって入力が消える (docs「Actions & Forms」の Validation Errors の "are thrown")                                                                    | 同じ                                         |
+| 保存のあと scroll を保つ                | `useForm` は `submitAction` に `method`・`data`・`_resolveOnShell` しか渡さず、先頭へ戻る                                                                                                                     | 同じ                                         |
+| client の検証                           | 無い。`Form` が `onSubmit` を持ち、props から `Omit` されている                                                                                                                                               | `onSubmit` で自前に書ける                    |
+| 通知は 1 組 (ADR-0026)                  | `FieldError` の文言と、`Form` の `role="alert"` の同じ文言が 2 つ並ぶ。`ok: false` では "Action failed with 409 Conflict" の英語の alert が出る。送信中は form に `aria-busy="true"` が付く (ADR-0026 が却下) | alert は 1 つ                                |
+| ログインと登録                          | page の action が無く `ActionUrl` に無いので `useForm` に載らない。Void はサインインを client の `auth.signIn.email()` で示す (Void docs「Authentication」)                                                   | 同じ                                         |
 
 部品が守る契約 (`action` の型、pending の a11y、二重発火、失敗、基盤への依存) は `docs/guides/react/updates.md`「Action 層の部品が守る契約」にある。
 
@@ -98,6 +108,8 @@ React はユーザー起点のイベントごとに次のイベントより前�
 
 mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanStack Form から送るときは同じファイルの `usePageActionForm` を通す。呼び出し方は `docs/guides/react/updates.md`「mutation の書き方」にある。
 `run` は `action()` の失敗で reject しない。失敗は `run` が通知し、Action の reject に任せない。
+
+送るのは `action()` の中身の写しに `preserveScroll` と `viewTransition: false` を足した 1 つの関数 (`sendPageAction`) で、`void/pages-client` から import するのはこの関数が使う `submitAction` と `interpolateRouteParams` だけにする。`_resolveOnShell: true` は `action()` の既定を写す。`action()` の結果の分かれ方 (`ok: false` と throw、`AbortError`) はそのまま受け、取り消しの判定と 422 の body の読み (field 名と文言の record であることを確かめる) と `VoidActionError` の見分け (Void 自身の `isCallSiteActionError` と同じく `name` と `status` の形) は `src/lib/action-error.ts` に持つ。撤去の条件は 2 つで、先に成り立った方で替える。`router.visit` が `resolveOn: "data"` を受ける版に上げたら、Void の docs「React navigation completion」の形の `router.visit` に `method`・`data`・`preserveScroll`・`viewTransition: false`・`resolveOn: "data"` を渡して送る。Void の `ActionOptions` が `preserveScroll` と `viewTransition` を受けるようになったら、`action()` に替える。どちらも `void/pages-client` の runtime の import を消す。替え方と、上げるたびに写しを Void に揃える手順は `sendPageAction` の docstring が持つ。
 
 | `action()` の結果                                 | `run`                                                                                                             | 理由                                                                                                                                                                              |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -123,20 +135,25 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 
 ### 検討した選択肢
 
-| 案                                                                                | 評価                                                                                                                                                                       | 採否     |
-| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| app 層に `src/components/action/` を置き `action` prop で包む                     | React Conf 2025 デモと同じ構造。registry を触らず (ADR-0020)、基盤にも依存しない。dedupe と pending の実装が 1 箇所に集まる                                                | **採用** |
-| Void の `Form` と `useForm` で送る                                                | form の値とエラーを `useForm` が持つので、TanStack Form の検証と二重になる。`Form` は native の form action で送り、FormData を経由する                                    | 却下     |
-| 呼び出し側で `action()` を直に呼ぶ                                                | `ok: false` を読み忘れると無通知の失敗になる。422 をフィールドへ写す処理が箇所ごとに散る                                                                                   | 却下     |
-| `run` が `action()` の throw を捕まえず、Action の reject として境界へ届ける      | Action の持ち主が unmount した後の失敗が何も出ずに消え、取り消しでも全画面のエラーが出る (「制約: Action の reject は、`useTransition` を呼んだ部品から境界へ投げられる」) | 却下     |
-| ref や閉包のフラグで同一タスク内の 2 連射も塞ぐ                                   | 実イベントでは起きない事象への防御で、その検証を書くためだけにフラグが要る (上の表)。react.dev の形 (`disabled={pending}`) から外れる                                      | 却下     |
-| 呼び出し側ごとに `useTransition` を書く                                           | 決着前の dedupe と a11y の状態伝達を毎回書き直す                                                                                                                           | 却下     |
-| Base UI (mui/base-ui#5133) か React Aria (adobe/react-spectrum#9894) の出荷を待つ | どちらも 2026-09-13 時点で merge 済み実装が無く、時期も未定                                                                                                                | 却下     |
-| 基盤を React Aria へ替えて action prop を待つ                                     | shadcn CLI は `--base aria` を持つが、shadcn-ui/ui#11724 (2026-09-01) の実測で API parity が無く porting になる。Action 層は基盤非依存なので、この判断と切り離せる         | 別 ADR   |
+| 案                                                                                                                                                                                                | 評価                                                                                                                                                                                                          | 採否              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| app 層に `src/components/action/` を置き `action` prop で包む                                                                                                                                     | React Conf 2025 デモと同じ構造。registry を触らず (ADR-0020)、基盤にも依存しない。dedupe と pending の実装が 1 箇所に集まる                                                                                   | **採用**          |
+| Void の `Form` と `useForm` で送る                                                                                                                                                                | 401・403・500 が境界に届いて入力が消え、保存のあと先頭へ scroll し、client の検証が無く、alert が欄のエラーと重なる (「Action 層」の表、2026-11-03 の観測)。ログインと登録は載らない                          | 却下              |
+| 呼び出し側で `action()` を直に呼ぶ                                                                                                                                                                | `ok: false` を読み忘れると無通知の失敗になる。422 をフィールドへ写す処理が箇所ごとに散る                                                                                                                      | 却下              |
+| `usePageAction` の中で `action()` をそのまま呼ぶ                                                                                                                                                  | `preserveScroll` と `viewTransition` を渡せず、保存のあと先頭へ scroll して focus が画面の外へ出、送信がクロスフェードになる (「制約: `action()` は `preserveScroll` と `viewTransition` を受けない」)        | 却下              |
+| `usePageAction` から `router.visit` に `method`・`data`・`preserveScroll`・`viewTransition: false` を渡して送る (Void docs「Pages Routing」の `router.visit('/logout', { method: 'POST' })` の形) | 公開の口だけで送れる。Void 1.5.0 では Action の中で await すると決着せず (voidzero-dev/void#663)、避けるには `@internal` の `_resolveOnShell` が要る。`resolveOn: "data"` を受ける版では成り立つ (撤去の条件) | 却下 (Void 1.5.0) |
+| `usePageAction` の中で `action()` の中身を写し、2 つの option を足す                                                                                                                              | 契約を変えずに `action()` の結果の分かれ方に乗る。`void/pages-client` の import は写した 1 関数に閉じ、`ActionOptions` が 2 つを受けたら `action()` に戻せる                                                  | **採用**          |
+| `run` が `action()` の throw を捕まえず、Action の reject として境界へ届ける                                                                                                                      | Action の持ち主が unmount した後の失敗が何も出ずに消え、取り消しでも全画面のエラーが出る (「制約: Action の reject は、`useTransition` を呼んだ部品から境界へ投げられる」)                                    | 却下              |
+| ref や閉包のフラグで同一タスク内の 2 連射も塞ぐ                                                                                                                                                   | 実イベントでは起きない事象への防御で、その検証を書くためだけにフラグが要る (上の表)。react.dev の形 (`disabled={pending}`) から外れる                                                                         | 却下              |
+| 呼び出し側ごとに `useTransition` を書く                                                                                                                                                           | 決着前の dedupe と a11y の状態伝達を毎回書き直す                                                                                                                                                              | 却下              |
+| Base UI (mui/base-ui#5133) か React Aria (adobe/react-spectrum#9894) の出荷を待つ                                                                                                                 | どちらも 2026-09-13 時点で merge 済み実装が無く、時期も未定                                                                                                                                                   | 却下              |
+| 基盤を React Aria へ替えて action prop を待つ                                                                                                                                                     | shadcn CLI は `--base aria` を持つが、shadcn-ui/ui#11724 (2026-09-01) の実測で API parity が無く porting になる。Action 層は基盤非依存なので、この判断と切り離せる                                            | 別 ADR            |
 
 ## Consequences
 
 - `usePageAction` を通さずに `action()` を呼ぶと、`ok: false` が通知の無い失敗になり、throw は境界に届くか消える。lint で検出できないため、レビューで見る
+- `void/pages-client` の import は `src/hooks/use-page-action.ts` の `sendPageAction` だけに置く (型の import は ADR-0048 の偽の router、`NavigationState` を読む部品、`src/lib/start-visit.ts` が持つ)。Void を上げたら、`sendPageAction` の docstring の手順で写しを Void に揃え、撤去の条件が成り立ったかを見る。`submitAction` と `interpolateRouteParams` が `void/pages-client` から消えたら、`action()` に戻して scroll の口を探し直す
+- redirect の先のページの chunk が読めない送信は、`submitAction` が `TypeError` で reject し、`run` は通信の失敗と見分けられずに toast に出す。server は書き込みを終えているので、`vite:preloadError` を受けた部品が action を持つページの path の文書を query なしで開き、toast は文書が替わるまでしか出ない。開くのは `useNavigation()` が `"submitting"` を描く送信 (form からの送信) だけで、`ActionButton` から `run` を先に呼ぶ送信では toast が残る (ADR-0049「chunk の読み込みの失敗」、ADR-0017「前提となる仕様」)
 - 401・403・500 も toast で伝わり、画面は差し替わらない。Error Boundary (ADR-0050) が `usePageAction` の送信から受けるのは `onSuccess` の throw だけになる。認証切れの 401 も画面を差し替えずに toast で伝え、入力を残す。ログインへ送ると入力が消える (ADR-0053)。画面ごと差し替えたい失敗を扱うときは、`run` の失敗の分岐に足す
 - `pageQuery` の渡し忘れは lint でも型でも止まらない。渡し忘れると、検証の失敗でページの query が落ち、エラーも出ない。レビューで見る
 - 取り消された送信がサーバーで走るかは、取り消した時点で要求がサーバーに届いていたかで分かれる。分かれ方と、後の送信が前を取り消すときの見え方は ADR-0017 が持つ

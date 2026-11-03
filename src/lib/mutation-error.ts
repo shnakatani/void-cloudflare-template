@@ -1,6 +1,5 @@
-import { VoidActionError } from "void/pages-client";
-
 import { toast } from "@/components/ui/toast";
+import { isActionError } from "@/lib/action-error";
 
 /** mutation 失敗時にユーザーへ出す固定文言。原因ではなく次に取れる行動だけを伝える。 */
 export const MUTATION_ERROR_FALLBACK_MESSAGE =
@@ -29,7 +28,7 @@ export const SESSION_EXPIRED_MESSAGE =
  */
 export function curateMutationErrorMessage(error: unknown): string {
   console.warn("[mutation] failed", { error });
-  if (error instanceof VoidActionError && error.status === 401) {
+  if (isActionError(error) && error.status === 401) {
     return SESSION_EXPIRED_MESSAGE;
   }
   return MUTATION_ERROR_FALLBACK_MESSAGE;
