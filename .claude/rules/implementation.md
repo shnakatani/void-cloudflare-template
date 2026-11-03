@@ -152,6 +152,8 @@ lint では見ないのでレビューで見る。
 - 瞬間 (ADR-0031) を date-fns で整形するときは `in: tz(APP_TIME_ZONE)` を渡すか値を `TZDate` にし、`@date-fns/tz` を直接の依存に足す。渡さないとシステムの TZ で計算する (`docs/guides/dates-and-time-zones.md`「画面に日時を出す」)
 - 暦の日付 (ADR-0031) の変換は `src/lib/calendar-date.ts`、表示は `src/lib/format-calendar-date-label.ts` の関数を通す。`YYYY-MM-DD` とローカルの 0 時の `Date` を往復させるので、TZ に依存しない (`docs/guides/dates-and-time-zones.md`「画面に暦の日付を出す」)
 - 食い違いを `suppressHydrationWarning` で抑えない。食い違った文字列がそのまま出る (`docs/guides/dates-and-time-zones.md`「タイムゾーンを明示して整形する理由」)
+- ブラウザの TZ や今日で描く部品 (Popover の外の Calendar など) は、部品の中で `use(browser())` を呼び、すぐ外を自前の `<Suspense>` で包む。省くと Void がページを包む Suspense が受け、初めの HTML からページごと消え、何も報告されない (`docs/guides/dates-and-time-zones.md`「ブラウザでだけ描く部品を組む」)
+- 呼び出し側が Suspense を置くとは限らない hook でブラウザの値を返すときは、`use(browser())` を呼ばず、`useSyncExternalStore` の `getServerSnapshot` で server の描画と hydration の間の値を返す (`docs/guides/dates-and-time-zones.md`「ブラウザでだけ描く部品を組む」)
 
 ## 依存はバレルから引かない
 
