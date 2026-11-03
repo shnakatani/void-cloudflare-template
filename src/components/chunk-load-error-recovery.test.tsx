@@ -13,7 +13,7 @@ vi.mock(import("@/lib/chunk-load-error"), async (importOriginal) => ({
   loadDocument: vi.fn(),
 }));
 
-const destination = new URL("/notes?q=a#top", window.location.origin);
+const destination = new URL("/b?q=a#top", window.location.origin);
 
 const router = createFakeRouter("/");
 
