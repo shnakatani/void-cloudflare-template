@@ -28,7 +28,26 @@ describe("authRedirectPath", () => {
     ["guest-only", true, HOME_PATH],
     ["public", false, null],
     ["public", true, null],
-  ])("%s でログイン %s なら %s", (access, signedIn, expected) => {
-    expect(authRedirectPath(access, signedIn)).toBe(expected);
+  ])("GET の %s でログイン %s なら %s", (access, signedIn, expected) => {
+    expect(authRedirectPath(access, signedIn, "GET")).toBe(expected);
+  });
+
+  it.each<[string, string | null]>([
+    ["GET", LOGIN_PATH],
+    ["HEAD", LOGIN_PATH],
+    ["POST", null],
+    ["PUT", null],
+    ["PATCH", null],
+    ["DELETE", null],
+  ])("未ログインの protected への %s は %s", (method, expected) => {
+    expect(authRedirectPath("protected", false, method)).toBe(expected);
+  });
+
+  it.each<[string, string | null]>([
+    ["GET", HOME_PATH],
+    ["HEAD", HOME_PATH],
+    ["POST", null],
+  ])("ログイン済みの guest-only への %s は %s", (method, expected) => {
+    expect(authRedirectPath("guest-only", true, method)).toBe(expected);
   });
 });

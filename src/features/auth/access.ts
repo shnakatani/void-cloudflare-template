@@ -24,7 +24,22 @@ export function pathAccess(pathname: string): PathAccess {
   return "public";
 }
 
-export function authRedirectPath(access: PathAccess, signedIn: boolean): string | null {
+/** 画面を開く要求の method。redirect の行き先を描くのは、この要求だけである */
+const DOCUMENT_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD"]);
+
+/**
+ * middleware が送る行き先。送らないなら `null`。
+ *
+ * 送るのは画面を開く要求 (GET・HEAD) だけにする。action の要求 (POST・PUT・PATCH・DELETE) は通し、handler の
+ * `requireAuth(c)` が 401 で止める。action を redirect すると、Void の `action()` は行き先のページを成功として受け取り、
+ * 保存していないのに成功の通知が出て、入力が消える (ADR-0053)
+ */
+export function authRedirectPath(
+  access: PathAccess,
+  signedIn: boolean,
+  method: string,
+): string | null {
+  if (!DOCUMENT_METHODS.has(method)) return null;
   switch (access) {
     case "protected":
       return signedIn ? null : LOGIN_PATH;
