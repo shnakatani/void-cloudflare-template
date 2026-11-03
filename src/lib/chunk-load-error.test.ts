@@ -4,8 +4,8 @@ import { chunkLoadErrorDocumentLoad } from "./chunk-load-error";
 
 const home = new URL("http://localhost/");
 
-function loading(href: string) {
-  return { state: "loading", location: new URL(href, home), method: "GET" } as const;
+function loading(href: string, base = home) {
+  return { state: "loading", location: new URL(href, base), method: "GET" } as const;
 }
 
 describe("chunkLoadErrorDocumentLoad", () => {
@@ -26,6 +26,15 @@ describe("chunkLoadErrorDocumentLoad", () => {
     const current = new URL("/notes?q=a", home);
     expect(chunkLoadErrorDocumentLoad(loading("/notes?q=a#top"), current)).toEqual({
       kind: "reload",
+    });
+  });
+
+  it("https で開いているときも、同じ origin の https の行き先の文書を開く", () => {
+    const current = new URL("https://app.example.com/");
+    const navigation = loading("/notes?q=a#top", current);
+    expect(chunkLoadErrorDocumentLoad(navigation, current)).toEqual({
+      kind: "assign",
+      url: navigation.location,
     });
   });
 
