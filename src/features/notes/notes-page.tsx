@@ -99,9 +99,10 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     if (next !== normalizeQuery(field.text)) {
       return;
     }
-    // 待ちの間に上限を超えた。超えた語は schema が切り詰めるので、上の比べ方では上限ちょうどの待っていた語と
-    // 一致して見える
+    // 上限を超えた語は送らず、打鍵が止まったここで伝える。超えた語は schema が切り詰めるので、上の比べ方では
+    // 上限ちょうどの語と一致して見える
     if (isNoteQueryTooLong(field.text)) {
+      announce(NOTE_QUERY_TOO_LONG_MESSAGE);
       return;
     }
     visitSearch(next);
@@ -120,15 +121,13 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
 
   function handleTextChange(text: string) {
     setField((current) => ({ ...current, text }));
-    // 超える前に待っていた語は、発火しても handleDebouncedSearch が捨てる
-    if (!isNoteQueryTooLong(text)) {
-      searchDebouncer.maybeExecute(normalizeQuery(text));
-    }
+    searchDebouncer.maybeExecute(normalizeQuery(text));
   }
 
   function handleSubmit() {
     searchDebouncer.cancel();
     if (queryTooLong) {
+      announce(NOTE_QUERY_TOO_LONG_MESSAGE);
       return;
     }
     // 正規化で値が変わるときだけ入力欄を揃える (trim が見える)。上限を超えた語はここまで来ないので切り詰めは起きない

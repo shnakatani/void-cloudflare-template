@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 
+import { expectAbsent } from "@/test/assert/absent";
+import { expectAnnouncements, readAnnouncements } from "@/test/assert/live-announcer";
+
 import { NOTE_QUERY_TOO_LONG_MESSAGE, NOTE_SEARCH_DEBOUNCE_MS } from "./note-search";
 import { noteSearchbox } from "./note-search-field.test-helpers";
 import { NOTE_VIEW } from "./notes-page-data.test-helpers";
@@ -82,12 +85,38 @@ describe("NotesPage の検索の待ち", () => {
     const field = noteSearchbox(screen);
     await field.fill("ab");
     await field.fill("あ".repeat(17));
-    await expect.element(screen.getByRole("alert")).toHaveTextContent(NOTE_QUERY_TOO_LONG_MESSAGE);
+    await expect.element(field).toHaveAccessibleDescription(NOTE_QUERY_TOO_LONG_MESSAGE);
     await expect.element(field).toBeInvalid();
     await waitPastSearchDebounce();
     await userEvent.keyboard("{Enter}");
     expect(router.visits).toEqual([]);
     await expect.element(field).toHaveValue("あ".repeat(17));
+  });
+
+  // 打鍵の途中に読み上げを割り込ませない。打鍵が止まったときと Enter で、polite で 1 回ずつ伝える
+  it("上限を超えたことは、打鍵の間は読み上げず、打鍵が止まったときと Enter で polite で伝える", async () => {
+    const { screen } = await renderNotesPage({ notes: [] });
+    const field = noteSearchbox(screen);
+    await field.fill("あ".repeat(17));
+    await field.fill("あ".repeat(18));
+    await expect.element(field).toBeInvalid();
+    await expectAbsent(screen.getByRole("alert"));
+    expect(readAnnouncements()).toEqual([]);
+    await waitPastSearchDebounce();
+    expect(readAnnouncements()).toEqual([NOTE_QUERY_TOO_LONG_MESSAGE]);
+    await userEvent.keyboard("{Enter}");
+    await expectAnnouncements([NOTE_QUERY_TOO_LONG_MESSAGE, NOTE_QUERY_TOO_LONG_MESSAGE]);
+    expect(readAnnouncements("assertive")).toEqual([]);
+  });
+
+  // 送らない語の間に表示中の一覧は q の結果のまま確かなので、ずれの印を出さない
+  it("上限ちょうどの語の待ちの間は半透明で、上限を超えると半透明をやめる", async () => {
+    const { screen } = await renderNotesPage({ notes: [NOTE_VIEW] });
+    const field = noteSearchbox(screen);
+    await field.fill("あ".repeat(16));
+    await expect.element(screen.getBySlot("stale-content")).toHaveStyle("opacity: 0.6");
+    await field.fill("あ".repeat(17));
+    await expect.element(screen.getBySlot("stale-content")).toHaveStyle("opacity: 1");
   });
 
   // 上限ちょうどの 16 文字の待ちが残ったまま 17 文字目を打つ。17 文字を schema に通すと 16 文字に切れて、

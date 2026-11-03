@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
+import { expectAbsent } from "@/test/assert/absent";
+
 import { NoteSearchField } from "./note-search-field";
 import { noteSearchbox } from "./note-search-field.test-helpers";
 
@@ -35,9 +37,11 @@ describe("NoteSearchField", () => {
       <NoteSearchField error="長すぎます" value="" onValueChange={() => {}} onSubmit={() => {}} />,
     );
 
-    await expect.element(screen.getByRole("alert")).toHaveTextContent("長すぎます");
+    await expect.element(screen.getByText("長すぎます")).toBeVisible();
     await expect.element(noteSearchbox(screen)).toBeInvalid();
     await expect.element(noteSearchbox(screen)).toHaveAccessibleDescription("長すぎます");
+    // 打鍵の途中に出る文言なので、live region にしない。読み上げはページが打鍵の止まったときに出す
+    await expectAbsent(screen.getByRole("alert"));
   });
 
   it("Enter で onSubmit を 1 回呼ぶ", async () => {

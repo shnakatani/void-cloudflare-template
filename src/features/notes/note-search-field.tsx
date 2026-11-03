@@ -1,7 +1,6 @@
 import { SearchIcon } from "lucide-react";
 import { type SubmitEvent, useId } from "react";
 
-import { FieldError } from "@/components/ui/field";
 import {
   InputGroup,
   InputGroupAddon,
@@ -14,7 +13,7 @@ import { NOTE_SEARCH_LABEL } from "./note-search";
 /**
  * 一覧の検索欄。値は親が持つ (制御コンポーネント。入力値は緊急更新のまま、ADR-0015)。
  * URL への確定は submit (Enter / 検索ボタン) で親が行う。`type="search"` で role は searchbox、
- * landmark は `<search>` 要素。`error` は入力欄の下に出し、入力欄の説明にも結ぶ。
+ * landmark は `<search>` 要素。`error` は入力欄の下に出し、入力欄の説明にも結ぶ。読み上げは親が `announce()` で出す。
  */
 export function NoteSearchField({
   value,
@@ -57,10 +56,11 @@ export function NoteSearchField({
           </InputGroupAddon>
         </InputGroup>
         {error === null ? null : (
+          // FieldError は role="alert" で、打鍵の途中に読み上げが割り込むので使わない (ADR-0026)。
           // 文言の幅で検索欄を広げない。広げると、打っている最中に入力欄が横へ動く
-          <div className="w-0 min-w-full">
-            <FieldError id={errorId}>{error}</FieldError>
-          </div>
+          <p id={errorId} className="w-0 min-w-full text-sm text-destructive">
+            {error}
+          </p>
         )}
       </form>
     </search>
