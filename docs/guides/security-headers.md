@@ -121,7 +121,7 @@ deploy した先への初めての http の訪問は、HSTS ではなく `void.c
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/guide/edge/headers.md` にある。MDN「Content-Security-Policy-Report-Only」は 2026-11-02 に読んだ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/guide/edge/` (`headers.md`・`redirects.md`) にある。MDN「Content-Security-Policy-Report-Only」は 2026-11-02 に読んだ。
 
 [Void docs「Custom Headers」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/headers.md
 [MDN「Content-Security-Policy」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy
@@ -133,6 +133,6 @@ deploy した先への初めての http の訪問は、HSTS ではなく `void.c
 [MDN「Cross-Origin-Resource-Policy」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Resource-Policy
 [MDN「Strict-Transport-Security」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Strict-Transport-Security
 [RFC 6797]: https://www.rfc-editor.org/rfc/rfc6797
-[Void docs「Redirects」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/edge/redirects.md
+[Void docs「Redirects」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/redirects.md
 [MDN「Permissions-Policy」]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Permissions-Policy
 [Cloudflare Workers の例「Set security headers」]: https://developers.cloudflare.com/workers/examples/security-headers/
