@@ -35,11 +35,12 @@ Console Piping の注入先: plugin は、`<html`・`hydrateRoot`・`createRoot`
 
 ## Decision
 
-**`@tanstack/devtools-vite` を `vite.config.ts` の最初の plugin に置き、`eventBusConfig.enabled: false` と `consolePiping.enabled: false` を渡す。ブラウザの console は `server.forwardConsole: true` で端末へ送る。`<TanStackDevtools>` は環境で分けずに import し、本番からは plugin に外させる。**
+**`@tanstack/devtools-vite` を `vite.config.ts` の最初の plugin に置き、`eventBusConfig.enabled: false` と `consolePiping.enabled: false` を渡す。ブラウザの console は `server.forwardConsole: true` で端末へ送り、Storybook の dev には `.storybook/main.ts` の `viteFinal` で同じ値を渡す。`<TanStackDevtools>` は環境で分けずに import し、本番からは plugin に外させる。**
 
 - event bus のサーバは、認証の無いメッセージで dev server の上でパッケージの install をシェル越しに走らせる (TanStack/devtools#464)。panel はこのサーバにつながない (`<TanStackDevtools>` の `eventBusConfig.connectToServerBus` の既定は false) ので、止めても panel の機能は減らない
 - Console Piping を止めて失うのは、ブラウザの `console.log`・`console.info`・`console.debug` の端末への転送だけである。server → ブラウザは上の表のとおり働いていない
 - `server.forwardConsole` は既定のままだと人の端末で働かないので、`true` を明示する
+- Storybook の dev では `vite.config.ts` の `forwardConsole` が届かない。`@storybook/builder-vite` 10.6.4 は `vite.config.ts` の設定を読むが、`server` を自分の値で丸ごと差し替える (`dist/index.js` の `createViteServer`)。Storybook docs「Vite」は、builder の設定を変える口に `viteFinal` と `mergeConfig` を案内する。2026-11-03 に Storybook の dev で story を開き、ブラウザで `console.warn`・`console.error` を出して端末の行を数えた。`viteFinal` が無いと人の端末に 0 行で、渡すと人の端末でも agent の端末でも `Vite [console.warn] <message>` と `Vite [console.error] <message>` が 1 行ずつ出た
 - plugin が外すのは、devtools の本体のパッケージ (`@tanstack/react-devtools` など 7 つ) を import したファイルの、その import と `<TanStackDevtools>` の JSX と、`plugins` の `render` だけから参照される import である (`@tanstack/devtools-bundler-core` の `remove-devtools.ts`)。`plugins` に関数の呼び出し (`tableDevtoolsPlugin()`) で渡した import は外さないが、JSX が外れると参照が無くなり、build が bundle から落とす (上の表の除去の行)
 - `DataTable` が Table Devtools に table を登録する hook (`useTanStackTableDevtools`) は、plugin が外す対象に入らない。dev だけ `import()` で読む形を残す (`src/components/parts/data-table.tsx`)
 
@@ -65,6 +66,8 @@ Console Piping の注入先: plugin は、`<html`・`hydrateRoot`・`createRoot`
 ## 出典
 
 - Vite「Server Options」の `server.forwardConsole`: https://vite.dev/config/server-options#server-forwardconsole (2026-11-03 に確認)
+- Storybook「Vite」の `viteFinal`: https://storybook.js.org/docs/builders/vite (2026-11-03 に確認)
+- `@storybook/builder-vite` 10.6.4 の `dist/index.js` (`commonConfig`・`createViteServer`)
 - TanStack Devtools「Vite Plugin」: https://tanstack.com/devtools/latest/docs/vite-plugin (2026-11-03 に確認)
 - TanStack Devtools「Production」: https://tanstack.com/devtools/latest/docs/production (2026-11-03 に確認)
 - `@voidzero-dev/vite-plus-core` 1.4.0 の `dist/vite/node/chunks/node.js` (`resolveForwardConsoleOptions`、`forwardConsolePlugin`、同梱の `std-env` 4.3.0)

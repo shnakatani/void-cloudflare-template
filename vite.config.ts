@@ -66,7 +66,8 @@ export default defineConfig({
   },
   server: {
     // ブラウザの console.error・console.warn と未処理の error を端末へ送る。既定は AI の coding agent を
-    // 検出したときだけ有効なので、人の端末でも働くよう明示する (ADR-0062)
+    // 検出したときだけ有効なので、人の端末でも働くよう明示する。Storybook の dev には、この server が
+    // 届かないので .storybook/main.ts の viteFinal が同じ値を渡す (ADR-0062)
     forwardConsole: true,
   },
   test: testConfig,
