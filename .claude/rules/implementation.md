@@ -117,7 +117,7 @@ lint では見ないのでレビューで見る。
 - `HTTPException` の `message`、`ValidationError` の文言、validator の message に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。production でもそのまま client に届く (ADR-0055)
 - server で調べたい失敗は、`HTTPException` を投げる前に `logger.error` に残す。`HTTPException` は server のログに出ない (ADR-0055)
 - server のログは `void/log` の `logger.error(<固定の message>, <fields>)` で書き、`console.error` に文字列と Error を並べて渡さない。Cloudflare の docs が勧める 1 つの JSON にならない (`docs/guides/data-loading.md`「server のログに失敗を残す」)
-- 捕まえた例外は `{ error: withoutQueryParams(error) }` (`src/lib/query-error.server.ts`) で渡し、fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。drizzle の query の失敗は bind した値を message と stack に持つ (ADR-0055)
+- 捕まえた例外は `{ error }` のように Error のまま fields に渡し、fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない (ADR-0055)
 
 ## 一覧の上のフォームのダイアログは一覧のページの query で開く
 

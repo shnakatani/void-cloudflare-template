@@ -1,7 +1,5 @@
 import { logger } from "void/log";
 
-import { withoutQueryParams } from "@/lib/query-error.server";
-
 import {
   toNoteView,
   type NoteDialogState,
@@ -33,7 +31,7 @@ async function readList(db: NotesDb, userId: string, q: string): Promise<NoteVie
     return (await listNotes(db, userId, { q })).map(toNoteView);
   } catch (error) {
     // 画面は区画に失敗を出すだけで、原因は server のログにしか残らない。検索語は利用者の入力なので載せない
-    logger.error("[notes] 一覧を読み込めない", { error: withoutQueryParams(error) });
+    logger.error("[notes] 一覧を読み込めない", { error });
     return null;
   }
 }
@@ -58,10 +56,7 @@ async function readDialog(
           ? { kind: "edit-not-found", id }
           : { kind: "edit", note: toNoteView(note) };
       } catch (error) {
-        logger.error("[notes] 編集する 1 件を読み込めない", {
-          id,
-          error: withoutQueryParams(error),
-        });
+        logger.error("[notes] 編集する 1 件を読み込めない", { id, error });
         return { kind: "edit-failed", id };
       }
     }

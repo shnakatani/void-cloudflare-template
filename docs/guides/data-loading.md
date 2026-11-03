@@ -42,11 +42,10 @@ production の Void は、loader と action の未知の例外の文言を clien
 
 1. `void/log` の `logger.error(<message>, <fields>)` で書く。1 回の呼び出しが 1 行の JSON になり、Workers Logs で message と項目で絞れる ([Void docs「Resource Clients」][] の Logging、[Cloudflare docs「Workers Best Practices」][] の Enable Workers Logs and Traces)
 2. message は `[<domain>] <起きたこと>` の固定の文言にし、値を埋め込まない。値は fields に分ける
-3. 捕まえた例外は `{ error: withoutQueryParams(error) }` (`src/lib/query-error.server.ts`) で渡す (ADR-0055)
+3. 捕まえた例外は `{ error }` のように Error のまま fields に渡す。`logger` が name・message・stack・cause を写す (ADR-0055)
 
 - `console.error` に文字列と Error を並べて渡さない。Void の docs のその形は hosted の target 向けで、1 つの JSON にならない (ADR-0055)
 - fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。id は載せてよい (ADR-0055)
-- 捕まえた例外を `withoutQueryParams` を通さずに渡さない。drizzle の query の失敗は bind した値を message・stack・`params` に持ち、検索語や保存する本文がそのままログに残る (ADR-0055)
 - loader と action から投げたまま Void に任せた例外は、Void が `console.error(error)` で複数行に出す。drizzle の query の失敗なら bind した値も載る (ADR-0055)
 
 ### loader で読めなかったものを返す
