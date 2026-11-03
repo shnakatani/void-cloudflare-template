@@ -48,4 +48,28 @@ describe("likeContains", () => {
   it("ASCII でない文字は大文字小文字を同一視しない", async () => {
     expect(await matches(["Ä"], "ä")).toEqual([]);
   });
+
+  // % で包んで 50 bytes ちょうどの検索語 (like-pattern.test.ts の境界と同じ)
+  it.each([
+    ["ASCII", "a".repeat(48)],
+    ["日本語", "あ".repeat(16)],
+    ["エスケープする記号", "%".repeat(24)],
+    ["サロゲートペア", "😀".repeat(12)],
+  ])("上限ちょうどのパターンは D1 が受ける (%s)", async (_label, text) => {
+    expect(await matches([`x${text}x`, "y"], text)).toEqual([`x${text}x`]);
+  });
+
+  it("上限を超えるパターンは D1 へ送らずに throw する", () => {
+    expect(() => likeContains(words.word, "あ".repeat(17))).toThrow("53 bytes > 50 bytes");
+  });
+
+  // LIKE_PATTERN_MAX_BYTES が D1 の上限と一致することを、D1 そのものに 51 bytes を送って確かめる。
+  // 上限は LIKE を行に当てるときに判定されるので、行の無い table では落ちない
+  it("D1 は 51 bytes のパターンを拒む", async () => {
+    await d1.db.insert(words).values({ word: "a" });
+    const query = d1.d1
+      .prepare("select word from words where word like ?")
+      .bind(`%${"a".repeat(49)}%`);
+    await expect(query.all()).rejects.toThrow("LIKE or GLOB pattern too complex");
+  });
 });

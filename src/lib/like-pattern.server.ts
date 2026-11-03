@@ -1,11 +1,11 @@
 import { type like, sql } from "void/db";
 
-const ESCAPE_CHAR = "\\";
-
-/** `%` / `_` / エスケープ文字をリテラルにする。`ESCAPE` 句と対で使う。 */
-function escapePattern(text: string): string {
-  return text.replace(/[\\%_]/g, (char) => `${ESCAPE_CHAR}${char}`);
-}
+import {
+  containsPattern,
+  containsPatternBytes,
+  LIKE_ESCAPE_CHAR,
+  LIKE_PATTERN_MAX_BYTES,
+} from "./like-pattern";
 
 /**
  * `column LIKE '%text%'` の部分一致。ユーザー入力のワイルドカードは文字として扱う。
@@ -19,10 +19,20 @@ function escapePattern(text: string): string {
  * エスケープの純粋関数だけを単体で見ても抜けたまま通るので、SQL まで通して見る。
  * 先頭が `%` の LIKE は index が効かず全行を走査する。`created_at` の index を足しても絞り込み時は
  * 速くならない (同じ 20,000 行で 1.64ms → 2.72ms、2026-09-23)。件数が問題になったら FTS5 を検討する。
+ *
+ * パターンが D1 の上限 (`LIKE_PATTERN_MAX_BYTES`) を超える `text` は throw する。呼び出し側は入力の検証で
+ * `fitsContainsPattern` を通し、ここへ超える値を渡さない
  */
 export function likeContains(
   column: Parameters<typeof like>[0],
   text: string,
 ): ReturnType<typeof sql> {
-  return sql`${column} LIKE ${`%${escapePattern(text)}%`} ESCAPE ${ESCAPE_CHAR}`;
+  const bytes = containsPatternBytes(text);
+  if (bytes > LIKE_PATTERN_MAX_BYTES) {
+    // 入力の値は載せない (server のログにユーザーの入力を残さない。ADR-0055)
+    throw new Error(
+      `部分一致のパターンが D1 の上限を超えた (${bytes} bytes > ${LIKE_PATTERN_MAX_BYTES} bytes)。入力の検証で fitsContainsPattern を通す`,
+    );
+  }
+  return sql`${column} LIKE ${containsPattern(text)} ESCAPE ${LIKE_ESCAPE_CHAR}`;
 }
