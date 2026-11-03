@@ -43,6 +43,9 @@ export default defineConfig({
     ],
   },
   routing: {
+    // http の要求を 308 で HTTPS へ移す。HSTS は HTTPS の応答でしか効かないので、初めての http の訪問はこれが上げる。
+    // localhost と loopback は http のまま (Void の docs「Redirects」の HTTP to HTTPS)
+    alwaysUseHttps: true,
     headers: {
       "/*": [
         "X-Content-Type-Options: nosniff",
