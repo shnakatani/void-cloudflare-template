@@ -163,11 +163,11 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 [Void docs「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/deployment.md
 [Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/integrations/cloudflare.md
-[Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
+[Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md
 [Void CLI reference「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/deploy.md
 [Void CLI reference「Database」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md
 [Void CLI reference「void db restore」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md#void-db-restore
-[Void CLI reference「Secrets and Environment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/secrets.md
+[Void CLI reference「Secrets and Environment」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/secrets.md
 [Void docs「Project Structure」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/structure.md
 [Void docs「First Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/platform/installation/first-deployment.md
 [GitHub Docs「Managing environments for deployment」]: https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments

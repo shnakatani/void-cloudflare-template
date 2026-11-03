@@ -114,7 +114,9 @@ CI は mise を要さず、同じタスクを同じ順に、1 つずつ別の st
 宣言すると、Void が型 (`.void/env.d.ts`) を作り、`void env check` と `void secret put` と `void deploy` と Worker の起動のときに値を検証する (Void docs「Environment variables」の Validation and redaction と Production server values)。
 `env.ts` に宣言した server の値は Worker の secret にし、`void.config.ts` の `worker.vars` に置かない。production の build が弾く (Void docs「Configuration」の `worker`: "reject any `worker.vars` name declared as a server key in `env.ts`")。
 
-`BETTER_AUTH_SECRET` は `env.ts` に宣言しない。Void の auth が読み、deploy が無ければ作る (Void docs「Authentication」の Behavior: "Void creates `BETTER_AUTH_SECRET` on deploy if it is missing and reuses it on later deploys.")。dev は secret を要らない (同: "Local development needs no secret setup.")。宣言すると、dev でも `.env` に値が無ければ `void env check` が落ちる。
+`BETTER_AUTH_SECRET` は `env.ts` に宣言しない。Void の auth が読み、deploy が無ければ作る (Void docs「Authentication」の Behavior: "Void creates `BETTER_AUTH_SECRET` on deploy if it is missing and reuses it on later deploys.")。dev は secret を要らない (同: "Local development needs no secret setup.")。Void の deploy は auth があると、この名前を `secrets.required` に自分で足し、本番に無い名前の検査からも外す (Void 1.5.0 の `cli/deploy-artifact-validation.ts`、2026-11-03)。docs は宣言を求めていない。
+
+必須で宣言すると、dev でも `.env` に値が無ければ `void env check` が落ちる。`string().optional()` で宣言すると、2026-11-03 に Void 1.5.0 で `void env check` は通った。それでも宣言しないのは、アプリのコードが読まない値を `env.ts` に持つ理由が無いからである。宣言する利点は `void secret put BETTER_AUTH_SECRET` が使えることだけで、宣言しないとそのコマンドは `secret: BETTER_AUTH_SECRET is not declared in env.ts.` で止まる。このテンプレートは secret を deploy が作る前提で、手で入れ替える手順を持たない。入れ替える運用にするなら、`.optional()` で宣言する。
 
 | 案                                                                        | 評価                                                                                                                       | 採否     |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -179,7 +181,7 @@ Vite は使用中なら次の空き port へずらし (Vite docs の `server.por
 
 Void はルートの `.env` を読み、`vp preview` の起動のたびにそこにある名前を Worker の secret として渡す。`vp preview` の Worker が secret を受けるのはこの経路だけである (Void 1.5.0 の `plugin-cloudflare-preview.ts`、2026-11-03)。dev では、`env.ts` に宣言した `VITE_*` の値を Void が `.env` から読んでブラウザへ渡す (Void 1.5.0 の `plugin-env-schema.ts` の `applyClientValuesToViteEnv`)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
 
-2026-11-03 に Void 1.5.0 の dev で、`env.ts` に `VITE_PROBE` だけを宣言し、`.env` に `VITE_PROBE` と宣言しない `VITE_UNDECLARED` を置くと、ブラウザの `import.meta.env` には `VITE_PROBE` だけが入った。Void は `envDir: false` を前提の 1 つとして扱い、build のときに `.env` のブラウザの値を消す処理をこの設定では飛ばす (同 `stripLocalClientEnv`)。
+2026-11-03 に Void 1.5.0 の dev で、`env.ts` に `VITE_PROBE` だけを宣言し、`.env` に `VITE_PROBE` と宣言しない `VITE_UNDECLARED` を置くと、ブラウザの `import.meta.env` には `VITE_PROBE` だけが入った。`envDir: false` のときは Vite が `.env` を読まず、build の `.env` のブラウザの値を消す処理が走らない (同 `stripLocalClientEnv` の早期 return)。
 
 `envDir: false` は `vite.config.ts` に 1 つだけ書く。
 テストの project は `vite.config.ts` の設定を継承するので (ADR-0037)、ビルドとテストで値が割れない。
@@ -331,7 +333,7 @@ Vite+ の `docs/guide/local-cli.md`「Best Practices」は、`vp` を呼ぶ scri
 - アプリの環境変数を `env.ts` に宣言して `void/env` で読む形、ローカルと本番の値の渡し方、検証の契機: Void docs「Environment variables」(https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md)
 - `env.ts` に宣言した server の値を `worker.vars` に置くと production の build が弾くこと: Void docs「Configuration」の `worker` (https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/config.md)
 - `BETTER_AUTH_SECRET` を deploy が作ることと、dev が secret を要らないこと: Void docs「Authentication」の Behavior (https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md)
-- dev で `env.ts` に宣言した `VITE_*` を `.env` から読んでブラウザへ渡す処理と、`envDir: false` のときに build の `.env` の値を消す処理を飛ばすこと: Void 1.5.0 の `packages/void/src/plugin-env-schema.ts` の `applyClientValuesToViteEnv` と `stripLocalClientEnv` (https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/src/plugin-env-schema.ts)
+- dev で `env.ts` に宣言した `VITE_*` を `.env` から読んでブラウザへ渡す処理と、`envDir: false` のときに build の `.env` の値を消す処理が走らないこと: Void 1.5.0 の `packages/void/src/plugin-env-schema.ts` の `applyClientValuesToViteEnv` と `stripLocalClientEnv` (https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/src/plugin-env-schema.ts)
 - Vite+ の runtime 解決順と `packageManager` による package manager shim、`vp env pin` の書き込み先: `node_modules/vite-plus/docs/guide/env.md`
 - `vp env pin` が範囲を exact の版に解決して書くこと: `node_modules/vite-plus/docs/guide/env.md`「Manage」の `vp env pin` の項と Examples (`vp env pin node@26  # Pin Node.js 26 to an exact version`)、Vite+ の `rfcs/dev-engines.md`「2.4 `vp env pin` write target」(https://github.com/voidzero-dev/vite-plus/blob/102fe8edad2c45690f24830feee30bfe242817ee/rfcs/dev-engines.md)、`resolve_version_for_pin` (https://github.com/voidzero-dev/vite-plus/blob/102fe8edad2c45690f24830feee30bfe242817ee/crates/vp_global_cli/src/commands/env/pin.rs)
 - pnpm に Node.js と pnpm の版を管理させない設定: Vite+ の `docs/guide/env.md`「Node.js Selection」の tip と「Package-Manager Selection」(https://github.com/voidzero-dev/vite-plus/blob/v1.4.0/docs/guide/env.md)

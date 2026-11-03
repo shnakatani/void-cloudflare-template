@@ -62,18 +62,19 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 1. `env.ts` の `defineEnv` に、名前と型を足す。型は `void/env` の `string()`・`number()`・`boolean()`・`url()`・`email()`・`oneOf([...])`・`json<T>()` か、Standard Schema の validator で書く。`.optional()` と `.default(value)` を付けられる。秘密を `default` に書かない ([Void docs「Environment variables」][] の Define the schema)
 2. コードでは `import { env } from "void/env"` で読み、`env.<名前>` を使う。`process.env`・`import.meta.env` で読まない。`env.ts` の検証と型を通らない。`src/env.d.ts` の `ImportMetaEnv` には宣言しない
-3. ローカルの値はルートの `.env` に書く。dev の server、`vp preview`、`void db` などが同じ `.env` を読み、shell の値がそれに勝つ。値に `#` を含むときは引用符で囲む ([Void docs「Environment variables」][] の Local development)
-4. `vp exec void env check` を打ち、`.env` と shell の値が宣言を満たすかを確かめる。欠けた値と不正な値で exit 1 になる。dev の server は欠けを警告にしか出さない ([Void CLI reference「Secrets and Environment」][] の `void env check`)
+3. ローカルの値はルートの `.env` に書く。dev の server と `void db` などが同じ `.env` を読み、shell の値がそれに勝つ。`vp preview` の Worker が受けるのは `.env` にある名前だけである (`docs/guides/auth.md`「preview に secret を渡す」)。値に `#` を含むときは引用符で囲む ([Void docs「Environment variables」][] の Local development)
+4. `vp exec void env check` を打ち、`.env` と shell の値が宣言を満たすかを確かめる。欠けた値と不正な値で exit 1 になる ([Void CLI reference「Secrets and Environment」][] の `void env check`)。dev の server は欠けを警告にしか出さず、起動は止まらない
 5. 本番へ出すなら `docs/guides/deployment.md`「本番の秘密を足す」の手順で値を渡す
 
-| 値の種類     | 判別                        | ローカル | 本番                                                            |
-| ------------ | --------------------------- | -------- | --------------------------------------------------------------- |
-| server の値  | 名前が `VITE_` で始まらない | `.env`   | `void secret put`。`void.config.ts` の `worker.vars` に置かない |
-| ブラウザの値 | 名前が `VITE_` で始まる     | `.env`   | build のシェルの環境変数か、schema の `default`                 |
+| 値の種類     | 判別                        | ローカル          | 本番                                                            |
+| ------------ | --------------------------- | ----------------- | --------------------------------------------------------------- |
+| server の値  | 名前が `VITE_` で始まらない | `.env`            | `void secret put`。`void.config.ts` の `worker.vars` に置かない |
+| ブラウザの値 | 名前が `VITE_` で始まる     | `.env` (dev だけ) | build のシェルの環境変数か、schema の `default`                 |
 
 - `VITE_` で始まる値はブラウザの JavaScript に埋め込まれるので、秘密を置かない。build は `.env` のブラウザの値を読まない。手元の値が黙って本番の設定になるのを防ぐためである ([Void docs「Environment variables」][] の Client values)
+- 必須の `VITE_*` (`default` なし) を宣言すると、手元の `vp run verify` の build と CI の `verify:build` は、build の shell に値が無いと `Client env validation failed` で落ちる。`void env check` は `.env` を見るので通る。手元は `VITE_NAME=<値> vp run verify` で渡す。CI の `verify:build` は、値が秘密でないのでリポジトリの変数 (Settings の Secrets and variables → Actions → Variables) に置き、`.github/workflows/ci.yml` の step に `env: { VITE_NAME: ${{ vars.VITE_NAME }} }` を足す ([GitHub Docs「Store information in variables」][])。deploy の build にも同じ値を要る (`docs/guides/deployment.md`「本番の秘密を足す」)。値が環境で変わらないなら、`default` で持つ方が渡す先が要らない
 - server の値を `worker.vars` に置くと、production の build が弾く ([Void docs「Configuration」][] の `worker`)
-- `BETTER_AUTH_SECRET` は `env.ts` に宣言しない (ADR-0004)。preview への渡し方は `docs/guides/auth.md`「preview に secret を渡す」にある
+- `BETTER_AUTH_SECRET` は `env.ts` に宣言しない。宣言すると `void secret put BETTER_AUTH_SECRET` で値を検証して渡せるが、deploy が作るので要らない (ADR-0004)。preview への渡し方は `docs/guides/auth.md`「preview に secret を渡す」にある
 - `.env` は Git に入れない。`.gitignore` の `.env` / `.env.*` が覆う
 - `.env` 以外の dotenv ファイル (`.env.local`・`.env.production`・`.dev.vars`) は Void が扱わない ([Void docs「Environment variables」][] の Local development)。暗号化した env ファイルを commit する形は、Void が読まないので使えない
 - Vite の `.env` 読み込みは `envDir: false` で切ってあり、`.env` の読み手は Void の 1 つである (ADR-0004)
@@ -268,6 +269,7 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 [dependabot-core「pnpm_lockfile_updater.rb」]: https://github.com/dependabot/dependabot-core/blob/d4120cab39d50362a51b1c4fb307e818fed15868/npm_and_yarn/lib/dependabot/npm_and_yarn/file_updater/pnpm_lockfile_updater.rb#L285-L295
 [gitignore(5)]: https://git-scm.com/docs/gitignore
 [git-add(1)]: https://git-scm.com/docs/git-add
+[GitHub Docs「Store information in variables」]: https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-variables
 [Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md
 [Void docs「Edge Prerendering」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/prerendering.md
 [Void docs「Configuration」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/config.md

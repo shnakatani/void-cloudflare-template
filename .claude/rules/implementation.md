@@ -158,10 +158,10 @@ lint では見ないのでレビューで見る。
 
 ## 環境変数は env.ts で宣言する
 
-- アプリが読む環境変数はルートの `env.ts` の `defineEnv` に宣言し、`void/env` の `env` で読む。`process.env`・`import.meta.env` で読まず、`src/env.d.ts` の `ImportMetaEnv` に宣言しない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
+- アプリが読む環境変数はルートの `env.ts` の `defineEnv` に宣言し、`void/env` の `env` で読む。`process.env`・`import.meta.env` で読まず (`import.meta.env.DEV` など Vite の組み込みのキーは除く)、`src/env.d.ts` の `ImportMetaEnv` に宣言しない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
 - server の値はローカルは `.env`、本番は `void secret put` で渡し、`void.config.ts` の `worker.vars` に置かない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
 - `VITE_` で始まる値はブラウザに埋め込まれるので秘密を置かない。本番の値は build のシェルか schema の `default` で渡し、build は `.env` の値を読まない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
-- `BETTER_AUTH_SECRET` は `env.ts` に宣言しない。宣言すると、secret の要らない dev でも `.env` に値が要る (ADR-0004)
+- `BETTER_AUTH_SECRET` は `env.ts` に宣言しない。Void の auth が読み、deploy が作る (ADR-0004)
 - 宣言と `.env` を変えたら `vp exec void env check` を打つ。dev の server は欠けを警告にしか出さない (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
 
 ## 依存はバレルから引かない

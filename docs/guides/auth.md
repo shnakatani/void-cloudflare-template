@@ -134,7 +134,7 @@ export default defineAuth(({ defaults }) => ({
 `vp preview` と `vp run verify` の成果物の検査は、`BETTER_AUTH_SECRET` が無いと要求ごとに 500 を返す。dev は無くても固定の値で動く ([Void docs「Authentication」][] の Behavior)。
 
 ```bash
-printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
+printf '\nBETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
 ```
 
 - secret はルートの `.env` に足す。`env.ts` には宣言しない (ADR-0004)。`vp preview` は起動のたびに `.env` を読み、そこにある名前を Worker の secret として渡す。build は値を成果物に写さないので、`.env` を書き換えたら preview を起動し直せばよく、build し直さなくてよい (Void 1.5.0 の `plugin-cloudflare-preview.ts`。2026-11-03 に、`.env` を外して起動した preview が要求ごとに 500 を返すことを確かめた)
