@@ -1,21 +1,44 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { chunkLoadErrorDestination } from "./chunk-load-error";
+import { chunkLoadErrorDocumentLoad } from "./chunk-load-error";
 
-describe("chunkLoadErrorDestination", () => {
-  it("GET の遷移の読み込み中は、query と hash を含む行き先を返す", () => {
-    const location = new URL("/notes?q=a#top", "http://localhost");
-    expect(chunkLoadErrorDestination({ state: "loading", location, method: "GET" })).toEqual(
-      location,
-    );
+const home = new URL("http://localhost/");
+
+function loading(href: string) {
+  return { state: "loading", location: new URL(href, home), method: "GET" } as const;
+}
+
+describe("chunkLoadErrorDocumentLoad", () => {
+  it("GET の遷移の読み込み中は、query と hash を含む行き先の文書を開く", () => {
+    const navigation = loading("/notes?q=a#top");
+    expect(chunkLoadErrorDocumentLoad(navigation, home)).toEqual({
+      kind: "assign",
+      url: navigation.location,
+    });
   });
 
-  it("遷移していなければ行き先を返さない", () => {
-    expect(chunkLoadErrorDestination({ state: "idle", location: null, method: null })).toBeNull();
+  it("戻る・進むで URL が既に行き先なら、hash があっても文書を読み直す", () => {
+    const current = new URL("/notes?q=a#top", home);
+    expect(chunkLoadErrorDocumentLoad(loading(current.href), current)).toEqual({ kind: "reload" });
   });
 
-  it("送信の行き先は action の URL で、開くページではないので返さない", () => {
-    const location = new URL("/notes?create", "http://localhost");
-    expect(chunkLoadErrorDestination({ state: "submitting", location, method: "POST" })).toBeNull();
+  it("今の URL と hash だけが違う行き先でも、文書を読み直す", () => {
+    const current = new URL("/notes?q=a", home);
+    expect(chunkLoadErrorDocumentLoad(loading("/notes?q=a#top"), current)).toEqual({
+      kind: "reload",
+    });
+  });
+
+  it("遷移していなければ文書を開かない", () => {
+    expect(
+      chunkLoadErrorDocumentLoad({ state: "idle", location: null, method: null }, home),
+    ).toBeNull();
+  });
+
+  it("送信の行き先は action の URL で、開くページではないので開かない", () => {
+    const location = new URL("/notes?create", home);
+    expect(
+      chunkLoadErrorDocumentLoad({ state: "submitting", location, method: "POST" }, home),
+    ).toBeNull();
   });
 });

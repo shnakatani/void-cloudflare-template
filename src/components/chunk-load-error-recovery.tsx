@@ -1,7 +1,7 @@
 import { useNavigation } from "@void/react";
 import { useEffect, useEffectEvent } from "react";
 
-import { chunkLoadErrorDestination, openDocument } from "@/lib/chunk-load-error";
+import { chunkLoadErrorDocumentLoad, loadDocument } from "@/lib/chunk-load-error";
 
 /**
  * 遷移の先のページの chunk が読めなかったら、待っていた遷移の行き先の文書を開く (ADR-0049「chunk の読み込みの失敗」)。
@@ -14,9 +14,9 @@ import { chunkLoadErrorDestination, openDocument } from "@/lib/chunk-load-error"
 export function ChunkLoadErrorRecovery(): null {
   const navigation = useNavigation();
   const onPreloadError = useEffectEvent(() => {
-    const destination = chunkLoadErrorDestination(navigation);
-    if (destination) {
-      openDocument(destination);
+    const load = chunkLoadErrorDocumentLoad(navigation, new URL(window.location.href));
+    if (load) {
+      loadDocument(load);
     }
   });
 

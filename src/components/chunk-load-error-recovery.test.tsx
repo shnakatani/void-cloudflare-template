@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { render } from "vitest-browser-react";
 import type { NavigationState } from "void/pages-client";
 
-import { openDocument } from "@/lib/chunk-load-error";
+import { loadDocument } from "@/lib/chunk-load-error";
 import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 
 import { ChunkLoadErrorRecovery } from "./chunk-load-error-recovery";
@@ -10,10 +10,10 @@ import { ChunkLoadErrorRecovery } from "./chunk-load-error-recovery";
 // テストの iframe の文書を替えないように、文書を開く口だけを差し替える。行き先の選び方は元のまま使う
 vi.mock(import("@/lib/chunk-load-error"), async (importOriginal) => ({
   ...(await importOriginal()),
-  openDocument: vi.fn(),
+  loadDocument: vi.fn(),
 }));
 
-const destination = new URL("/notes?q=a#top", "http://localhost");
+const destination = new URL("/notes?q=a#top", window.location.origin);
 
 async function renderRecovery(navigation: NavigationState) {
   return render(
@@ -38,7 +38,7 @@ describe("ChunkLoadErrorRecovery", () => {
 
     const event = dispatchPreloadError();
 
-    expect(vi.mocked(openDocument).mock.calls).toEqual([[destination]]);
+    expect(vi.mocked(loadDocument).mock.calls).toEqual([[{ kind: "assign", url: destination }]]);
     // 止めると Vite は reject せず、Void の遷移は module の代わりに undefined を受けて別の TypeError で落ちる
     expect(event.defaultPrevented).toBe(false);
   });
@@ -49,7 +49,7 @@ describe("ChunkLoadErrorRecovery", () => {
 
     dispatchPreloadError();
 
-    expect(vi.mocked(openDocument)).not.toHaveBeenCalled();
+    expect(vi.mocked(loadDocument)).not.toHaveBeenCalled();
   });
 
   it("外したあとの chunk の失敗では文書を開かない", async () => {
@@ -59,6 +59,6 @@ describe("ChunkLoadErrorRecovery", () => {
 
     dispatchPreloadError();
 
-    expect(vi.mocked(openDocument)).not.toHaveBeenCalled();
+    expect(vi.mocked(loadDocument)).not.toHaveBeenCalled();
   });
 });
