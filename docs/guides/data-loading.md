@@ -115,4 +115,4 @@ Void 1.4.0 は、loader の結果ごとに次の応答を返す。出典は ADR-
 [Cloudflare docs「Workers Best Practices」]: https://developers.cloudflare.com/workers/best-practices/workers-best-practices/#enable-workers-logs-and-traces
 [react.dev「Component」]: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
 [Void docs「Loaders & Props」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/loaders.md
-[Void docs「Resource Clients」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/api/resources.md#logging
+[Void docs「Resource Clients」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/api/resources.md
