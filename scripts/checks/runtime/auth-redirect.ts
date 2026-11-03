@@ -6,7 +6,7 @@ import {
 } from "../../lib/redirect-responses.ts";
 
 /**
- * 未ログインの文書の要求 (GET) が保護した path から `/login` へ送られ、それ以外の method の要求は送られずに 401 で
+ * 未ログインの文書の要求 (GET) が保護した path から `/login` へ送られ、書き込みの要求 (POST) は送られずに 401 で
  * 止まることを、ビルド成果物を `vp preview` で起動して確かめる。
  * 保護は `middleware/01.auth.ts` と `src/features/auth/access.ts` が持つ。判定の関数は unit のテストが見るが、
  * middleware が要求の経路に載っていること、redirect が絶対 URL で query を混ぜないこと (voidzero-dev/void#648)、
@@ -14,7 +14,9 @@ import {
  * 書き込みの要求が redirect を返すと、Void の `action()` は行き先のページを成功として受け取り、保存していないのに
  * 成功の通知が出る (ADR-0053)。
  *
- * ログインした要求の振り分け (ログイン済みで guest-only の path を開いたときの redirect) は確かめない。dev で確かめる
+ * ログインした要求の振り分け (ログイン済みで guest-only の path を開いたときの redirect) は確かめない。dev で確かめる。
+ * middleware が `OPTIONS` を通すことも確かめない。`vp preview` は Vite の `cors` が Worker より前に `OPTIONS` へ
+ * 204 を返すので、middleware が止めても落ちない。判定は `access.test.ts` が見る
  */
 
 const REQUEST_TIMEOUT_MS = 2000;

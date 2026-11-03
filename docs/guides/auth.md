@@ -17,14 +17,14 @@
 ### 保護する path を足す
 
 1. `src/features/auth/access.ts` の `PROTECTED_PATHS` に、そのページの path の定数を import して足す。文字列を直に書くと、ページを動かして定数だけを直したときに、動かした先が黙って守られなくなる (ADR-0059)。下位の path (`/x/1`) も守られる。`/` だけは `/` そのものに限る
-2. `scripts/checks/runtime/auth-redirect.ts` の `EXPECTATIONS` に、その path が未ログインで `/login` へ送られる行を足す。書き込みの要求の 401 の行は path ごとに足さない。middleware は守る path の `GET`・`HEAD` 以外を path によらず 401 で止め、その分岐は action の無い `POST /` の行が見る (`EXPECTATIONS` の docstring)
+2. `scripts/checks/runtime/auth-redirect.ts` の `EXPECTATIONS` に、その path が未ログインで `/login` へ送られる行を足す。書き込みの要求の 401 の行は path ごとに足さない。middleware は守る path の `GET`・`HEAD`・`OPTIONS` 以外を path によらず 401 で止め、その分岐は action の無い `POST /` の行が見る (`EXPECTATIONS` の docstring)
 3. その path がページなら、`scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` に `signedIn: true` の行を足す。足さないと、そのページの HTML に CSP で止まる script があっても落ちない (`docs/guides/security-headers.md`「CSP の下で script を足す」)
 4. `vp build` のあと `vp run verify:auth-redirect` と `vp run verify:security-headers` で確かめる
 
 - どちらの一覧にも無い path は、未ログインでも開く。足し忘れても何も落ちないので、`auth-redirect.ts` の `EXPECTATIONS` の行で守る (ADR-0053)
 - 守るページは prerender しない。`.md` のページと loader の無い island のページは自動で prerender されるので、守る path の下に置かない (ADR-0053)
 - ログイン済みなら開く意味の無い path (ログインと登録の画面) は `GUEST_ONLY_PATHS` に足す。ログイン済みの要求は `/` へ送られる
-- middleware が送るのは画面を開く要求 (`GET`・`HEAD`) だけで、それ以外の method の未ログインの要求は 401 で止める (ADR-0053、「action の要求を redirect しない理由」)。守るページの loader と action も `requireAuth(c)` で user を読む
+- middleware が送るのは画面を開く要求 (`GET`・`HEAD`) だけで、CORS の preflight (`OPTIONS`) は通し、それ以外の method の未ログインの要求は 401 で止める (ADR-0053、「action の要求を redirect しない理由」)。守るページの loader と action も `requireAuth(c)` で user を読む
 - redirect の行き先は `new URL(<path>, c.req.url).href` の絶対 URL で渡す。相対の path を渡すと、要求の query が行き先に混ざる (「redirect を絶対 URL で書く理由」)
 
 ### `routes/` に書き込みの handler を足す
@@ -39,6 +39,7 @@
 | 別の origin の frontend から呼ばせる                              | その origin を `auth.ts` の `trustedOrigins` に足す (「auth の設定を変える」)。足さないと、その frontend の書き込みはログインしていない要求になる                           |
 
 - handler の path が `PROTECTED_PATHS` の下にあれば、未ログインの `POST` などの要求は middleware が 401 で止める。一覧に無い path では handler に届くので、user を読む判定は handler の `requireAuth(c)` が持つ
+- 別の origin の frontend が資格情報つきで呼ぶと、ブラウザは simple request でない要求の前に CORS の preflight (`OPTIONS`) を送る。preflight には Hono の `cors` を答えさせ、`cors` は global の middleware (`middleware/NN.cors.ts`) か、route の `export const OPTIONS` に置く。route の handler は export した method の要求だけを受けるので、`GET` などの handler にだけ渡した `cors` は preflight を受けない。守る path でも middleware は `OPTIONS` を止めない (ADR-0053)
 - `Origin` も `Sec-Fetch-Site` も `Referer` も無い要求は、ブラウザの外の client として扱われ、session の cookie を持てば user が読める。ブラウザの外の client から呼ばせない API でも、user を読む判定は外さない
 
 ### 全ページで user を読む
