@@ -89,6 +89,7 @@ lint では見ないのでレビューで見る。
 
 - アプリのページへ遷移する `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。`href` の文字列は在らない path でも型検査を通り、押すまで 404 に気付けない (ADR-0059)
 - path の定数は `"<path>" satisfies RoutePath` (`void/routes` の型) で書く。当てないと、ページを動かしたあとも古い path のまま型検査を通る (ADR-0059)
+- ページを足す・動かす・消したら、`vp exec void prepare` を打つか dev server を起動してから `vp check` を打つ。`vp check` は route の型を作り直さず、古い型のまま通る (ADR-0059)
 - `c.redirect` には、path の定数か URL を組む関数の値を `new URL(<値>, c.req.url).href` で絶対 URL にして渡す。相対の path は要求の query を行き先に混ぜる (`docs/guides/auth.md`「redirect を絶対 URL で書く理由」)
 - query を持つ URL は、path の定数を `routeUrl(<定数>, { query })` (`void/routes`) に渡して組む関数で組み、呼び出し側で `?` と `&` を連結しない (ADR-0059)
 - `router.visit` にも `routeUrl()` の文字列を渡し、行き先の object を渡さない。`Link` の `href` と `c.redirect` は文字列しか受けない (ADR-0059)

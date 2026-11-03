@@ -47,7 +47,7 @@ Void 1.5.0 で、遷移の行き先を受ける口の型は次のとおりであ
 
 ## Consequences
 
-- 定数の型検査は `.void/routes.d.ts` が新しいときだけ効く。`vp install` の `postinstall` (`void prepare`) と dev server が作り直す。ページを動かしたあとに dev server も `void prepare` も走らせずに `vp check` を打つと、古い route の型で通る
+- 定数の型検査は `.void/routes.d.ts` が新しいときだけ効く。`vp install` の `postinstall` (`void prepare`) と dev server が作り直す。ページを動かしたあとに dev server も `void prepare` も走らせずに `vp check` を打つと、古い route の型で通る (2026-11-03、Void 1.5.0。`pages/` にページを 1 枚足して `vp check` を打っても `.void/routes.d.ts` にその path は増えず、`vp exec void prepare` のあとに増えた)
 - 値を持たない query の名前は、URL に `?<名前>=` で載る。loader は値の有無ではなく名前の有無で読む
 - `Link` の `href` に文字列を直に書いても型検査は落ちない。定数と `routeUrl()` を通すことはレビューで見る
 - page の action の URL は `ActionUrl` が型で検査するので、この決定の対象にしない
