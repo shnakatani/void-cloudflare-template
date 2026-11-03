@@ -18,7 +18,7 @@
 | nuqs の `history` option                                                                  | URL の state の既定を `replace` にし、push はタブやモーダルのようにナビゲーションに当たるときだけにする                                                                                                                                        |
 | WCAG 2.2 Understanding「Status Messages」                                                 | 状態の通知の目的を "doesn't unnecessarily interrupt their work" とし、"Using role="alert" or aria-live="assertive" on content which is not important and time-sensitive" を failure に挙げる                                                   |
 | APG「Alert Pattern」                                                                      | "Frequent interruptions inhibit usability for people with visual and cognitive disabilities"                                                                                                                                                   |
-| GOV.UK Design System の Character count (govuk-frontend の `character-count.mjs`)         | 上限を超えたことを、見える文言は打鍵のたびに、読み上げは `aria-live="polite"` の要素で打鍵が 500ms 以上止まってから書き換えて伝える                                                                                                            |
+| GOV.UK Design System の Character count (govuk-frontend の `character-count.mjs`)         | 上限を超えたことを、見える文言は打鍵のたびに、読み上げは `aria-live="polite"` の要素で伝える。読み上げの要素は、focus の間 1000ms ごとに値を見て、最後の打鍵から 500ms 以上たっていれば書き換える (打鍵が止まってから 500〜1500ms 後)          |
 
 ### 実測: 打鍵と遷移
 
@@ -60,20 +60,21 @@ loader が返す値は次のとおりにする。ページそのもの (一覧) 
 
 ### 検討した選択肢
 
-| 案                                                                              | 評価                                                                                                                                                    | 採否     |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 打鍵が止まったときと Enter で、URL に replace で書く                            | 一覧が打鍵に追従し、取得は loader の 1 本だけ。途中の語の visit は後の visit が取り消す (ADR-0017)                                                      | **採用** |
-| Enter だけで URL に書く                                                         | 打鍵に追従する一覧を失う                                                                                                                                | 却下     |
-| 打鍵ごとに URL に書く                                                           | 途中の語の一覧は commit されないが、1 文字ごとに要求がサーバーへ届き、loader が走る                                                                     | 却下     |
-| debounce の間は `routes/` の API を typed fetch で叩き、URL は Enter で書く     | 取得の経路が loader と API の 2 本になる。表示中の一覧と URL の条件がずれ、再読み込みで別の一覧になる                                                   | 却下     |
-| debounce した値を effect で見張って visit する                                  | 原因が打鍵なのに、effect が URL を書く (react.dev「You Might Not Need an Effect」)                                                                      | 却下     |
-| 上限を超えた入力も schema で切り詰めて送る                                      | 切った語の一覧が出て、打った語と結果が食い違う。何で探したかが入力欄から分からない                                                                      | 却下     |
-| 上限を超えたことを `role="alert"` の要素で伝える                                | 上限を超えた打鍵の途中で読み上げが割り込む (WCAG 2.2 Understanding「Status Messages」の failure)。条件付きで mount する live region でもある (ADR-0026) | 却下     |
-| 上限を超えた打鍵のたびに `announce()` する                                      | 打ち続ける間、打鍵のたびに同じ文言が polite の region に積まれる (APG「Alert Pattern」の頻度、GOV.UK の Character count は打鍵が止まってから伝える)     | 却下     |
-| push で書く                                                                     | 検索は同じ一覧の絞り込みで、戻るが検索を 1 回ずつ巻き戻す (nuqs)                                                                                        | 却下     |
-| 一覧の失敗で loader が throw し、Void の既定に任せる                            | 静的な 500 のページになり、検索欄ごと消える。区画だけの失敗を出せない                                                                                   | 却下     |
-| 開く 1 件が無いとき `c.notFound()` を返す                                       | 静的な 404 のページになり、一覧ごと消える                                                                                                               | 却下     |
-| 一覧を読めないときも title を変えず、区画の見出しを `<h1>` の下の素の要素にする | 遷移の読み上げはページ名だけを読み、focus はページ名の `<h1>` へ移る。失敗はどこにも伝わらない                                                          | 却下     |
+| 案                                                                              | 評価                                                                                                                                                                           | 採否     |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| 打鍵が止まったときと Enter で、URL に replace で書く                            | 一覧が打鍵に追従し、取得は loader の 1 本だけ。途中の語の visit は後の visit が取り消す (ADR-0017)                                                                             | **採用** |
+| Enter だけで URL に書く                                                         | 打鍵に追従する一覧を失う                                                                                                                                                       | 却下     |
+| 打鍵ごとに URL に書く                                                           | 途中の語の一覧は commit されないが、1 文字ごとに要求がサーバーへ届き、loader が走る                                                                                            | 却下     |
+| debounce の間は `routes/` の API を typed fetch で叩き、URL は Enter で書く     | 取得の経路が loader と API の 2 本になる。表示中の一覧と URL の条件がずれ、再読み込みで別の一覧になる                                                                          | 却下     |
+| debounce した値を effect で見張って visit する                                  | 原因が打鍵なのに、effect が URL を書く (react.dev「You Might Not Need an Effect」)                                                                                             | 却下     |
+| 上限を超えた入力も schema で切り詰めて送る                                      | 切った語の一覧が出て、打った語と結果が食い違う。何で探したかが入力欄から分からない                                                                                             | 却下     |
+| 上限を超えたことを `role="alert"` の要素で伝える                                | 上限を超えた打鍵の途中で読み上げが割り込む (WCAG 2.2 Understanding「Status Messages」の failure)。条件付きで mount する live region でもある (ADR-0026)                        | 却下     |
+| 上限を超えた打鍵のたびに `announce()` する                                      | 打ち続ける間、打鍵のたびに同じ文言が polite の region に積まれる (APG「Alert Pattern」の頻度、GOV.UK の Character count は打鍵が止まってから伝える)                            | 却下     |
+| 上限の読み上げだけを、GOV.UK に倣って検索の待ちより長い別の待ちで出す           | 送らないと決める発火と読み上げが別の時点になり、Enter とほかの visit で捨てる待ちが 2 つになる。打鍵の間隔が待ちより長い人に読み上げが入りうるのは、待ちを延ばしても変わらない | 却下     |
+| push で書く                                                                     | 検索は同じ一覧の絞り込みで、戻るが検索を 1 回ずつ巻き戻す (nuqs)                                                                                                               | 却下     |
+| 一覧の失敗で loader が throw し、Void の既定に任せる                            | 静的な 500 のページになり、検索欄ごと消える。区画だけの失敗を出せない                                                                                                          | 却下     |
+| 開く 1 件が無いとき `c.notFound()` を返す                                       | 静的な 404 のページになり、一覧ごと消える                                                                                                                                      | 却下     |
+| 一覧を読めないときも title を変えず、区画の見出しを `<h1>` の下の素の要素にする | 遷移の読み上げはページ名だけを読み、focus はページ名の `<h1>` へ移る。失敗はどこにも伝わらない                                                                                 | 却下     |
 
 ## Consequences
 
@@ -85,6 +86,7 @@ loader が返す値は次のとおりにする。ページそのもの (一覧) 
 - `head()` はページを開いたときと検索の visit を分けないので、検索の visit で一覧を読めなかったときも title に「エラー: 」が付く。query だけの遷移なので、遷移の読み上げは title を読まず、focus も動かない。失敗の読み上げはページの effect が出す
 - 再試行は loader 全体を読み直すので、読めた側 (一覧か、開く 1 件) も読み直す
 - 上限を超えたまま打鍵が止まるたびに、同じ文言を読み上げる
+- 上限の読み上げは検索の debounce の発火で出すので、打鍵が止まってから読むまでの待ちは検索の待ち (300ms) と同じで、GOV.UK の Character count (500〜1500ms) より短い。打鍵の間隔が 300ms を超える人には、打ち終える前に読み上げが入りうる。件数の通知 (ADR-0027) も同じ待ちのあとに出る。300ms に出典は無い
 
 ## 出典
 
