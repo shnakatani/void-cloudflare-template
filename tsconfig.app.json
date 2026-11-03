@@ -1,32 +1,20 @@
-// ブラウザで動くアプリのコード (DOM の型)。ページは Worker の SSR でも動くが、DOM の型で検査する。
-// server のファイルは tsconfig.worker.json が、テストと story は tsconfig.test.json が持つ。exclude の
-// *.server.ts(x) は tsconfig.worker.json の include と、付随ファイルの種別と src/test/** は
-// tsconfig.test.json の include と揃える。ずれると、そのファイルはどの tsconfig にも入らないか、2 つに入る
-// (ADR-0047)
+// ブラウザで動くアプリのコードと、そのテストと story (DOM の型)。ページは Worker の SSR でも動くが、DOM の型で
+// 検査する。exclude の *.server.ts(x) は tsconfig.worker.json の include と揃える。ずれると、そのファイルは
+// どの tsconfig にも入らないか、2 つに入る (ADR-0047)
 {
   "extends": ["./tsconfig.base.json", "./.void/tsconfig.json", "./tsconfig.paths.json"],
   "compilerOptions": {
     "lib": ["ES2024", "ESNext.Error", "DOM", "DOM.Iterable"],
-    // global の型は types/ だけから引く。types/ の空の @cloudflare/workers-types が、void/env などの型が足す
-    // Workers の型を空にする。typeRoots を書くと types は node_modules を探さないので、types/app-globals が参照する
-    // (ADR-0047)
-    "typeRoots": ["./types"],
-    "types": ["app-globals"]
+    // type reference を先に types/ で解決させる。types/ の空の @cloudflare/workers-types が、void/env などの型が
+    // 足す Workers の型を空にする。依存の global の型は src/env.d.ts の triple-slash で足す (ADR-0047)
+    "typeRoots": ["./types"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "pages/**/*.ts", "pages/**/*.tsx"],
-  "exclude": [
-    "**/*.server.ts",
-    "**/*.server.tsx",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.test-d.ts",
-    "**/*.test-d.tsx",
-    "**/*.test-helpers.ts",
-    "**/*.test-helpers.tsx",
-    "**/*.story-helpers.ts",
-    "**/*.story-helpers.tsx",
-    "**/*.stories.ts",
-    "**/*.stories.tsx",
-    "src/test/**"
-  ]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "pages/**/*.ts",
+    "pages/**/*.tsx",
+    ".storybook/preview.tsx"
+  ],
+  "exclude": ["**/*.server.ts", "**/*.server.tsx"]
 }

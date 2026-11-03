@@ -1,4 +1,4 @@
-// tsconfig.app.json・tsconfig.test.json・tsconfig.worker.json が extends の最後に読む `paths`。TypeScript は
+// tsconfig.app.json・tsconfig.worker.json が extends の最後に読む `paths`。TypeScript は
 // `paths` を継承でマージせず、最後に読んだ 1 つで丸ごと置き換える。そのため `@/*` と
 // `.void/tsconfig.json` の `paths` を、ここ 1 か所にまとめて持つ (ADR-0047)
 {

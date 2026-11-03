@@ -16,7 +16,6 @@
  * - `.claude/rules/` の `paths` (`testing.md` はテストを置けるディレクトリだけ、他は全ディレクトリ)
  * - `src/styles.css` の `@source`
  * - `tsconfig.worker.json` の `include` (ディレクトリごとに `.ts` と `.tsx`。`pages/` は `*.server.ts` と `*.server.tsx` だけを持つ)
- * - `tsconfig.test.json` の `exclude` (`pages/` は除外しない)
  * - ADR-0047 の実行環境の表
  */
 export const VOID_SOURCE_DIRS = [
