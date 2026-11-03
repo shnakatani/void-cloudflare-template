@@ -95,7 +95,7 @@ F の実測 (2026-11-03、Void 1.4.0、TypeScript 6.0.3)。probe は、`env.ts` 
 | probe あり、app と test に `typeRoots` を書かない        | TS2345 が 9 件で落ちる |
 | probe あり、`typeRoots` は書き、空の宣言のファイルを消す | TS2345 が 9 件で落ちる |
 
-F で、ページの import から app に入る `src/lib/` の `*.server.ts` に `void/handler` の `ValidationError` の値の使用を足しても、`vp check` は DOM の `append` の TS2345 を出さなかった。`src/lib/` に `new HTMLRewriter()` と `D1Database` を書くと、`tsc -p tsconfig.app.json` は TS2304 と TS2552 で落ちた。`routes/` に `document` を書くと、`tsc -p tsconfig.worker.json` は TS2584 で落ちた (2026-11-03)。
+F で、ページの import から app に入る `src/lib/` の `*.server.ts` に `void/env` の `env` と `void/handler` の `ValidationError` の値の使用を足しても、`vp check` は DOM の `append` の TS2345 を出さなかった。`src/lib/` に `new HTMLRewriter()` と `D1Database` を書くと、`tsc -p tsconfig.app.json` は TS2304 と TS2552 で落ちた。`routes/` に `document` を書くと、`tsc -p tsconfig.worker.json` は TS2584 で落ちた (2026-11-03)。
 
 `paths` の置き場所:
 
