@@ -41,4 +41,12 @@ describe("chunkLoadErrorDocumentLoad", () => {
       chunkLoadErrorDocumentLoad({ state: "submitting", location, method: "POST" }, home),
     ).toBeNull();
   });
+
+  it.each([
+    ["別の origin", "https://example.com/notes"],
+    ["同じ origin を名乗る blob:", "blob:http://localhost/0b6e1c2a"],
+    ["javascript:", "javascript:alert(1)"],
+  ])("%s の行き先は開かない", (_, href) => {
+    expect(chunkLoadErrorDocumentLoad(loading(href), home)).toBeNull();
+  });
 });

@@ -12,7 +12,7 @@ export function chunkLoadErrorDocumentLoad(
   current: URL,
 ): DocumentLoad | null {
   const destination = navigation.state === "loading" ? navigation.location : null;
-  if (!destination) {
+  if (!destination || !isSameOriginHttp(destination, current)) {
     return null;
   }
   // 今の URL と hash を除いて同じ行き先への assign() は fragment の移動になり、文書を開かない (HTML の navigate)
@@ -20,6 +20,15 @@ export function chunkLoadErrorDocumentLoad(
     return { kind: "reload" };
   }
   return { kind: "assign", url: destination };
+}
+
+/**
+ * Void が遷移の前に取る検査と同じく、scheme を先に見る (`blob:` の URL は作った文書の origin を名乗る)。
+ * 別の origin と http(s) 以外への遷移は、Void が chunk を読む前に抜けて event を出さない。それでも届くのは、
+ * 別の import の失敗が遷移の開始と失敗の間に割り込んだときだけ
+ */
+function isSameOriginHttp(url: URL, current: URL): boolean {
+  return (url.protocol === "http:" || url.protocol === "https:") && url.origin === current.origin;
 }
 
 function withoutFragment(url: URL): string {
