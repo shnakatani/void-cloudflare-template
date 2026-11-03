@@ -8,11 +8,11 @@
 
 このテンプレートのコードは、次の 3 つの実行環境で動く。
 
-| 実行環境           | 置き場所                                                                                                                                        |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| ブラウザ           | `src/` のアプリのコード、`pages/*.tsx` (Worker の SSR でも動く)、ブラウザテストと story                                                         |
-| Cloudflare Workers | `routes/`、`middleware/`、`crons/`、`queues/`、`db/`、`email/`、`durable-objects/`、`pages/**/*.server.ts`・`*.server.tsx`、`auth.ts`、`env.ts` |
-| Node.js            | `scripts/`、`tooling/`、`vite.config.ts`、`void.config.ts`、`.storybook/main.ts`、unit のテスト                                                 |
+| 実行環境           | 置き場所                                                                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ブラウザ           | `src/` のアプリのコード、`pages/*.tsx` (Worker の SSR でも動く)、ブラウザテストと story                                                                                               |
+| Cloudflare Workers | `routes/`、`middleware/`、`crons/`、`queues/`、`db/`、`email/`、`durable-objects/`、`pages/**/*.server.ts`・`*.server.tsx`、`src/**/*.server.ts`・`*.server.tsx`、`auth.ts`、`env.ts` |
+| Node.js            | `scripts/`、`tooling/`、`vite.config.ts`、`void.config.ts`、`.storybook/main.ts`、unit のテスト                                                                                       |
 
 この表は動く場所の区分で、tsconfig の区分とは一致しない。テストと story は、ブラウザと Node.js のどちらで走るものも 1 つの tsconfig にまとめる。ただし Worker のディレクトリと `scripts/`・`tooling/` に置いたテストは、テストする対象のコードと同じ tsconfig に入れる (Decision の境界の判断)。
 
@@ -27,7 +27,7 @@ tsconfig を分けても、server のファイルは次の経路で app と test
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
 | `.void/routes.d.ts` の `typeof import(...)` (`packages/void/src/codegen/route-types.ts`)               | action を持つ `pages/**/*.server.ts`、`routes/**` |
 | ページの `import type { Props } from "./x.server"` (Void の docs「Type Safety」の Loader → Page Props) | loader を持つ `pages/**/*.server.ts`              |
-| `tsconfig.app.json` の `include`                                                                       | `src/**/*.server.ts`                              |
+| 上の 2 つで入ったファイルの import                                                                     | `src/**/*.server.ts`                              |
 | `.void/env.d.ts` の `typeof import("../env.ts")` (`packages/void/src/codegen/env-types.ts`)            | `env.ts`                                          |
 
 - 4 つ目は `env.ts` を置くと `void prepare` が `.void/env.d.ts` を書き、`.void/tsconfig.json` の `files` に足す (`packages/void/src/codegen/project-tsconfig.ts`)。`env.ts` は docs「Environment variables」どおりに `void/env` から `defineEnv` を import するので、app と test のどのファイルも `void/env` を import していなくても落ちる
@@ -49,6 +49,7 @@ tsconfig を分けても、server のファイルは次の経路で app と test
 境界の判断:
 
 - `pages/*.tsx` は、Worker の SSR でも動くが app に入れ、DOM の型で検査する。`src/components/` を描くのはブラウザが主で、DOM の型が要る
+- `src/` の `*.server.ts`・`*.server.tsx` は worker に入れる。app に入れると、Void の型を経た Workers の値 (`c.env.DB` など) の型が解決しない (Consequences)。`c.env.DB` を `string` に入れる誤りは型検査を通り、正しい `c.env.DB.prepare()` は `typescript/no-unsafe-*` で落ちた (2026-11-03)
 - テストと story は app から分けて test に入れる。Vitest と Storybook の型が Node の型を読み込む (`storybook/dist/node-logger`、`undici-types`、`vite-plus-core` の `vite/node` が `/// <reference types="node" />` を持つ)。app に入れると、アプリのコードの `process` と `Buffer` が型検査を通ってしまう
 - unit のテストは Node で走るが、app のコードを読むので test に入れる。test は DOM の型も Node の型も持つ
 - テストは `src/` の外の Void の規約のディレクトリにも置ける。`pages/` のテストは test に入れる。Worker のディレクトリのテストは worker に入れる。test の program は Workers の型を持たない (下の「Workers の型を app と test から外す」) ので、テストに Workers の型の名前を書くと落ちる。`src/lib/` のテストに `D1Database` を書くと、`vp check` が TS2552 で落ちた (2026-11-03)
@@ -73,7 +74,7 @@ Workers の型を app と test から外す:
 **app と test は `typeRoots` を `types/` にし、`types/@cloudflare/workers-types/index.d.ts` に中身の無い宣言を置く。** `void/env` などの `/// <reference types="@cloudflare/workers-types" />` は、`typeRoots` から先に探すので、この 2 つの program では空の宣言に解決する (`tsc --traceResolution` の primary search path で確かめた)。worker は `typeRoots` を書かず、Workers の型を読む。
 
 - `typeRoots` を書いた program では、`compilerOptions.types` の名前を node_modules から探さない (`tsc --traceResolution` が "Resolving type reference directive for program that specifies custom typeRoots, skipping lookup in 'node_modules' folder." と出す。TypeScript 6.0.3)。そこで `types` には `types/app-globals`・`types/test-globals` を書き、依存の型はそこから `/// <reference types="..." />` で参照する。Vite の docs「Features」の Client Types は、`types` に書く形と、d.ts に triple-slash で書く形の両方を案内している
-- `void/env` などは、Void の docs のとおりの場所で import してよい。`env.ts`、`pages/**/*.server.ts`、`routes/`、`middleware/`、`src/**/*.server.ts` のどれでも、app と test の型検査は落ちない。client のコードから読める値は ADR-0055 の Context の表の `void/env` の行が持つ
+- `void/env` などは、Void の docs のとおりの場所で import してよい。`env.ts`、`pages/**/*.server.ts`、`routes/`、`middleware/`、`src/**/*.server.ts` のどれでも、app と test の型検査は落ちない (下の実測)。client のコードから読める値は ADR-0055 の Context の表の `void/env` の行が持つ
 
 | 案                                                                                                            | 評価                                                                                                                                                                                                                                                          | 採否     |
 | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -93,7 +94,7 @@ F の実測 (2026-11-03、Void 1.4.0、TypeScript 6.0.3)。probe は、`env.ts` 
 | probe あり、app と test に `typeRoots` を書かない        | TS2345 が 9 件で落ちる |
 | probe あり、`typeRoots` は書き、空の宣言のファイルを消す | TS2345 が 9 件で落ちる |
 
-F で `src/lib/` に `new HTMLRewriter()` と `D1Database` を書くと、`tsc -p tsconfig.app.json` は TS2304 と TS2552 で落ちた。`routes/` に `document` を書くと、`tsc -p tsconfig.worker.json` は TS2584 で落ちた (2026-11-03)。
+F で、ページの import から app に入る `src/lib/` の `*.server.ts` に `void/handler` の `ValidationError` の値の使用を足しても、`vp check` は通った。`src/lib/` に `new HTMLRewriter()` と `D1Database` を書くと、`tsc -p tsconfig.app.json` は TS2304 と TS2552 で落ちた。`routes/` に `document` を書くと、`tsc -p tsconfig.worker.json` は TS2584 で落ちた (2026-11-03)。
 
 `paths` の置き場所:
 
@@ -134,7 +135,9 @@ U の実測 (2026-11-02、TypeScript 6.0.3、Vite 8.3.5。Vite は vite-plus-cor
 - どの tsconfig の `include` にも入らないファイルは、tsgolint が推論した program で検査する。報告されるのは、その program の既定の設定で出る誤りだけである。`lib`・`types`・`paths` は 4 つのどれとも違うので、置き場所の実行環境に合った誤りは出ない (2026-11-01、どこにも入らない `misc/x.ts` で `number` に文字列を入れると TS2322 が出た)
 - `tsconfig.app.json` の `exclude` と `tsconfig.test.json` の `include` は、付随ファイルの種別を字面で並べる。`tsconfig.test.json` の `exclude` は、`tsconfig.worker.json` の `include` のディレクトリと `scripts/`・`tooling/` を字面で並べる。ずれると、そのファイルはどの tsconfig にも入らず推論した program で検査されるか、2 つの tsconfig に入る
 - ページの型は Void の docs「Type Safety」どおり、`.server.ts` の `export type Props = InferProps<typeof loader>` をページが `import type` で受ける。受けた `.server.ts` は app の program に入るが、F によって Workers の型は足されない
-- server のファイルに Workers の型の名前 (`D1Database` など) を書くと、`tsc -p tsconfig.app.json` は TS2552 を出し、`vp check` は通る (2026-11-03)。`vp check` (tsgolint) は、ファイルを `include` に持つ tsconfig の program で検査する。型検査の合否は `vp check` で見て、`tsc -p` は `--explainFiles` と `--traceResolution` で経路を調べるときに使う
+- server のファイルは、Context の経路で app と test の program にも入る。そこでは Workers の型の名前が解決しない。名前を直に書くと `tsc -p tsconfig.app.json` は TS2552 を出す。Void の型を経た値は、型が解決しないまま通る。`c.env.DB` の型は `void/dist/env-public-*.d.mts` の `Cloudflare.Env` が参照する `D1Database` で、その解決の誤りを `tsconfig.base.json` の `skipLibCheck: true` が隠す
+- `vp check` (tsgolint) は、ファイルを `include` に持つ tsconfig の program で検査する。server のファイルは worker の program で Workers の型が付く。ページの import から app に入る `src/lib/` の `*.server.ts` で `c.env.DB` を `string` に入れると、`vp check` は TS2322 で落ち、`tsc -p tsconfig.app.json` は通った (2026-11-03)。型検査の合否は `vp check` で見て、`tsc -p` は `--explainFiles` と `--traceResolution` で経路を調べるときに使う
+- テストは test の program で検査されるので、テストの中の `c.env.DB` は型が解決しない。テストのファイルでは `typescript/no-unsafe-*` の多くを外している (`docs/guides/lint/configuration.md`「テストファイルの緩和」) ので、`src/lib/` のテストで `c.env.DB` を `string` に入れても `vp check` は通った (2026-11-03)
 - app と test の program に global の型を足すときは、`types/app-globals/index.d.ts` か `types/test-globals/index.d.ts` に `/// <reference types="..." />` を足す。tsconfig の `types` に名前を足すと、node_modules を探さず TS2688 で落ちる
 - `.void/db.d.ts` も 1 行目に `/// <reference types="@cloudflare/workers-types" />` を持つ。F の前に app へ Workers の型が入らなかったのは、pnpm が `@cloudflare/workers-types` をルートの `node_modules` に置かず、`.void/` からの参照が解決しなかったためである (2026-11-03、`tsc --traceResolution`)
 - app の program は Node の型を持つ。app に入る server のファイル (action を持つ `pages/<path>.server.ts` など) の `import ... from "void"` が、`void/dist/index.d.mts` → `@cloudflare/vite-plugin` → `miniflare` → `undici` の型を経て `/// <reference types="node" />` を読む (2026-11-03、`tsc --explainFiles`)。`src/lib/` に `process` と `Buffer` を書いても `vp check` は通る
