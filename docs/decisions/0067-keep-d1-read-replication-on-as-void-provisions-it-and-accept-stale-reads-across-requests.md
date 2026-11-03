@@ -6,7 +6,7 @@
 
 ## Context
 
-Void 1.4.0 は、D1 の database を provision するときに read replication を有効にする。Void の docs「D1 (SQLite)」の Read replication は "Void enables D1 read replication when it provisions a database." と書く。
+Void 1.5.0 は、D1 の database を provision するときに read replication を有効にする。Void の docs「D1 (SQLite)」の Read replication は "Void enables D1 read replication when it provisions a database." と書く。
 
 D1 の replica は primary の変更を非同期に受け取る。Cloudflare の docs「Global read replication」は "D1 asynchronously replicates changes from the primary database instance to all read replicas. This means that at any given time, a read replica may be arbitrarily out of date." と書く。1 つの session の中の query は、sequential consistency を保つ ("Sessions API ensures sequential consistency for all queries in a session.")。bookmark を渡さずに始めた別の session との間には、この保証が無い。
 
@@ -47,7 +47,7 @@ Void の docs「D1 (SQLite)」は "Authentication session checks start on the pr
 
 ### 検討した選択肢
 
-| 案                                                                                                                                                                                                                                                                                                                                                                | 遅れを覆う範囲                                                    | Void 1.4.0 で組めるか                                                                                                                                                                                                                                                              | 採否                                                   |
+| 案                                                                                                                                                                                                                                                                                                                                                                | 遅れを覆う範囲                                                    | Void 1.5.0 で組めるか                                                                                                                                                                                                                                                              | 採否                                                   |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | bookmark を cookie か header で次の要求へ渡す (Cloudflare の推奨形)。応答の前に `getBookmark()` を書き、次の要求は `withSession(<bookmark>)` で始める (Cloudflare の docs「Global read replication」の Start a session from previous context (bookmark)、tutorial「Using D1 Read Replication for your e-commerce website」の Step 7 の cookie `product_bookmark`) | 同じ client の続く要求すべて                                      | 組めない。`db` と `createDb` は session の始め方を `first-unconstrained` に固定し、bookmark を受け取らない。読む側は自前の `drizzle(env.DB.withSession(<bookmark>))` になり、ADR-0052 から外れる。auth は Void が生成するモジュールで `db` を使うので、自前の drizzle では覆えない | 却下                                                   |
 | 直後に読む loader だけ `env.DB.withSession("first-primary")` で読む (Void の docs「D1 (SQLite)」の案内)                                                                                                                                                                                                                                                           | 書き換えた loader だけ。auth は覆えない                           | 読む側が自前の drizzle になり、ADR-0052 から外れる。どの loader が書き込みの直後に読むかはページごとに決まり、一般の規範にできない                                                                                                                                                 | 却下                                                   |
@@ -55,7 +55,7 @@ Void の docs「D1 (SQLite)」は "Authentication session checks start on the pr
 | action で redirect せず、同じ要求で描き直す (Void の docs「Actions & Forms」の既定)                                                                                                                                                                                                                                                                               | redirect しない action の直後だけ。ログインとログアウトは覆えない | 組めるが、一覧の条件を保つ redirect (ADR-0056) とぶつかる                                                                                                                                                                                                                          | 却下                                                   |
 | Void の既定のまま、要求ごとの session に任せる                                                                                                                                                                                                                                                                                                                    | 要求の中だけ                                                      | 組める                                                                                                                                                                                                                                                                             | **採用**                                               |
 
-Cloudflare の推奨形は Void 1.4.0 の `db` では組めず、組める案はどれも、覆う範囲が一部に限られるか、読みの速さと provision のたびの切り直しを払う。テンプレートから作るアプリが要求をまたいだ一貫性を要るかは、アプリごとに違う。そのため既定は Void のままにし、要るアプリが切る手順を用意する。
+Cloudflare の推奨形は Void 1.5.0 の `db` では組めず、組める案はどれも、覆う範囲が一部に限られるか、読みの速さと provision のたびの切り直しを払う。テンプレートから作るアプリが要求をまたいだ一貫性を要るかは、アプリごとに違う。そのため既定は Void のままにし、要るアプリが切る手順を用意する。
 
 ## Consequences
 
@@ -66,10 +66,10 @@ Cloudflare の推奨形は Void 1.4.0 の `db` では組めず、組める案は
 
 ## 出典
 
-Void の docs とソースは v1.4.0 を読んだ。同じ docs が Void 1.4.0 に同梱の `node_modules/void/docs/` にある。Cloudflare の docs と blog は 2026-11-03 に原文と照らした。
+Void の docs は v1.5.0 を読んだ。同じ docs が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。ソースは v1.4.0 を読み、`withSession` の形が 1.5.0 でも同じことを確かめた。Cloudflare の docs と blog は 2026-11-03 に原文と照らした。
 
-- Void の docs「D1 (SQLite)」(Read replication): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/database/d1.md
-- Void の docs「Actions & Forms」(action の戻り値ごとの振る舞い): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/actions-and-forms.md
+- Void の docs「D1 (SQLite)」(Read replication): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database/d1.md
+- Void の docs「Actions & Forms」(action の戻り値ごとの振る舞い): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/actions-and-forms.md
 - Void 1.4.0 のソース: `packages/void/src/plugin-drizzle.ts`、`runtime/db.ts`、`runtime/env.ts`、`runtime/remote/d1.ts`、`auth/drizzle.ts`、`router/compile.ts`、`runtime/better-auth-shared.ts`、`pages/protocol.ts`、`pages/client.ts`、`pages/navigation-engine.ts`、`cli/provision.ts`、`cli/deploy-cloudflare-preflight.ts`。https://github.com/voidzero-dev/void/tree/v1.4.0/packages/void/src
 - Better Auth 1.7.14 の sign-out (session の行と cookie を消す): https://github.com/better-auth/better-auth/blob/v1.7.14/packages/better-auth/src/api/routes/sign-out.ts
 - Better Auth 1.7.14 の get-session (session の cookie が無ければ DB を読まない): https://github.com/better-auth/better-auth/blob/v1.7.14/packages/better-auth/src/api/routes/session.ts

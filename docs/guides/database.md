@@ -189,5 +189,5 @@ D1 の結果の `meta.served_by_primary` は、その query を処理した inst
 [Void docs「void db seed」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md
 [drizzle docs「Seed Overview」]: https://orm.drizzle.team/docs/seed-overview
 [Cloudflare docs「Global read replication」]: https://developers.cloudflare.com/d1/best-practices/read-replication/
-[Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/integrations/cloudflare.md
+[Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/integrations/cloudflare.md
 [Cloudflare docs「Real-time logs」]: https://developers.cloudflare.com/workers/observability/logs/real-time-logs/
