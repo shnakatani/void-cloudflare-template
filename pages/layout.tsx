@@ -2,6 +2,7 @@ import { useShared } from "@void/react";
 import { StrictMode, useEffect, type ReactNode } from "react";
 
 import { AppDevtools } from "@/components/app-devtools";
+import { ChunkLoadErrorRecovery } from "@/components/chunk-load-error-recovery";
 import { LiveRegions } from "@/components/live-regions";
 import { NavigationProgress } from "@/components/navigation-progress";
 import { RouteAnnouncer } from "@/components/route-announcer";
@@ -40,6 +41,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <NavigationProgress />
       <LiveRegions />
       <RouteAnnouncer />
+      <ChunkLoadErrorRecovery />
       <AppDevtools />
     </StrictMode>
   );

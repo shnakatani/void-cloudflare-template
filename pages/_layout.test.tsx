@@ -7,6 +7,7 @@ import type { NavigationState } from "void/pages-client";
 
 import { toast } from "@/components/ui/toast";
 import type { AppShared, SharedUser } from "@/features/auth/shared";
+import { loadDocument } from "@/lib/chunk-load-error";
 import { LIVE_REGION_IDS } from "@/lib/live-announcer";
 import { MUTATION_ERROR_FALLBACK_MESSAGE } from "@/lib/mutation-error";
 import { UA_VISUAL_TRANSITION_ATTRIBUTE } from "@/lib/ua-visual-transition";
@@ -16,6 +17,11 @@ import { expectAbsent } from "@/test/assert/absent";
 import Layout from "./layout";
 
 vi.mock("void/client", () => ({ auth: { signOut: vi.fn() } }));
+// 文書を開く口だけを差し替え、テストの iframe の文書を替えない
+vi.mock(import("@/lib/chunk-load-error"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  loadDocument: vi.fn(),
+}));
 
 const SIGNED_OUT: AppShared = { auth: { user: null } };
 const USER: SharedUser = { id: "u1", email: "a@example.com", name: "a" };
@@ -105,6 +111,23 @@ describe("root layout", () => {
     await expect
       .element(screen.getByRole("heading", { name: "エラーが発生しました" }))
       .toHaveFocus();
+  });
+
+  it("全画面のエラー表示の間も、遷移の先のページの chunk が読めなければ行き先の文書を開く", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const destination = new URL("/b", window.location.origin);
+    const screen = await renderLayout(<FailingPage />, createFakeRouter("/a"), SIGNED_OUT, {
+      state: "loading",
+      location: destination,
+      method: "GET",
+    });
+    await expect
+      .element(screen.getByRole("heading", { name: "エラーが発生しました" }))
+      .toBeVisible();
+
+    window.dispatchEvent(new Event("vite:preloadError", { cancelable: true }));
+
+    expect(vi.mocked(loadDocument).mock.calls).toEqual([[{ kind: "assign", url: destination }]]);
   });
 
   it("ブラウザが遷移のアニメーションを出した戻る・進むで html に印を付け、unmount で外す", async () => {
