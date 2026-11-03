@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import { isExistingCalendarDate } from "@/lib/calendar-date";
-import { truncateCodePoints } from "@/lib/truncate-code-points";
+import { fitsContainsPattern, truncateToContainsPattern } from "@/lib/like-pattern";
 
 /** ドメインの呼称。画面見出し・追加ボタン・削除確認の文言が使う。 */
 export const NOTE_ENTITY_LABEL = "メモ";
@@ -152,28 +152,34 @@ export const noteUpdateSchema = v.object({
 });
 export type NoteUpdate = v.InferOutput<typeof noteUpdateSchema>;
 
-export const NOTE_QUERY_MAX_LENGTH = 100;
+/**
+ * 検索語が一覧の部分一致の上限を超えるか。q は D1 の LIKE のパターンになり、上限は文字数ではなく
+ * % で包んでエスケープしたあとの bytes で決まる (`src/lib/like-pattern.ts`)。入力欄はこれで超えたことを伝え、送らない
+ */
+export function isNoteQueryTooLong(text: string): boolean {
+  return !fitsContainsPattern(text.trim());
+}
 
 /**
  * 一覧の絞り込み条件。loader が `c.req.query("q")` (文字列か `undefined`) をこの schema に通す。
  * `q` の既定は空文字 = 絞り込みなし。
  *
- * 上限は reject せず切り詰める。入力欄は maxLength で打ち止めにしないので、打ち込んだ値も URL の値も
- * この切り詰めで同じ値に収束する (ADR-0036)。文字列以外は弾き、既定の英語文言を出さない。
+ * 上限は reject せず切り詰める。入力欄は超えたら送らないので、ここで切るのは手で書いた URL の値で、
+ * 切った値はもう一度通しても変わらない (ADR-0036)。文字列以外は弾き、既定の英語文言を出さない。
  */
 export const noteListFilterSchema = v.object({
   q: v.optional(
     v.pipe(
       v.string("検索語は文字列で指定してください"),
       v.trim(),
-      // 上限を超えたかは valibot の maxCodePoints が判定し、超えたときだけ code point の境界で切る。
-      // 切った末尾の空白は落とす。残すと、切った値をもう一度通したときに trim で値が変わる
-      v.fallback(v.pipe(v.string(), v.maxCodePoints(NOTE_QUERY_MAX_LENGTH)), (dataset) => {
+      // 上限を超えたときだけ code point の境界で切る。切った末尾の空白は落とす。残すと、切った値を
+      // もう一度通したときに trim で値が変わる
+      v.fallback(v.pipe(v.string(), v.check(fitsContainsPattern)), (dataset) => {
         // 外側の v.string と v.trim を通った後なので、値は文字列のはず
         if (typeof dataset?.value !== "string") {
           throw new Error("検索語の切り詰めに文字列でない値が届いた");
         }
-        return truncateCodePoints(dataset.value, NOTE_QUERY_MAX_LENGTH).trimEnd();
+        return truncateToContainsPattern(dataset.value).trimEnd();
       }),
     ),
     "",

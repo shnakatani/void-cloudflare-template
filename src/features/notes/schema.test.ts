@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import {
   NOTE_BODY_MAX_LENGTH,
   NOTE_FIELD_LABELS,
-  NOTE_QUERY_MAX_LENGTH,
   NOTE_TITLE_MAX_LENGTH,
+  isNoteQueryTooLong,
   noteIdSchema,
   noteInputSchema,
   noteListFilterSchema,
@@ -304,28 +304,31 @@ describe("noteListFilterSchema", () => {
     expect(v.parse(noteListFilterSchema, { q: "   " })).toEqual({ q: "" });
   });
 
-  // 上限の境界: cap - 1 / cap 文字は保ち、cap + 1 文字は cap 文字に切る (reject しない)。数える単位は
-  // code point (ADR-0036) で、𠮷 は 2 code unit・1 code point
-  it.each(["a", "𠮷"])("上限を超えた分は切り詰め、エラーにしない (%s)", (char) => {
-    const cap = NOTE_QUERY_MAX_LENGTH;
+  // 上限は % で包んだパターンの 50 bytes で、検索語に使えるのは 48 bytes。「あ」は 3 bytes で 16 文字、
+  // 𠮷 は 4 bytes で 12 文字、% はエスケープで 2 bytes で 24 文字。cap - 1 / cap は保ち、cap + 1 は cap に切る
+  it.each([
+    ["a", 48],
+    ["あ", 16],
+    ["𠮷", 12],
+    ["%", 24],
+  ])("上限を超えた分は切り詰め、エラーにしない (%s)", (char, cap) => {
     const parseQ = (length: number) => v.parse(noteListFilterSchema, { q: char.repeat(length) }).q;
     expect(parseQ(cap - 1)).toBe(char.repeat(cap - 1));
     expect(parseQ(cap)).toBe(char.repeat(cap));
     expect(parseQ(cap + 1)).toBe(char.repeat(cap));
   });
 
-  // "a" × (cap - 1) + " b" は cap + 1 文字。cap で切ると末尾が空白になるので落とし、cap - 1 文字の "a" にする。
+  // "a" × 47 + " b" は 49 bytes。48 bytes で切ると末尾が空白になるので落とし、47 文字の "a" にする。
   // 残すと、切った値をもう一度通したときに trim で値が変わる
   it("切った末尾に空白を残さず、切った値をもう一度通しても変わらない", () => {
-    const cap = NOTE_QUERY_MAX_LENGTH;
-    const once = v.parse(noteListFilterSchema, { q: `${"a".repeat(cap - 1)} b` });
-    expect(once).toEqual({ q: "a".repeat(cap - 1) });
+    const once = v.parse(noteListFilterSchema, { q: `${"a".repeat(47)} b` });
+    expect(once).toEqual({ q: "a".repeat(47) });
     expect(v.parse(noteListFilterSchema, once)).toEqual(once);
   });
 
   it("trim してから切り詰める (前後の空白は上限に含めない)", () => {
-    expect(v.parse(noteListFilterSchema, { q: ` ${"a".repeat(NOTE_QUERY_MAX_LENGTH)} ` })).toEqual({
-      q: "a".repeat(NOTE_QUERY_MAX_LENGTH),
+    expect(v.parse(noteListFilterSchema, { q: ` ${"あ".repeat(16)} ` })).toEqual({
+      q: "あ".repeat(16),
     });
   });
 
@@ -334,5 +337,17 @@ describe("noteListFilterSchema", () => {
     const result = v.safeParse(noteListFilterSchema, { q: 1 });
     expect(result.success).toBe(false);
     expect(result.issues?.[0]?.message).toBe("検索語は文字列で指定してください");
+  });
+});
+
+describe("isNoteQueryTooLong", () => {
+  // schema が切り詰める境界と同じ所で超える
+  it("上限ちょうどは超えず、1 文字足すと超える", () => {
+    expect(isNoteQueryTooLong("あ".repeat(16))).toBe(false);
+    expect(isNoteQueryTooLong("あ".repeat(17))).toBe(true);
+  });
+
+  it("前後の空白は数えない (schema の trim と同じ)", () => {
+    expect(isNoteQueryTooLong(`  ${"あ".repeat(16)}  `)).toBe(false);
   });
 });

@@ -4,7 +4,6 @@ import { render } from "vitest-browser-react";
 
 import { NoteSearchField } from "./note-search-field";
 import { noteSearchbox } from "./note-search-field.test-helpers";
-import { NOTE_QUERY_MAX_LENGTH } from "./schema";
 
 describe("NoteSearchField", () => {
   it("入力で onValueChange へ現在値を渡す", async () => {
@@ -24,7 +23,7 @@ describe("NoteSearchField", () => {
     const screen = await render(
       <NoteSearchField value="" onValueChange={onValueChange} onSubmit={() => {}} />,
     );
-    const over = "a".repeat(NOTE_QUERY_MAX_LENGTH + 1);
+    const over = "あ".repeat(17);
 
     await noteSearchbox(screen).fill(over);
 
