@@ -1,8 +1,18 @@
+import { VoidActionError } from "void/pages-client";
+
 import { toast } from "@/components/ui/toast";
 
 /** mutation 失敗時にユーザーへ出す固定文言。原因ではなく次に取れる行動だけを伝える。 */
 export const MUTATION_ERROR_FALLBACK_MESSAGE =
   "操作に失敗しました。時間をおいて再試行してください。";
+
+/**
+ * action が 401 (session 切れ) で止まったときの文言。時間をおいても通らないので、ログインし直しを案内する。
+ * 同じタブでログインのページへ移ると、ダイアログと入力が消える。session の cookie はタブをまたいで効くので、
+ * 別のタブでログインし直せば、残った入力のまま送り直せる (WCAG 2.2 Understanding「Re-authenticating」)
+ */
+export const SESSION_EXPIRED_MESSAGE =
+  "ログインが切れています。別のタブでログインし直してから、もう一度操作してください。";
 
 /**
  * mutation の失敗で toast に出す文言を組み立てる。
@@ -12,12 +22,16 @@ export const MUTATION_ERROR_FALLBACK_MESSAGE =
  *
  * raw error は observability のため console.warn に残す (fail-closed)。
  *
- * ユーザー向けの文言を持つエラーを導入するときは、その型の分岐をここへ足して
+ * 次に取れる行動が固定文言と違う失敗は、ここで分ける。action の 401 は `SESSION_EXPIRED_MESSAGE` を返す。
+ * ユーザー向けの文言を持つエラーを導入するときも、その型の分岐をここへ足して
  * `error.message` を返す。分岐を足す場所をここ 1 箇所に
  * 閉じるために、呼び出し側は toast へ渡す文言をこの関数からのみ受け取る。
  */
 export function curateMutationErrorMessage(error: unknown): string {
   console.warn("[mutation] failed", { error });
+  if (error instanceof VoidActionError && error.status === 401) {
+    return SESSION_EXPIRED_MESSAGE;
+  }
   return MUTATION_ERROR_FALLBACK_MESSAGE;
 }
 
