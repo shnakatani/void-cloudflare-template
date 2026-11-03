@@ -138,6 +138,7 @@ describe("NotesPage の検索の待ち", () => {
     await expect.element(field).toBeInvalid();
     await field.fill("あ".repeat(16));
     await expect.element(field).not.toBeInvalid();
+    await expect.element(field).not.toHaveAccessibleDescription();
     await expect
       .poll(() => router.visits.map((visit) => visit.url))
       .toEqual([`/notes?q=${encodeURIComponent("あ".repeat(16))}`]);
