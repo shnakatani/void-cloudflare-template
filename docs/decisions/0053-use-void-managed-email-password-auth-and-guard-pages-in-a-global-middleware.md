@@ -68,7 +68,7 @@ action の要求を redirect すると、Void 1.4.0 の client は redirect を�
 
 - 保護する path は `src/features/auth/access.ts` の `PROTECTED_PATHS` に足す。どちらの一覧にも無い path は `public` で、未ログインでも開く (fail-open)。足し忘れても何も落ちないので、守る path ごとに `scripts/checks/runtime/auth-redirect.ts` の期待値に 1 行足す
 - 一覧に無い path の handler では、`requireAuth(c)` だけが未ログインの要求を止める。handler が `getUser()` で読んで `null` のまま書くと、未ログインの要求が書き込みまで届く
-- 守る path への別の origin からの書き込みの要求は、Void の page の action の origin の判定 (403、ADR-0060) より先に、middleware の 401 で止まる。Void の auth の middleware が session の cookie を捨てるので、cookie を付けて送っても 401 になる (2026-11-03、`vp preview`)
+- 守る path への、`trustedOrigins` に無い別の origin からの書き込みの要求は、Void の page の action の origin の判定 (403、ADR-0060) より先に、middleware の 401 で止まる。Void の auth の middleware が session の cookie を捨てるので、cookie を付けて送っても 401 になる (2026-11-03、`vp preview`)。`trustedOrigins` の origin からログインした cookie を付けて送ると、cookie は捨てられず、middleware を通って page の action の 403 になる (Void 1.4.0 の `runtime/better-auth-shared.ts` の `sessionHeaders` と `pages/protocol.ts` の `isSameOriginAction`)
 - 守るページを prerender しない。`.md` のページと、loader の無い island のページは自動で prerender されるので (Void の docs「Edge Prerendering」)、守る path の下に置かない。prerender は build の時点の HTML と page data (`/_void/pages/<path>.json`) を静的な出力に書く (Void 1.4.0 の `prerender-render.ts`)。その配信が middleware の判定を通るかは確かめていない
 - `SharedContext` には page data の `shared ?? {}` が入る (`@void/react` 1.4.0 の `runtime/pages-client.ts`)。`pages/layout.tsx` は描画の先頭で `.auth` を分割代入するので、middleware を通らずに描かれたページでは layout が throw する。layout の中の `AppErrorBoundary` はまだ mount されていないので、この throw を受ける境界は無い。いまは middleware がすべての要求で `shared` を入れる
 - `vp preview` と deploy には `BETTER_AUTH_SECRET` が要る。preview への渡し方は `docs/guides/auth.md`「preview に secret を渡す」

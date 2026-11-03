@@ -158,7 +158,7 @@ Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か�
 | session を読むすべての要求 | `POST`・`PUT`・`PATCH`・`DELETE` で、`Origin` が要求の origin とも `trustedOrigins` とも違う ([Void docs「Authentication」][] の Behavior、Void 1.4.0 の `runtime/better-auth-shared.ts` の `sessionHeaders`)                                                                | cookie を捨て、user の無い要求として通す |
 
 - cookie を捨てる判定は要求を止めない。`routes/` の handler が守られるのは、user を読み、無ければ止まるからである
-- 守る path (`PROTECTED_PATHS`) では、page の action の判定より先に、cookie を捨てられて未ログインになった要求を middleware が 401 で止める。403 ではなく 401 が返る (ADR-0053)
+- 守る path (`PROTECTED_PATHS`) では、`trustedOrigins` に無い別の origin からの要求は cookie を捨てられて未ログインになり、page の action の判定より先に middleware が 401 で止める。403 ではなく 401 が返る (ADR-0053)
 - `Origin`・`Sec-Fetch-Site`・`Referer` のどれも無い要求は、どちらの判定もブラウザの外の client として通す
 - ブラウザが別の origin への要求に `Origin` を付けること、session の cookie の `SameSite` が止める範囲、2026-11-02 に `vp preview` で叩いた結果は、ADR-0060 の Context にある
 
