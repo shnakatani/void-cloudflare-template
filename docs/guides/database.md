@@ -133,7 +133,8 @@ D1 の結果の `meta.served_by_primary` は、その query を処理した inst
 2. deploy し、Cloudflare の dashboard の Worker の Logs で Live を開いて、操作したときの出力を見る ([Cloudflare docs「Real-time logs」][])
 3. 確かめ終えたら、足した行を消して deploy し直す
 
-- 足した query を loader の最初に置くと、その要求の session がどの instance から始まったかが分かる。`db` は要求の中の query で 1 つの session を共有し (ADR-0067)、後の query はそれより古くない instance で読む ([Cloudflare docs「Global read replication」][] の Sessions API provides sequential consistency)
+- 足した query は loader の query と同じ session で動き、その query を処理した instance を返す。`db` は要求の中の query で 1 つの session を共有し (ADR-0067)、後の query はそれより古くない instance で読む ([Cloudflare docs「Global read replication」][] の Sessions API provides sequential consistency)
+- session の cookie を送る要求では、loader より先に Void の auth の middleware が同じ session で session の行を読む (ADR-0067)。その読みを処理した instance は、足した query では分からない
 - ローカルの dev では、`served_by_primary` と `served_by_region` は `undefined` になる ([Cloudflare docs「Global read replication」][])。deploy した環境でしか確かめられない
 - コードを足さずに傾向だけを見るなら、Cloudflare の dashboard の D1 の metrics で、要求を処理した region の内訳を見る ([Cloudflare docs「Global read replication」][] の Observability)
 
