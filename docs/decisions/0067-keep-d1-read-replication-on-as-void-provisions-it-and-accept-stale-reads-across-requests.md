@@ -8,7 +8,7 @@
 
 Void 1.4.0 は、D1 の database を provision するときに read replication を有効にする。Void の docs「D1 (SQLite)」の Read replication は "Void enables D1 read replication when it provisions a database." と書く。
 
-D1 の replica は primary の変更を非同期に受け取る。Cloudflare の docs「Global read replication」は "D1 asynchronously replicates changes from the primary database instance to all read replicas. This means that at any given time, a read replica may be arbitrarily out of date." と書く。1 つの session の中の query は、sequential consistency を保つ ("Sessions API ensures sequential consistency for all queries in a session.")。session をまたぐ query には、この保証が無い。
+D1 の replica は primary の変更を非同期に受け取る。Cloudflare の docs「Global read replication」は "D1 asynchronously replicates changes from the primary database instance to all read replicas. This means that at any given time, a read replica may be arbitrarily out of date." と書く。1 つの session の中の query は、sequential consistency を保つ ("Sessions API ensures sequential consistency for all queries in a session.")。bookmark を渡さずに始めた別の session との間には、この保証が無い。
 
 ### Void が張る session
 
@@ -59,7 +59,7 @@ Cloudflare の推奨形は Void 1.4.0 の `db` では組めず、組める案は
 
 ## Consequences
 
-- deploy した環境では、保存の redirect の先と、ログインと登録の直後に、古い読みが起こりうる。ローカルの dev・preview・remote dev では起こらないので、テストと手元の確認では見つからない
+- deploy した環境では、保存の redirect の先と、ログインと登録の直後に、古い読みが起こりうる。ローカルの dev・preview・remote dev では起こらない (dev と preview は推論。Context) ので、テストと手元の確認では見つからない
 - どの instance が読んだかは、D1 の結果の `meta.served_by_primary` で確かめる。手順は `docs/guides/database.md`「deploy した環境で読んだ instance を確かめる」
 - auth の遅れは、Void の docs ではなくソース (Context の表) で判断する。docs の記述と 1.4.0 のソースが食い違う
 - Cloudflare の docs は、replication を切った database でも Sessions API が動くと書く ("Sessions API works with databases that do not have read replication enabled, so it is safe to run code with Sessions API even after disabling read replication.")。切っても `void/db` はそのまま使える

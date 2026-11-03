@@ -114,7 +114,7 @@ it("別のユーザーの行を返さない", async () => {
 
 - 切ってから replica が要求を受けなくなるまで、最大 24 時間かかる ([Cloudflare docs「Global read replication」][])。その間は、古い読みがまだ起こりうる
 - `void/db` は切った database でもそのまま使える。Sessions API は replication の無い database でも動く ([Cloudflare docs「Global read replication」][])
-- `void deploy` が provision を走らせると、Void が replication を `auto` に戻す。`--provision` を付けた deploy や、新しい資源を宣言した deploy で走る。走る条件の一覧は ADR-0067 にある。その deploy のあとに 4 で確かめ、`auto` なら 3 を打ち直す
+- `void deploy` が provision を走らせると、Void が replication を `auto` に戻す。`--provision` を付けた deploy や、新しい資源を宣言した deploy で走る。走る条件の一覧は ADR-0067 にある。その deploy のあとに `GET` で確かめ、`auto` なら `PUT` を打ち直す
 
 ### deploy した環境で読んだ instance を確かめる
 
