@@ -1,0 +1,66 @@
+diff --git a/errors.cjs b/errors.cjs
+index b593f0da263a7ad7904f44e89f1c0992c39c4aad..07210bd4694634b62871c680669545ac28ea3397 100644
+--- a/errors.cjs
++++ b/errors.cjs
+@@ -34,10 +34,9 @@ class DrizzleError extends Error {
+ }
+ class DrizzleQueryError extends Error {
+   constructor(query, params, cause) {
+-    super(`Failed query: ${query}
+-params: ${params}`);
++    super(`Failed query: ${query}`);
+     this.query = query;
+-    this.params = params;
++    this.params = void 0;
+     this.cause = cause;
+     Error.captureStackTrace(this, DrizzleQueryError);
+     if (cause) this.cause = cause;
+diff --git a/errors.d.cts b/errors.d.cts
+index dc885a739ee987fe12bac870f825150157da48cf..b31d950cc9293764b881d9c07053778cf50ea5ae 100644
+--- a/errors.d.cts
++++ b/errors.d.cts
+@@ -8,9 +8,9 @@ export declare class DrizzleError extends Error {
+ }
+ export declare class DrizzleQueryError extends Error {
+     query: string;
+-    params: any[];
++    params: any[] | undefined;
+     cause?: Error | undefined;
+-    constructor(query: string, params: any[], cause?: Error | undefined);
++    constructor(query: string, params: any[] | undefined, cause?: Error | undefined);
+ }
+ export declare class TransactionRollbackError extends DrizzleError {
+     static readonly [entityKind]: string;
+diff --git a/errors.d.ts b/errors.d.ts
+index c3d95cfe373a5525351ff325ffe522c25edba1a4..af92f31e4917af04e0e58ee172bb25fcf8bb397d 100644
+--- a/errors.d.ts
++++ b/errors.d.ts
+@@ -8,9 +8,9 @@ export declare class DrizzleError extends Error {
+ }
+ export declare class DrizzleQueryError extends Error {
+     query: string;
+-    params: any[];
++    params: any[] | undefined;
+     cause?: Error | undefined;
+-    constructor(query: string, params: any[], cause?: Error | undefined);
++    constructor(query: string, params: any[] | undefined, cause?: Error | undefined);
+ }
+ export declare class TransactionRollbackError extends DrizzleError {
+     static readonly [entityKind]: string;
+diff --git a/errors.js b/errors.js
+index 6db8b6365e30f239bf2738504937ed81733e82dd..df3910833f20f4605681476081fb22eaed4a3fd8 100644
+--- a/errors.js
++++ b/errors.js
+@@ -9,10 +9,9 @@ class DrizzleError extends Error {
+ }
+ class DrizzleQueryError extends Error {
+   constructor(query, params, cause) {
+-    super(`Failed query: ${query}
+-params: ${params}`);
++    super(`Failed query: ${query}`);
+     this.query = query;
+-    this.params = params;
++    this.params = void 0;
+     this.cause = cause;
+     Error.captureStackTrace(this, DrizzleQueryError);
+     if (cause) this.cause = cause;
