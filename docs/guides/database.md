@@ -215,7 +215,6 @@ D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs �
 | Better Auth の sign-up の API を seed から呼ぶ              | 却下 | Void は Worker の外で Better Auth を組む口を公開しない。`auth/drizzle.ts` が組む options は auth の schema を作るためだけのもの             |
 | Void の hash 関数を呼ぶ                                     | 却下 | `voidAuthPassword` (`runtime/better-auth-shared.ts`) は export されていない                                                                 |
 | Better Auth の `hashPassword` (`better-auth/crypto`) を呼ぶ | 却下 | Void と同じ形を作るが、`better-auth` は `void` の依存で、直接の依存に足すと版を `void` と揃え続けることになる                               |
-| seed の中で `node:crypto` の `scrypt` で作る                | 却下 | `db/` は Workers の型の tsconfig (ADR-0047) に入り、`node:crypto` の型が無い                                                                |
 | 固定の salt で作った値を置く                                | 採用 | Void の hash の形 (`<salt>:<鍵>` の hex、scrypt の N 16384・r 16・p 1・鍵 64 byte) が変わると、見本のユーザーでログインできなくなって分かる |
 
 ### seed に drizzle-seed を使わない理由
