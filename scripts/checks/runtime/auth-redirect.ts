@@ -19,7 +19,7 @@ import {
 
 const REQUEST_TIMEOUT_MS = 2000;
 
-/** 送る body は action の検証を通る値にする。検証に落ちると、`requireAuth(c)` より前に 422 が返る */
+/** action へは JSON の body を送る。body が無いと、`requireAuth(c)` より前に 400 が返る (2026-11-03、`vp preview`) */
 interface Probe extends ExpectedResponse {
   readonly json?: unknown;
 }
