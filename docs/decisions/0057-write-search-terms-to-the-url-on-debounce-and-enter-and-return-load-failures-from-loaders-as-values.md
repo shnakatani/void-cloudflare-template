@@ -83,7 +83,7 @@ loader が返す値は次のとおりにする。ページそのもの (一覧) 
 - 目に見える遷移中の印は、root の layout の帯 1 つ (`src/components/navigation-progress.tsx`) と、押したリンクの Spinner が持つ。ページごとの skeleton は置かない。帯は `aria-hidden` で、`"loading"` のときだけ、300ms 遅れて現れる。別のページへの遷移の待ちは ADR-0049 の部品が 1000ms を超えたら「読み込み中」と読み上げ、完了は ADR-0049 の部品と各ページの通知が読み上げる。送信中の印は押した部品の pending が持つ (ADR-0017)
 - 帯の遅れの 300ms に出典は無い。短い読み込みで帯を瞬かせないための値で、検索の入力の debounce と同じ桁に置いた。Nielsen Norman Group「Response Times: The 3 Important Limits」は、0.1 秒を超え 1.0 秒に満たない遅れには特別な表示は要らず、1.0 秒を超えると作業中だと知らせるとする。この値は閾値より短い側にあり、遅れを伸ばしても出典と矛盾しない
 - 一覧の読み込みの失敗も HTTP の 200 で届く。失敗に気付く手掛かりは server の `logger.error` のログだけになる (ADR-0055)
-- 検索語は要求の URL に載るので、Workers Logs の invocation log に残り、traces を有効にしていれば trace の span にも残る (ADR-0055)
+- 検索語は要求の URL に載るので、Workers Logs の invocation log に残り、trace を取った要求では trace の span にも残る (ADR-0055)
 - `head()` はページを開いたときと検索の visit を分けないので、検索の visit で一覧を読めなかったときも title に「エラー: 」が付く。query だけの遷移なので、遷移の読み上げは title を読まず、focus も動かない。失敗の読み上げはページの effect が出す
 - 再試行は loader 全体を読み直すので、読めた側 (一覧か、開く 1 件) も読み直す
 - 上限を超えたまま打鍵が止まるたびに、同じ文言を読み上げる

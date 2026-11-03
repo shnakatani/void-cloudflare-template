@@ -2,13 +2,14 @@
 
 Cloudflare の自分のアカウントへ本番を出す手順と、`.github/workflows/void-deploy.yml` を有効にする・止める手順と、本番の Worker の設定 (配信先、ログ、要求の body の上限) と、その形にしている理由を持つ。
 
-| 決定                                                                                                                    | ADR      |
-| ----------------------------------------------------------------------------------------------------------------------- | -------- |
-| inline の script を許さない CSP を送り、Void の deferred props を使わない                                               | ADR-0051 |
-| DB は void/db と D1 で持ち、migration は auth の table ごと void db generate で生成して commit する                     | ADR-0052 |
-| 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                             | ADR-0053 |
-| 本番へは GitHub Actions から void deploy で Cloudflare へ出し、deploy しない repository では workflow を Disable にする | ADR-0061 |
-| D1 の read replication は Void の既定のまま有効にし、要求をまたぐ読みの遅れを受け入れる                                 | ADR-0067 |
+| 決定                                                                                                                                            | ADR      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| inline の script を許さない CSP を送り、Void の deferred props を使わない                                                                       | ADR-0051 |
+| DB は void/db と D1 で持ち、migration は auth の table ごと void db generate で生成して commit する                                             | ADR-0052 |
+| 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                                                     | ADR-0053 |
+| ドメインの schema と query と画面の部品は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
+| 本番へは GitHub Actions から void deploy で Cloudflare へ出し、deploy しない repository では workflow を Disable にする                         | ADR-0061 |
+| D1 の read replication は Void の既定のまま有効にし、要求をまたぐ読みの遅れを受け入れる                                                         | ADR-0067 |
 
 ## how-to
 
@@ -58,6 +59,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 
 - `void.config.ts` の `cloudflare.observability` の `head_sampling_rate` を書き換えて deploy する。logs と traces で別の率を持てる ([Cloudflare docs「Traces」][] の Sampling)。いまの率の理由は「Workers Logs と Traces の率を決めた理由」
 - 止めるときは、logs は `enabled: false`、traces は `traces.enabled: false` を書く。`enabled` は `logs.enabled` の略記で、logs だけを指す ([Cloudflare docs「Wrangler Configuration」][] の `observability`)。traces は `traces.enabled` で切り替える ([Cloudflare docs「Traces」][])。`observability` ごと消すと、Void は deploy で設定を送らず、Worker は前の値のまま残る (Void 1.5.0 の `deploy-cloudflare/src/version.ts` の `readCloudflareTriggerConfig`)
+- Workers Logs の invocation log と traces の span は、要求の URL を query ごと持つ。URL に載る値を Cloudflare の記録に残さないときに止める設定は ADR-0055 にある
 
 ### 上限より大きな body を受ける route を足す
 
@@ -122,7 +124,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 | 対象   | 率           | 理由                                                                                                                                                                                                                                                                                    |
 | ------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| logs   | `1` (すべて) | ときどき起きる失敗は、起きた要求のログが残っていないと調べられない (同じ節)。率を下げると、`console.error` に残した失敗も同じ率で落ちる                                                                                                                                                 |
+| logs   | `1` (すべて) | ときどき起きる失敗は、起きた要求のログが残っていないと調べられない (同じ節)。率を下げると、`logger` に残した失敗と、Void の `onError` が `console.error` に出す失敗も同じ率で落ちる                                                                                                     |
 | traces | `0.01` (1%)  | 2026-12-01 から、traces は logs と同じ取り込みの枠を使う。Free の枠は 1 日 0.5 GB で、超えるとその日の取り込みが止まる ([Cloudflare docs「Observability pricing」][])。traces の既定の率は `1` なので ([Cloudflare docs「Traces」][] の Sampling)、書かないと traces が logs の枠を食う |
 
 - `observability.enabled: true` だけでは traces は付かない。traces は `traces.enabled` で有効にする ([Cloudflare docs「Traces」][] の How to enable tracing)
