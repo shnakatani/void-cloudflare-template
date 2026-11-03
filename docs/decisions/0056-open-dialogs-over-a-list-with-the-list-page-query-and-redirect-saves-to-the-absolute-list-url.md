@@ -118,7 +118,7 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 ## Consequences
 
 - 戻る・進むで閉じると、Popup は Base UI の閉じ方で消えるが、Overlay はクロスフェードで 250ms かけて薄れる。戻る・進むの遷移の `viewTransition` は Void の外から変えられない (ADR-0058)
-- 保存のあとの redirect は履歴を積む。保存のあとブラウザの戻るを押すと、ダイアログがもう一度開く (2026-11-02 に dev で確認)。`usePageAction` は `submitAction` に `replace` を渡していない (ADR-0016「制約: Action の中の送信は `_resolveOnShell` を付けて決着させる」)
+- 保存のあとの redirect は履歴を積む。保存のあとブラウザの戻るを押すと、ダイアログがもう一度開く (2026-11-02 に dev で確認)。`usePageAction` は `submitAction` に `replace` を渡していない (ADR-0016「mutation の書き方」)
 - 開くリンク、閉じる遷移、保存と削除の action は、どれも `preserveScroll` を渡して一覧の scroll の位置を保つ。Void は `preserveScroll` の無い遷移で先頭へ scroll し (Void docs「Scroll Restoration」)、一覧を下まで送ってから開閉・保存・削除すると、開いた元のリンクや次の行へ戻した focus が画面の外に出た (2026-11-02、dev、30 行、1280×720)。scroll の位置は Void の遷移が動かすので、偽の router で描くブラウザテスト (ADR-0048) では測れない。テストは visit と送信に `preserveScroll` が渡ることを見る
 - 開閉のたびに一覧も読み直す。loader が 1 つなので、ダイアログの値だけを読む経路は無い
 - 開くと、`QueryDialog` が title を 1 回 announce し、focus はダイアログの中の入力欄へ移る。ダイアログの名前 (`aria-labelledby` の見出し) は、focus が中へ移ったときに支援技術が読む。2026-11-02 に dev (Void 1.4.0、headed の playwright-cli) で announce と `focusin` を記録して確かめた。スクリーンリーダーが読む回数は数えていない
