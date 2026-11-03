@@ -12,11 +12,11 @@ dev の画面に TanStack Devtools の panel (`<TanStackDevtools>`) を出す。
 - docs「Production」は、Vite の project では plugin が本番の build から devtools を外すとする。devtools を import したファイルを環境で分けて読む形は、Vite でない project のための形である
 - Void の docs は `voidPlugin()` を framework の plugin より前に置く (`node_modules/void/docs/guide/pages-routing/overview.md` の `plugins: [voidPlugin(), voidReact()]`。"must come before the framework plugin" の注記は `integrations/frameworks/tanstack-start.md`)。devtools の plugin を最初に置いても、この順は崩れない
 - Vite docs「Server Options」の `server.forwardConsole` は "Forward browser runtime events to the Vite server console during development." で、`true` は未処理の error と `console.error`・`console.warn` を送る。既定は、AI の coding agent を検出したときだけ `true` になる
-- 検出の実装は docs と Vite+ で違う。docs は `@vercel/detect-agent` を挙げるが、Vite+ 1.4.0 (`@voidzero-dev/vite-plus-core` 1.4.0) が同梱する Vite は `std-env` 4.3.0 の判定を使い、`AI_AGENT`・`CLAUDECODE`・`CLAUDE_CODE`・`CODEX_THREAD_ID` などの環境変数で agent とみなす (`dist/vite/node/chunks/node.js` の `resolveForwardConsoleOptions`、2026-11-03)
+- Vite 8.3.5 以降は、`std-env` の判定で agent を検出し、`AI_AGENT`・`CLAUDECODE`・`CLAUDE_CODE`・`CODEX_THREAD_ID` などの環境変数で agent とみなす (vitejs/vite#23744。Vite+ 1.4.0 が同梱する Vite 8.3.5 の `resolveForwardConsoleOptions` で確かめた)。2026-11-03 の時点で、公開中の vite.dev のページは `@vercel/detect-agent` の判定と書く。Vite の repository の `docs/config/server-options.md` は `std-env` と書く
 
 ### Void の dev で各機能が働くか
 
-2026-11-03 に、`vp dev` (Void 1.4.0、Vite+ 1.4.0、`@cloudflare/vite-plugin` 1.66.0、`@tanstack/devtools-vite` 0.8.6) と `vp build` で確かめた。ページの server 側の描画は workerd で動く。「人の端末」は上の環境変数を外して起動した dev を指す。
+2026-11-03 に、`vp dev` (Void 1.4.0、Vite+ 1.4.0 が同梱する Vite 8.3.5、`@cloudflare/vite-plugin` 1.66.0、`@tanstack/devtools-vite` 0.8.6) と `vp build` で確かめた。ページの server 側の描画は workerd で動く。「人の端末」は `AI_AGENT`・`CLAUDECODE`・`CLAUDE_CODE` を外して起動した dev を指す。
 
 | 機能                                               | 働くか                  | 観測                                                                                                                                                                                                                                                                                                                                                              |
 | -------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
