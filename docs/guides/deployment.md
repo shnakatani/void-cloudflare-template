@@ -57,7 +57,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 ### Workers Logs と Traces の率を変える
 
 - `void.config.ts` の `cloudflare.observability` の `head_sampling_rate` を書き換えて deploy する。logs と traces で別の率を持てる ([Cloudflare docs「Traces」][] の Sampling)。いまの率の理由は「Workers Logs と Traces の率を決めた理由」
-- 止めるときは `enabled: false` を書く。`observability` ごと消すと、Void は deploy で設定を送らず、Worker は前の値のまま残る (Void 1.4.0 の `deploy-cloudflare/src/version.ts` の `readCloudflareTriggerConfig`。1.5.0 も同じ)
+- 止めるときは、logs は `enabled: false`、traces は `traces.enabled: false` を書く。`enabled` は `logs.enabled` の略記で、logs だけを指す ([Cloudflare docs「Wrangler Configuration」][] の `observability`)。traces は `traces.enabled` で切り替える ([Cloudflare docs「Traces」][])。`observability` ごと消すと、Void は deploy で設定を送らず、Worker は前の値のまま残る (Void 1.4.0 の `deploy-cloudflare/src/version.ts` の `readCloudflareTriggerConfig`。1.5.0 も同じ)
 
 ### 上限より大きな body を受ける route を足す
 
@@ -183,6 +183,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 [Cloudflare docs「Workers Limits」]: https://developers.cloudflare.com/workers/platform/limits/
 [Cloudflare docs「Workers Logs」]: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
 [Cloudflare docs「Traces」]: https://developers.cloudflare.com/workers/observability/traces/
+[Cloudflare docs「Wrangler Configuration」]: https://developers.cloudflare.com/workers/wrangler/configuration/#observability
 [Cloudflare docs「Observability pricing」]: https://developers.cloudflare.com/observability/pricing/
 [Cloudflare docs「Static Assets Billing and Limitations」]: https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/
 [Hono docs「Body Limit Middleware」]: https://hono.dev/docs/middleware/builtin/body-limit
