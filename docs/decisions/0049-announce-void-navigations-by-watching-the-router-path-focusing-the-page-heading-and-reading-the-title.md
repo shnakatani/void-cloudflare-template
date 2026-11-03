@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-03
-- 関連: ADR-0026 (読み上げは `announce()` の polite の region に流す)、ADR-0027 (検索条件の変化は件数の通知で伝える)、ADR-0048 (テストでは偽の router で描く)、ADR-0056 (query で開くダイアログの読み込み中)、ADR-0057 (遷移中の帯)
+- 関連: ADR-0026 (読み上げは `announce()` の polite の region に流す)、ADR-0027 (検索条件の変化は件数の通知で伝える)、ADR-0048 (テストでは偽の router で描く)、ADR-0050 (描画の失敗は error boundary で受ける)、ADR-0056 (query で開くダイアログの読み込み中)、ADR-0057 (遷移中の帯)
 
 ## Context
 
@@ -27,18 +27,19 @@ v1.4.0 のソースで読んだ遷移の順序は次のとおり。
 
 ## Decision
 
-| 項目             | 決定                                                                                                                                                                                                                                                                                                                                                                                      |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 伝え方           | 新しいページの見出しへの focus 移動と、title の読み上げを併用する                                                                                                                                                                                                                                                                                                                         |
-| 伝える遷移       | `useRouter().path` が変わる遷移。戻る・進むも同じに扱う                                                                                                                                                                                                                                                                                                                                   |
-| 伝えない遷移     | query か hash だけの変化と、最初の描画                                                                                                                                                                                                                                                                                                                                                    |
-| 検出             | root の layout に置いた部品 (`src/components/route-announcer.tsx`) の `useEffect` で見る。`useRouter().path` が変わった描画で見出しへ focus を移し、その後 `useNavigation()` が idle に戻った描画で title を読み上げる。扱った path を ref に持ち、同じなら何もしない                                                                                                                     |
-| focus の移し先   | `focusPageHeading` (`src/lib/focus-page-heading.ts`) が選ぶ。失敗の見出しの印の要素、無ければ最初の `<h1>`、どちらも無ければ `<body>`。`focus({ preventScroll: true, focusVisible: false })` で枠を出さない                                                                                                                                                                               |
-| focus を奪わない | `useNavigation().state` が idle 以外になってから path が変わるまでに、利用者かアプリが focus を動かしていたら移さない。そのとき focus が `<body>` か `null` に落ちていれば移す。モーダルのダイアログが開いていれば移さない                                                                                                                                                                |
-| 読み上げ         | `document.title` をそのまま、`announce()` (ADR-0026) の polite で流す。文言は足さない                                                                                                                                                                                                                                                                                                     |
-| title の形       | `<ページ名> — <アプリ名>`。ページ名を持つページは `head()` で `{ title: pageTitle("<ページ名>") }` (`src/lib/page-title.ts`) を返す。ホームと `head()` を持たないページは `void.config.ts` の `head.title` (アプリ名だけ)                                                                                                                                                                 |
-| 待ちの読み上げ   | 行き先の path が今の path と違う `"loading"` が `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`、1000ms) を超えたら、`announce()` の polite で「読み込み中」を 1 回流す。流した遷移が `useRouter().path` を変えずに idle へ戻ったら、「読み込みを終えました」を流す。文書ごと読み込み直す場面 (通信の失敗、loader の throw) では、文書が替わる前に流れる。下の「待ちの読み上げ」 |
-| 置き場           | `pages/layout.tsx` の `<main>` の外。ページを包む error boundary を足すときも、その外に置く。境界の中に置くと、失敗の画面に置き換わったときに検出が止まる                                                                                                                                                                                                                                 |
+| 項目                   | 決定                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 伝え方                 | 新しいページの見出しへの focus 移動と、title の読み上げを併用する                                                                                                                                                                                                                                                                                                                                                          |
+| 伝える遷移             | `useRouter().path` が変わる遷移。戻る・進むも同じに扱う                                                                                                                                                                                                                                                                                                                                                                    |
+| 伝えない遷移           | query か hash だけの変化と、最初の描画                                                                                                                                                                                                                                                                                                                                                                                     |
+| 検出                   | root の layout に置いた部品 (`src/components/route-announcer.tsx`) の `useEffect` で見る。`useRouter().path` が変わった描画で見出しへ focus を移し、その後 `useNavigation()` が idle に戻った描画で title を読み上げる。扱った path を ref に持ち、同じなら何もしない                                                                                                                                                      |
+| focus の移し先         | `focusPageHeading` (`src/lib/focus-page-heading.ts`) が選ぶ。失敗の見出しの印の要素、無ければ最初の `<h1>`、どちらも無ければ `<body>`。`focus({ preventScroll: true, focusVisible: false })` で枠を出さない                                                                                                                                                                                                                |
+| focus を奪わない       | `useNavigation().state` が idle 以外になってから path が変わるまでに、利用者かアプリが focus を動かしていたら移さない。そのとき focus が `<body>` か `null` に落ちていれば移す。モーダルのダイアログが開いていれば移さない                                                                                                                                                                                                 |
+| 読み上げ               | `document.title` をそのまま、`announce()` (ADR-0026) の polite で流す。文言は足さない                                                                                                                                                                                                                                                                                                                                      |
+| title の形             | `<ページ名> — <アプリ名>`。ページ名を持つページは `head()` で `{ title: pageTitle("<ページ名>") }` (`src/lib/page-title.ts`) を返す。ホームと `head()` を持たないページは `void.config.ts` の `head.title` (アプリ名だけ)                                                                                                                                                                                                  |
+| 待ちの読み上げ         | 行き先の path が今の path と違う `"loading"` が `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`、1000ms) を超えたら、`announce()` の polite で「読み込み中」を 1 回流す。流した遷移が `useRouter().path` を変えずに idle へ戻ったら、「読み込みを終えました」を流す。文書ごと読み込み直す場面 (通信の失敗、loader の throw、ページの chunk の読み込みの失敗) では、文書が替わる前に流れる。下の「待ちの読み上げ」 |
+| chunk の読み込みの失敗 | 遷移の先のページの chunk が読めなければ、Vite の `vite:preloadError` を受けて、待っていた GET の遷移の行き先 (`useNavigation().location`) の文書を `location.assign()` で開く。受ける部品は `src/components/chunk-load-error-recovery.tsx`。下の「chunk の読み込みの失敗」                                                                                                                                                 |
+| 置き場                 | `pages/layout.tsx` の `<main>` の外。ページを包む error boundary を足すときも、その外に置く。境界の中に置くと、失敗の画面に置き換わったときに検出が止まる                                                                                                                                                                                                                                                                  |
 
 ### 検討した案: 伝え方
 
@@ -124,13 +125,14 @@ Gatsby 2019 のテストの、枠についての証言は両方向にある。�
 - 「読み込み中」を流した遷移が `useRouter().path` を変えずに idle へ戻ったら、「読み込みを終えました」を流す。ページが変わらない場面では、目で見る利用者には帯が消えることで終わりが伝わるが、focus も title も動かない。WCAG の同じ文書の "Removal of status text" は、待ちの表示が消えることを "non-sighted users would be unaware of this change, unless the end of the waiting state results in a change of context for the user" とし、見えない status message ("system available") で同じ情報を渡す形を挙げる
 - Void 1.4.0 のソースで、`useNavigation()` が path を変えずに idle へ戻る場面は下の表のとおりで、どれでも「読み込みを終えました」が流れる
 
-| 場面                                                                                 | Void 1.4.0 の経路                                                                                                                                   | 終わったあとの文書                                                                                                   |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 今の path への redirect                                                              | `navigation-engine.ts` は redirect 先を commit の行き先にだけ書き、`useNavigation()` の `location` は始めの URL のまま残る                          | 今のページのまま                                                                                                     |
-| 今のページの中の遷移 (query か hash だけの遷移、今の path へのリンク) による取り消し | `prepareVisit` が前の遷移を abort する                                                                                                              | 今のページのまま                                                                                                     |
-| ページのデータを読む途中の失敗のうち、文書の読み込みに替えないもの                   | `pages-client.ts` の `schedule` が shell の reject を受けて `fail` を dispatch する                                                                 | 今のページのまま                                                                                                     |
-| ファイルのダウンロード                                                               | `navigation-engine.ts` の `loadNavigationShell` が `window.location.href` に替え、`schedule` が結果の無い shell を受けて `abandon` を dispatch する | 今のページのまま                                                                                                     |
-| 通信の失敗、Void の応答でない応答 (loader の throw で返る静的な 500 を含む)          | ダウンロードと同じ                                                                                                                                  | 新しい文書に替わる。「読み込みを終えました」は替わる前の文書に入る (下の「実測: 待ちの読み上げ」の文書が替わる 2 行) |
+| 場面                                                                                                                         | Void 1.4.0 の経路                                                                                                                                              | 終わったあとの文書                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 今の path への redirect                                                                                                      | `navigation-engine.ts` は redirect 先を commit の行き先にだけ書き、`useNavigation()` の `location` は始めの URL のまま残る                                     | 今のページのまま                                                                                                     |
+| 今のページの中の遷移 (query か hash だけの遷移、今の path へのリンク) による取り消し                                         | `prepareVisit` が前の遷移を abort する                                                                                                                         | 今のページのまま                                                                                                     |
+| ページのデータを読む途中の失敗のうち、文書の読み込みに替えないもの (`pages: Missing page payload.` など、chunk の失敗を除く) | `pages-client.ts` の `schedule` が shell の reject を受けて `fail` を dispatch する                                                                            | 今のページのまま                                                                                                     |
+| ページの chunk の読み込みの失敗                                                                                              | `fail` を dispatch する前に、`src/components/chunk-load-error-recovery.tsx` が `vite:preloadError` を受けて行き先の文書を開く (下の「chunk の読み込みの失敗」) | 行き先の文書に替わる。「読み込みを終えました」は替わる前の文書に入る (下の「実測: chunk の読み込みの失敗」)          |
+| ファイルのダウンロード                                                                                                       | `navigation-engine.ts` の `loadNavigationShell` が `window.location.href` に替え、`schedule` が結果の無い shell を受けて `abandon` を dispatch する            | 今のページのまま                                                                                                     |
+| 通信の失敗、Void の応答でない応答 (loader の throw で返る静的な 500 を含む)                                                  | ダウンロードと同じ                                                                                                                                             | 新しい文書に替わる。「読み込みを終えました」は替わる前の文書に入る (下の「実測: 待ちの読み上げ」の文書が替わる 2 行) |
 
 - 文書が替わる場面の終わりは、出典の上では伝えなくてよい。文書が替わることは上の "Removal of status text" の引用の "change of context" に当たる。Primer「Loading」も、完了や失敗が明らかな場面では "we won't need an additional announcement" とし、例に "a page load" を挙げる。それでも流すのは、流さない形を Void 1.4.0 の公開の口で組めないからである (下の表の、`useNavigation()` で見分ける案)
 - 流す側の損は、新しいページが開く前に「読み込みを終えました」が流れることである。文言が前の文書の region に入ってから文書が替わるまでは、下の「実測: 待ちの読み上げ」で 15ms と 46ms で、新しい文書の応答が遅いほど延びる。この間に読み上げが始まれば、まだ開いていないページの読み込みが終わったと聞こえる (推論。支援技術で聞いていない)
@@ -149,6 +151,46 @@ Gatsby 2019 のテストの、枠についての証言は両方向にある。�
 | `useNavigation()` で文書ごと読み込む場面を見分け、「読み込みを終えました」を流さない | 出典の上で要らない、文書が替わる場面の終わりを省ける。ただし `useNavigation()` は文書の読み込みとダウンロードをどちらも同じ idle で終え、見分けられない。流さない形にすると、ページの変わらないダウンロードの、要る終わりも伝わらなくなる | 成り立たない |
 | ページを変えずに終わった遷移の終わりに、今のページの title を読み上げる              | ページが変わったように聞こえる。query か hash だけの遷移が取り消したときにも title を読み、「伝えない遷移」と食い違う                                                                                                                     | 却下         |
 | Void の `navigationFallback`                                                         | Void 1.4.0 は `voidReact()` から渡す口を持たず (ADR-0056 の Context)、受け皿はページの位置に描かれて前のページごと置き換わる                                                                                                              | 成り立たない |
+
+### chunk の読み込みの失敗
+
+遷移の先のページの chunk が読めないと、Void 1.4.0 は前のページへ戻し、帯を消すだけで終える (下の「実測: chunk の読み込みの失敗」)。URL・title・見出し・focus は前のページのままで、目で見る利用者にもスクリーンリーダーの利用者にも失敗が伝わらない。デプロイで前の版の chunk が消えたあと、開いたままの古いタブで起きる。
+
+| Void 1.4.0 の経路                                                                                                                          | 出典                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| `resolveComponent` が `(await loader()).default` でページの chunk を読み、失敗すると遷移の shell が reject する                            | `void/src/pages/navigation-engine.ts`      |
+| 通信の失敗と Void の応答でない応答は `window.location.href = url` で文書ごと開くが、`resolveComponent` の reject はこの退避を通らない      | 同上の `loadNavigationShell`               |
+| `schedule` は shell の reject を受けて `fail` を dispatch し、前のページに戻す                                                             | `@void/react` の `runtime/pages-client.ts` |
+| `Link` は `router.visit()` の Promise を捨てるので、失敗は unhandled rejection になる。描画の throw ではないので error boundary に届かない | `@void/react` の `runtime/link.tsx`        |
+
+- 受け口は Vite の `vite:preloadError` にする。Vite docs「Building for Production」の Load Error Handling は "Vite emits `vite:preloadError` event when it fails to load dynamic imports." とし、デプロイで前の版の asset が消える場面への対処として案内する。build はページの chunk の `import()` を preload の helper で包み、helper が失敗で event を出す
+- event は `schedule` が `fail` を dispatch する前に出るので、その時点の `useNavigation()` は待っていた遷移の行き先を持つ。開くのは GET の遷移 (`"loading"`) の行き先だけにする。送信 (`"submitting"`) の `location` は action の URL で、action の後に開くページではない
+- 文書を開く形は、Void が通信の失敗で取る退避 (`window.location.href = url`) と同じにする。戻る・進むでは URL が既に行き先なので、同じ URL への `assign()` は history を増やさない (実測)
+- `preventDefault()` は呼ばない。止めても Void の `resolveComponent` は module の代わりに `undefined` を受けて別の TypeError で落ち、遷移は救えない (2026-11-03 の実測)
+- 読み直しは繰り返さない。開いた文書でも chunk が読めないと、Void は最初のページの `resolveComponent` の決着を待ってから React を描くので、部品が mount されず event を受けない。行き先の server の HTML が出たまま止まる (実測)
+- 遷移していないときの `vite:preloadError` (`React.lazy` の部品の chunk など) では文書を開かない。`React.lazy` の失敗は描画の throw になり (react.dev「lazy」の "If the Promise rejects, React will `throw` the rejection reason for the nearest Error Boundary to handle.")、ADR-0050 の境界が受ける。行き先を持たない読み直し (`location.reload()`) は、開いた文書でも同じ chunk が mount の後に読めないと、読み直しを繰り返す
+
+| 案                                                                     | 評価                                                                                                                                                                                      | 採否         |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `vite:preloadError` で、待っていた遷移の行き先の文書を開く             | 押した行き先が開く。新しい文書は新しい版の HTML と chunk を読む。Void の通信の失敗の退避と同じ結果                                                                                        | **採用**     |
+| Vite docs の例のとおり `location.reload()` する                        | Void は URL を前のページへ戻しているので、開くのは押す前のページになる (実測)                                                                                                             | 却下         |
+| 行き先が無いときだけ `location.reload()` する                          | 当たる場面がこのテンプレートに無い。mount の後に読む chunk が消えたままだと読み直しを繰り返し、止めるには `sessionStorage` の印が要る。描画中の失敗は ADR-0050 の境界が受けて再試行を出す | 却下         |
+| `sessionStorage` に開いた行き先を記録し、同じ行き先の 2 回目は開かない | 行き先を開く形では、上のとおり開いた文書の側で止まる。記録は、別のデプロイのあとに同じ行き先を開く 2 回目も止める                                                                         | 却下         |
+| アプリの中で失敗を伝える (toast や全画面のエラー表示)                  | Void 1.4.0 の公開の口で受けられない (`Link` は reject を捨て、`useNavigation()` は失敗も idle で終える)。伝えても消えた chunk は読めず、操作を続けられない                                | 成り立たない |
+| Void の `navigationFallback`                                           | 上の「待ちの読み上げ」の表と同じ。`voidReact()` から渡す口が無い                                                                                                                          | 成り立たない |
+
+HTML の応答に `Cache-Control: no-cache` は足さない。Vite docs の同じ節は、古い asset を指す HTML が cache から出ないよう "make sure to set `Cache-Control: no-cache` on the HTML file" とする。
+
+| 応答                                    | 今の `Cache-Control` (2026-11-03、Void 1.4.0 の `vp preview` を curl で見た) | 出典                                                                                            |
+| --------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| ログインした要求へのページと Pages JSON | `no-store`                                                                   | Void docs「Authentication」の "Responses to signed-in requests get `Cache-Control: no-store`"   |
+| ログインしていない要求へのページ        | 無し。`Last-Modified` と `ETag` も無い                                       | Chromium 156 で同じ URL を続けて開くと、2 回目も server へ要求が出た (`fromDiskCache: false`)   |
+| `public/` のファイル                    | `public, max-age=0, must-revalidate` (ログインした要求では `private`)        | 実測。Void docs「Static Assets」は、Cloudflare に直に deploy した場合も通常の再検証のままとする |
+| hash の付いた asset                     | `public, max-age=31536000, immutable`                                        | Void docs「Static Assets」。「Custom Headers」の Scope のとおり rule では置き換わらない         |
+
+- `routing.headers` の key は URL の path の pattern で、拡張子の無い SSR のページだけには当てられない。`/*` に足すと `public/` のファイルと API の応答にも当たる
+- Cloudflare の CDN は既定で HTML を cache しない (Cloudflare docs「Default Cache Behavior」の "The Cloudflare CDN does not cache HTML or JSON by default.")
+- RFC 9111 4.2.2 は、明示の有効期限の無い応答に cache が経験則の有効期限を付けることを許し、cache させたくない origin には `Cache-Control: no-cache` のような明示の指定を勧める。ログインしていない要求へのページは、Chromium 以外では cache されるかを測っていない
 
 ### title の組み方
 
@@ -169,6 +211,10 @@ Gatsby 2019 のテストの、枠についての証言は両方向にある。�
 - Void が遷移の開始と完了を購読する API を持ったら、この検出を作り直す
 - 見出しの focus と title の読み上げがスクリーンリーダーでどう聞こえるかは、一次資料で決着していない。この実装 (title を `useNavigation()` が idle に戻った描画で読み上げ、待ちが続けば先に「読み込み中」を読み、path を変えずに終われば「読み込みを終えました」を読む) は、Void 1.4.0 の上で支援技術を使って聞いていない。聞いて確かめる手順は `docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」が持つ。聞こえ方が悪ければ、読み上げの文言と強さを見直す
 - 入れない改善: 戻る・進むで戻った先で、前に focus していた要素へ focus を戻す。MPA で bfcache から戻ったときと揃う形で (whatwg/html#6696、2021-10-14 にマージ。"the focused element stays the same/not reset")、Navigation API の explainer も traverse の例に挙げる。ただし explainer 自身が "the notion of \"the same element\" is not generally stable" とし、要素を識別子で覚える仕組みが要る。ブラウザの実装も揃っていない (wpt.fyi の `back-forward-cache/focus.html` は、2026-09-28 の時点で Edge 154 だけが 1/1 の結果を持ち、Chrome・Firefox・Safari は結果が無い)。いまの実装は、戻った先でも新しいページの見出しへ focus を移す (下の「調査結果」のブラウザの戻るの行)
+- chunk の読み込みの失敗の受け口は、Vite の build がページの `import()` を包む preload の helper が出す event に乗る。Vite docs はこの event を「Building for Production」の節で案内する。dev で event が出るかは測っていないので、確かめるのは `vp build` の後の `vp preview` で行う
+- 部品は Void の内部の 2 つの順序に乗る。`vite:preloadError` が `fail` の dispatch より前に出ること (その時点の `useNavigation()` が行き先を持つ) と、最初のページの chunk が読めないと React を描かないこと (読み直しを繰り返さない)。どちらも docs に書かれていない。Void を上げたら、preview でページの chunk の要求を落としてリンクを押し、行き先の文書が開くことと、落とし続けても読み直しが 1 回で止まることを確かめる (下の「実測: chunk の読み込みの失敗」の形)
+- Void が chunk の失敗も文書の読み込みに替えるようになったら、`src/components/chunk-load-error-recovery.tsx` を外す
+- ログインしていない要求へのページに `Last-Modified`・`ETag`・`Cache-Control` の `max-age` を付けるなら、そのページに `Cache-Control: no-cache` も付ける。古い HTML が cache から出ると、消えた chunk を指して最初の描画が止まる
 - 偽の router (ADR-0048) は title の書き換えを再現しない。`src/components/route-announcer.test.tsx` は、新しいページの描画と遷移の完了の間に `document.title` を置き換えて確かめる。title の順序は下の「調査結果」の dev server の実測が持つ
 
 ## 調査結果
@@ -214,6 +260,22 @@ idle に戻った effect で読み上げる形では、続けてブラウザの�
 
 - 遷移の待ちの間 (押してから 1300ms) と遷移の後に、axe-core を WCAG 2.2 AA と best-practice の規則で当て、違反は 0 件だった
 
+### 実測: chunk の読み込みの失敗
+
+2026-11-03、Void 1.4.0 の `vp build` の後の `vp preview` を playwright-cli 0.1.19 の headless の Chromium 156.0.8078.80 で操作した。ログインしてホームを開き、行き先のページの chunk (`/assets/<ページ>-<hash>.js`) の要求を Playwright の route で落としてから、行き先へのリンクを押した。時刻は押してからの経過で、live region の記録と文書の読み込みは console と Playwright の `framenavigated` で取った。戻る・進むと query の行は、この文書がまだ chunk を読んでいない行き先の history の項目を `history.pushState` で作り、`history.back()` で戻った。
+
+| 場面                                                      | 部品なし                                                                                                                      | 部品あり                                                                                                                 |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| chunk の要求を abort                                      | 50ms に `vite:preloadError` と unhandled rejection。URL・title・`<h1>` はホームのまま、focus は押したリンク、live region は空 | 44ms に `vite:preloadError`、84ms に行き先の文書が開き、行き先のページが描かれた                                         |
+| chunk を 404 の HTML で返す                               | (未測定。abort と同じ経路)                                                                                                    | 97ms に行き先の文書が開いた                                                                                              |
+| chunk の要求を落とし続ける                                | (未測定)                                                                                                                      | 74ms に行き先の文書が開き、その文書でも chunk が読めずに server の HTML のまま止まった。文書の読み込みは 1 回だけ        |
+| ページのデータの要求を 1500ms 遅らせ、chunk を abort      | 1044ms に「読み込み中」、1570ms に `vite:preloadError`、1571ms に「読み込みを終えました」。ページはホームのまま               | 1052ms に「読み込み中」、1576ms に `vite:preloadError`、1579ms に「読み込みを終えました」、1601ms に行き先の文書が開いた |
+| 戻るで、chunk を読んでいないページへ戻る                  | (未測定)                                                                                                                      | 36ms に同じ URL の文書が開き、`history.length` は増えなかった                                                            |
+| 戻るで、query で開くダイアログ (ADR-0056) の URL へ戻る   | (未測定)                                                                                                                      | `?new` を含む URL の文書が開き、ダイアログが開いた                                                                       |
+| chunk を落とさずにホームと行き先を 10 往復 (リンクと戻る) | -                                                                                                                             | 文書は 1 度も読み直されなかった (window に置いた印が残った)                                                              |
+
+- 部品が入る前の build の client の `.js` の合計は 833096 byte、入れた後は 833643 byte だった
+
 ## 出典
 
 - Void docs「Head Management」: `node_modules/void/docs/guide/pages-routing/head.md`
@@ -231,3 +293,13 @@ idle に戻った effect で読み上げる形では、続けてブラウザの�
 - Navigation API の explainer「Focus management」: https://github.com/WICG/navigation-api#focus-management
 - whatwg/html#6696 (bfcache から戻ったときの focus): https://github.com/whatwg/html/pull/6696
 - wpt.fyi の `back-forward-cache/focus.html`: https://wpt.fyi/results/html/browsers/browsing-the-web/back-forward-cache/focus.html (2026-09-28 に確認)
+- Vite docs「Building for Production」の Load Error Handling: https://vite.dev/guide/build#load-error-handling
+- Void docs「Authentication」(ログインした要求への `Cache-Control: no-store`): `node_modules/void/docs/guide/auth.md`
+- Void docs「Custom Headers」: `node_modules/void/docs/guide/edge/headers.md`
+- Void docs「Static Assets」: `node_modules/void/docs/guide/edge/static-assets.md`
+- Void 1.4.0 の `packages/void/src/pages/navigation-engine.ts` (`resolveComponent`、`loadNavigationShell`): https://github.com/voidzero-dev/void/blob/96b0b73fad2f044c3740f25c045ee216105353b0/packages/void/src/pages/navigation-engine.ts
+- Void 1.4.0 の `packages/react/src/runtime/pages-client.ts` (`schedule`): https://github.com/voidzero-dev/void/blob/96b0b73fad2f044c3740f25c045ee216105353b0/packages/react/src/runtime/pages-client.ts
+- Void 1.4.0 の `packages/react/src/runtime/link.tsx`: https://github.com/voidzero-dev/void/blob/96b0b73fad2f044c3740f25c045ee216105353b0/packages/react/src/runtime/link.tsx
+- react.dev「lazy」: https://react.dev/reference/react/lazy
+- Cloudflare docs「Default Cache Behavior」: https://developers.cloudflare.com/cache/concepts/default-cache-behavior/
+- RFC 9111 4.2.2「Calculating Heuristic Freshness」: https://www.rfc-editor.org/rfc/rfc9111.html#section-4.2.2
