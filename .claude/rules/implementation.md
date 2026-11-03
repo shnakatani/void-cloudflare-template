@@ -111,12 +111,14 @@ lint では見ないのでレビューで見る。
 
 - ページの対象そのものが無いときは、loader で `return c.notFound()` を返す。`throw new HTTPException(404)` は本文が text だけの 404 になる (ADR-0050)
 - ページは在り、その中の区画のデータや開く 1 件を読めない・無いときは、loader で throw せず失敗の値で返し、ページが区画に失敗を描く。throw するとページごと静的な 500 になり、検索欄のような周りも消える (ADR-0057)
-- 失敗の値を返したら、server の `console.error` に残す。応答は 200 で届き、ほかに気付く手掛かりが無い (ADR-0057)
+- 失敗の値を返したら、server の `logger.error` に残す。応答は 200 で届き、ほかに気付く手掛かりが無い (ADR-0057)
 - 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)
 - loader が失敗の値を返した区画の再試行は、`router.refresh()` を `Button` の `onClick` から呼ぶ。`SectionErrorBoundary` の再試行は loader を読み直さない (`docs/guides/data-loading.md`「失敗した画面から再試行する」)
 - 再試行の `router.refresh()` には `{ viewTransition: false }` を渡す。渡さないと、Void の既定で失敗の表示と読み直した画面がクロスフェードで重なる (ADR-0058)
 - `HTTPException` の `message`、`ValidationError` の文言、validator の message に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。production でもそのまま client に届く (ADR-0055)
-- server で調べたい失敗は、`HTTPException` を投げる前に `console.error` に残す。`HTTPException` は server のログに出ない (ADR-0055)
+- server で調べたい失敗は、`HTTPException` を投げる前に `logger.error` に残す。`HTTPException` は server のログに出ない (ADR-0055)
+- server のログは `void/log` の `logger.error(<固定の message>, <fields>)` で書き、`console.error` に文字列と Error を並べて渡さない。fields を項目で絞れない (`docs/guides/data-loading.md`「server のログに失敗を残す」)
+- 捕まえた例外は `{ error }` のように Error のまま fields に渡し、fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない (ADR-0055)
 
 ## 一覧の上のフォームのダイアログは一覧のページの query で開く
 
