@@ -15,13 +15,19 @@ vi.mock(import("@/lib/chunk-load-error"), async (importOriginal) => ({
 
 const destination = new URL("/notes?q=a#top", window.location.origin);
 
-async function renderRecovery(navigation: NavigationState) {
-  return render(
-    <VoidRouterProvider router={createFakeRouter("/")} navigation={navigation}>
+const router = createFakeRouter("/");
+
+function recovery(navigation: NavigationState) {
+  return (
+    <VoidRouterProvider router={router} navigation={navigation}>
       <h1>ホーム</h1>
       <ChunkLoadErrorRecovery />
-    </VoidRouterProvider>,
+    </VoidRouterProvider>
   );
+}
+
+async function renderRecovery(navigation: NavigationState) {
+  return render(recovery(navigation));
 }
 
 /** Vite の preload の helper が dynamic import の失敗で出す event (Vite docs「Building for Production」の Load Error Handling) */
@@ -41,6 +47,17 @@ describe("ChunkLoadErrorRecovery", () => {
     expect(vi.mocked(loadDocument).mock.calls).toEqual([[{ kind: "assign", url: destination }]]);
     // 止めると Vite は reject せず、Void の遷移は module の代わりに undefined を受けて別の TypeError で落ちる
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("idle で描いたあとに始まった遷移でも、event の時点の行き先の文書を開く", async () => {
+    // layout は idle で mount され、遷移はそのあとに始まる。mount の時点の値を読む実装はここで落ちる
+    const screen = await renderRecovery({ state: "idle", location: null, method: null });
+    await expect.element(screen.getByRole("heading", { name: "ホーム" })).toBeVisible();
+    await screen.rerender(recovery({ state: "loading", location: destination, method: "GET" }));
+
+    dispatchPreloadError();
+
+    expect(vi.mocked(loadDocument).mock.calls).toEqual([[{ kind: "assign", url: destination }]]);
   });
 
   it("遷移していないときの chunk の失敗では文書を開かない", async () => {
