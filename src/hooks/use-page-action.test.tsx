@@ -1,7 +1,7 @@
 import { revalidateLogic } from "@tanstack/react-form";
 import { useState, type ReactNode } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render, renderHook } from "vitest-browser-react";
 import { submitAction, VoidActionError } from "void/pages-client";
@@ -378,11 +378,6 @@ describe("usePageAction が Void の submitAction から受ける失敗", () => 
     const actual = await vi.importActual<typeof import("void/pages-client")>("void/pages-client");
     vi.mocked(submitAction).mockImplementation(actual.submitAction);
     vi.spyOn(console, "warn").mockImplementation(() => {});
-  });
-
-  // 本物の submitAction を後の describe に持ち越さない。値を決め忘れたテストが偽の router で成功してしまう
-  afterEach(() => {
-    vi.mocked(submitAction).mockReset();
   });
 
   function renderWithRouter(

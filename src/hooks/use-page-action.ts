@@ -100,8 +100,8 @@ function routeParams(params: unknown): Record<string, string> | undefined {
  * props の commit と互いを待って決着しない (ADR-0015)。
  *
  * 写しの中身 (`action()` の既定の option と送り方) が Void とずれても、型の検査とテストは落ちない。テストのうち
- * Void の `submitAction` を通すのは、422 の body と throw の読み方を見るものだけである。Void を上げたら、上の 2 ファイル
- * を前の版の tag と比べて読み (`gh api repos/voidzero-dev/void/compare/v<前の版>...v<上げた版>`)、`createActionClient`
+ * Void の `submitAction` を通すのは、422 の body と throw の読み方を見るものだけである。Void を上げたら、`action.ts`・`client.ts` と、
+ * `src/lib/action-error.ts` の写しの元の `packages/void/src/pages/action-result.ts` の 3 ファイルを前の版の tag と比べて読み (`gh api repos/voidzero-dev/void/compare/v<前の版>...v<上げた版>`)、`createActionClient`
  * の `action` と `submitAction` の変更をここと `src/lib/action-error.ts` に写す。option の名前が型から消えたときだけは
  * `vp check` が落ちる。
  *
