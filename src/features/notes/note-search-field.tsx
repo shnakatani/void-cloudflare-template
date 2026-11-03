@@ -37,7 +37,7 @@ export function NoteSearchField({
 
   return (
     <search data-slot="note-search">
-      <form onSubmit={handleSubmit}>
+      <form className="flex flex-col gap-1" onSubmit={handleSubmit}>
         <InputGroup>
           <InputGroupAddon>
             <SearchIcon aria-hidden />
@@ -56,11 +56,7 @@ export function NoteSearchField({
             <InputGroupButton type="submit">検索</InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
-        {error === null ? null : (
-          <FieldError id={errorId} className="mt-1">
-            {error}
-          </FieldError>
-        )}
+        {error === null ? null : <FieldError id={errorId}>{error}</FieldError>}
       </form>
     </search>
   );
