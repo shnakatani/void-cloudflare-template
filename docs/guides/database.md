@@ -93,7 +93,7 @@ D1 は 1 つの query と 1 回の Worker の呼び出しに上限を持つ。�
 3. deploy したあと、`vp exec void db execute --remote "PRAGMA optimize"` で統計を取り直す。index を作ったあとに打つよう Cloudflare が勧める ([Cloudflare docs「SQL statements」][] の `PRAGMA optimize`)
 
 - D1 は返した行ではなく読んだ行の数で課金する。全行を読む query は、1 行を返すだけでも全行の分を払う ([Cloudflare docs「Use indexes」][] の Indexes and your bill)
-- 手元の `vp exec void db execute` は `SELECT` で始まる文の結果だけを表に出し、`EXPLAIN QUERY PLAN` の結果を出さない (Void 1.4.0 の `dist/db-*.mjs` の `runExecute`)。手元ではテストの D1 で読む。`--remote` は結果の行をすべて表に出す
+- 手元の `vp exec void db execute` は `SELECT` で始まる文の結果だけを表に出し、`EXPLAIN QUERY PLAN` の結果を出さない (Void 1.5.0 の `dist/db-*.mjs` の `runExecute`)。手元ではテストの D1 で読む。`--remote` は結果の行をすべて表に出す
 
 ### ユーザー入力で部分一致の検索を組む
 
