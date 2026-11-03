@@ -20,6 +20,10 @@ declare module "void/routes" {
   interface PageActionMap {
     "/page-action-test": { body: { title: string; memo: string } };
     "/page-action-named-test": { actions: { save: { body: { title: string } } } };
+    "/page-action-params-test/:id": {
+      actions: { save: { body: { title: string } } };
+      params: { id: string };
+    };
   }
 }
 
@@ -116,6 +120,23 @@ describe("usePageAction", () => {
     );
   });
 
+  // Void の `ValidationError` は `{ errors: { <field 名>: <文言> } }` を返す (docs「Actions & Forms」の Validation Errors)。
+  // その形でない 422 の body をフィールドに写すと、何も描かれないか文字列でない値が field に入る
+  it.each([
+    { note: "errors が配列", body: { errors: ["必須です"] } },
+    { note: "body が文字列", body: "Unprocessable Content" },
+  ])("422 の body の $note なら、フィールドに写さず toast に出す", async ({ body }) => {
+    vi.mocked(submitAction).mockResolvedValue({ ok: false, error: actionError(422, body) });
+    const onValidationError = vi.fn();
+    const { result } = await renderHook(() => usePageAction(ACTION_URL, { onValidationError }), {
+      wrapper: WithToaster,
+    });
+
+    await expect(result.current.run({ title: "", memo: "" })).resolves.toBe(false);
+    await expect.element(page.getByText(MUTATION_ERROR_FALLBACK_MESSAGE)).toBeVisible();
+    expect(onValidationError).not.toHaveBeenCalled();
+  });
+
   it("422 のフィールドのエラーが空なら、警告を残して toast に出す", async () => {
     vi.mocked(submitAction).mockResolvedValue({
       ok: false,
@@ -178,6 +199,24 @@ describe("usePageAction", () => {
     expect(submitAction).toHaveBeenCalledExactlyOnceWith(
       expect.anything(),
       "/page-action-named-test?save&new&q=%E4%BC%9A",
+      expect.objectContaining({ data: { title: "a" } }),
+    );
+  });
+
+  it("動的な page の params を path の segment に展開し、ページの query はそのまま後ろに載せる", async () => {
+    vi.mocked(submitAction).mockResolvedValue({ ok: true, pageData: undefined });
+    const { result } = await renderHook(() =>
+      usePageAction("/page-action-params-test/:id?save", {
+        params: { id: "a/b" },
+        pageQuery: "q=%E4%BC%9A",
+      }),
+    );
+
+    await result.current.run({ title: "a" });
+
+    expect(submitAction).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      "/page-action-params-test/a%2Fb?save&q=%E4%BC%9A",
       expect.objectContaining({ data: { title: "a" } }),
     );
   });
