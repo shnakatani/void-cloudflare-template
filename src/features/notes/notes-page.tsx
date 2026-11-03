@@ -17,6 +17,7 @@ import { noteDeleteDialogHandle } from "./note-delete-dialog-handle";
 import { NoteDialogContent, pendingNoteDialog } from "./note-dialog";
 import { NOTE_CREATE_OPENER } from "./note-dialog-focus";
 import {
+  NOTE_QUERY_TOO_LONG_MESSAGE,
   NOTE_SEARCH_DEBOUNCE_MS,
   NOTES_RESULTS_ERROR_ANNOUNCEMENT,
   noteSearchResultMessage,
@@ -32,7 +33,7 @@ import {
   pendingNoteDialogQuery,
   pendingNoteEditId,
 } from "./notes-url";
-import { NOTE_ENTITY_LABEL, noteListFilterSchema, type Note } from "./schema";
+import { isNoteQueryTooLong, NOTE_ENTITY_LABEL, noteListFilterSchema, type Note } from "./schema";
 
 type SearchField = {
   readonly text: string;
@@ -65,6 +66,8 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
     setField({ text: q === field.requestedQ ? field.text : q, syncedQ: q, requestedQ: null });
   }
   const draftQ = normalizeQuery(field.text);
+  // 上限を超えた語は送らない。schema は切り詰めるが、切った語で探すと打った語と結果が食い違う
+  const queryTooLong = isNoteQueryTooLong(field.text);
 
   function visitSearch(next: string) {
     // 求めた q がまだ届いていないなら、表示中の q と同じ語でも送る。送らないと、途中の語の visit が commit される
@@ -112,11 +115,17 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
 
   function handleTextChange(text: string) {
     setField((current) => ({ ...current, text }));
-    searchDebouncer.maybeExecute(normalizeQuery(text));
+    // 超える前に待っていた語は、発火しても入力欄の語と違うので送られない (handleDebouncedSearch)
+    if (!isNoteQueryTooLong(text)) {
+      searchDebouncer.maybeExecute(normalizeQuery(text));
+    }
   }
 
   function handleSubmit() {
     searchDebouncer.cancel();
+    if (queryTooLong) {
+      return;
+    }
     // 正規化で値が変わるときだけ入力欄を揃える (trim と切り詰めが見える)
     if (field.text !== draftQ) {
       setField((current) => ({ ...current, text: draftQ }));
@@ -179,6 +188,7 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
           <>
             <NoteSearchField
               value={field.text}
+              error={queryTooLong ? NOTE_QUERY_TOO_LONG_MESSAGE : null}
               onValueChange={handleTextChange}
               onSubmit={handleSubmit}
             />
@@ -195,8 +205,9 @@ export function NotesPage({ q, notes, dialog }: NotesPageData) {
         }
       />
       <div className="flex flex-1 flex-col p-4">
-        {/* 入力と props の q がずれている間 (debounce の待ちと読み込み中) は、前の一覧を半透明で残す */}
-        <StaleContent stale={draftQ !== q}>
+        {/* 入力と props の q がずれている間 (debounce の待ちと読み込み中) は、前の一覧を半透明で残す。
+            送らない語の間は、表示中の一覧が q の結果のまま確かなので残さない */}
+        <StaleContent stale={!queryTooLong && draftQ !== q}>
           <NotesResults
             q={q}
             notes={notes}

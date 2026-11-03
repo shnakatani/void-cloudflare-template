@@ -1,7 +1,18 @@
+import { CONTAINS_TEXT_MAX_BYTES } from "@/lib/like-pattern";
+
 import { NOTE_ENTITY_LABEL } from "./schema";
 
 /** 検索欄のアクセシブルネーム。placeholder と同じ文言 (見た目と読み上げを揃える)。 */
 export const NOTE_SEARCH_LABEL = `${NOTE_ENTITY_LABEL}を検索`;
+
+/** UTF-8 でひらがな・カタカナ・常用の漢字が占める bytes */
+const JAPANESE_CHAR_BYTES = 3;
+
+/**
+ * 検索語が上限 (`isNoteQueryTooLong`) を超えたときの文言。上限は bytes で決まり「N 文字以内」と言えないので、
+ * 日本語と英数字の文字数を目安に出す
+ */
+export const NOTE_QUERY_TOO_LONG_MESSAGE = `検索語が長すぎます。日本語は ${Math.floor(CONTAINS_TEXT_MAX_BYTES / JAPANESE_CHAR_BYTES)} 文字、英数字は ${CONTAINS_TEXT_MAX_BYTES} 文字までを目安に短くしてください`;
 
 /**
  * 打鍵が止まってから一覧の URL へ移るまでの待ち。移るたびに loader が一覧を読む。

@@ -9,7 +9,7 @@ describe("NoteSearchField", () => {
   it("入力で onValueChange へ現在値を渡す", async () => {
     const onValueChange = vi.fn();
     const screen = await render(
-      <NoteSearchField value="" onValueChange={onValueChange} onSubmit={() => {}} />,
+      <NoteSearchField error={null} value="" onValueChange={onValueChange} onSubmit={() => {}} />,
     );
 
     await noteSearchbox(screen).fill("りんご");
@@ -17,11 +17,11 @@ describe("NoteSearchField", () => {
     expect(onValueChange).toHaveBeenLastCalledWith("りんご");
   });
 
-  // 上限は入力欄で打ち止めにしない。超えた分は schema が切り詰める (ADR-0036)
+  // 上限は入力欄で打ち止めにしない。超えたことはページが error で伝える (ADR-0036)
   it("上限を超えて打っても入力欄は切らずに渡す", async () => {
     const onValueChange = vi.fn();
     const screen = await render(
-      <NoteSearchField value="" onValueChange={onValueChange} onSubmit={() => {}} />,
+      <NoteSearchField error={null} value="" onValueChange={onValueChange} onSubmit={() => {}} />,
     );
     const over = "あ".repeat(17);
 
@@ -30,10 +30,20 @@ describe("NoteSearchField", () => {
     expect(onValueChange).toHaveBeenLastCalledWith(over);
   });
 
+  it("error を入力欄の下に出し、入力欄を不正にして説明に結ぶ", async () => {
+    const screen = await render(
+      <NoteSearchField error="長すぎます" value="" onValueChange={() => {}} onSubmit={() => {}} />,
+    );
+
+    await expect.element(screen.getByRole("alert")).toHaveTextContent("長すぎます");
+    await expect.element(noteSearchbox(screen)).toBeInvalid();
+    await expect.element(noteSearchbox(screen)).toHaveAccessibleDescription("長すぎます");
+  });
+
   it("Enter で onSubmit を 1 回呼ぶ", async () => {
     const onSubmit = vi.fn();
     const screen = await render(
-      <NoteSearchField value="りんご" onValueChange={() => {}} onSubmit={onSubmit} />,
+      <NoteSearchField error={null} value="りんご" onValueChange={() => {}} onSubmit={onSubmit} />,
     );
 
     await noteSearchbox(screen).click();
@@ -45,7 +55,7 @@ describe("NoteSearchField", () => {
   it("検索ボタンでも onSubmit を呼ぶ", async () => {
     const onSubmit = vi.fn();
     const screen = await render(
-      <NoteSearchField value="りんご" onValueChange={() => {}} onSubmit={onSubmit} />,
+      <NoteSearchField error={null} value="りんご" onValueChange={() => {}} onSubmit={onSubmit} />,
     );
 
     await screen.getByRole("button", { name: "検索" }).click();
@@ -55,7 +65,7 @@ describe("NoteSearchField", () => {
 
   it("landmark は <search> 要素で組む", async () => {
     const screen = await render(
-      <NoteSearchField value="" onValueChange={() => {}} onSubmit={() => {}} />,
+      <NoteSearchField error={null} value="" onValueChange={() => {}} onSubmit={() => {}} />,
     );
 
     // vitest 同梱の locator engine は <search> を role に写さないので (2026-09-23)、要素名で見る

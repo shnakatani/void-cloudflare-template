@@ -1,6 +1,7 @@
 import { SearchIcon } from "lucide-react";
-import type { SubmitEvent } from "react";
+import { type SubmitEvent, useId } from "react";
 
+import { FieldError } from "@/components/ui/field";
 import {
   InputGroup,
   InputGroupAddon,
@@ -13,17 +14,22 @@ import { NOTE_SEARCH_LABEL } from "./note-search";
 /**
  * 一覧の検索欄。値は親が持つ (制御コンポーネント。入力値は緊急更新のまま、ADR-0015)。
  * URL への確定は submit (Enter / 検索ボタン) で親が行う。`type="search"` で role は searchbox、
- * landmark は `<search>` 要素。
+ * landmark は `<search>` 要素。`error` は入力欄の下に出し、入力欄の説明にも結ぶ。
  */
 export function NoteSearchField({
   value,
+  error,
   onValueChange,
   onSubmit,
 }: {
   value: string;
+  /** 入力が送れない理由。null なら出さない */
+  error: string | null;
   onValueChange: (value: string) => void;
   onSubmit: () => void;
 }) {
+  const errorId = useId();
+
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     onSubmit();
@@ -40,7 +46,9 @@ export function NoteSearchField({
             type="search"
             aria-label={NOTE_SEARCH_LABEL}
             placeholder={NOTE_SEARCH_LABEL}
-            // 上限は maxLength で打ち止めにしない。超えた分は schema が切り詰める (ADR-0036)
+            // 上限は maxLength で打ち止めにしない。超えたら error で伝える (ADR-0036)
+            aria-invalid={error !== null}
+            aria-describedby={error === null ? undefined : errorId}
             value={value}
             onChange={(event) => onValueChange(event.target.value)}
           />
@@ -48,6 +56,11 @@ export function NoteSearchField({
             <InputGroupButton type="submit">検索</InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
+        {error === null ? null : (
+          <FieldError id={errorId} className="mt-1">
+            {error}
+          </FieldError>
+        )}
       </form>
     </search>
   );

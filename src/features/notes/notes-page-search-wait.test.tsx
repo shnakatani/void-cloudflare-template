@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
+import { userEvent } from "vite-plus/test/browser";
 
-import { NOTE_SEARCH_DEBOUNCE_MS } from "./note-search";
+import { NOTE_QUERY_TOO_LONG_MESSAGE, NOTE_SEARCH_DEBOUNCE_MS } from "./note-search";
 import { noteSearchbox } from "./note-search-field.test-helpers";
 import { NOTE_VIEW } from "./notes-page-data.test-helpers";
 import { renderNotesPage } from "./notes-page.test-helpers";
@@ -73,5 +74,31 @@ describe("NotesPage の検索の待ち", () => {
     expect(router.visits).toEqual([]);
     await rerender({ notes: [], dialog: { kind: "closed" } });
     await expect.element(field).toHaveValue("");
+  });
+
+  // 「あ」17 文字は % で包んで 53 bytes で、D1 の LIKE の上限 (50 bytes) を超える
+  it("上限を超えた語は、打鍵が止まっても Enter でも送らず、入力欄で上限を伝える", async () => {
+    const { screen, router } = await renderNotesPage({ notes: [] });
+    const field = noteSearchbox(screen);
+    await field.fill("ab");
+    await field.fill("あ".repeat(17));
+    await expect.element(screen.getByRole("alert")).toHaveTextContent(NOTE_QUERY_TOO_LONG_MESSAGE);
+    await expect.element(field).toBeInvalid();
+    await waitPastSearchDebounce();
+    await userEvent.keyboard("{Enter}");
+    expect(router.visits).toEqual([]);
+    await expect.element(field).toHaveValue("あ".repeat(17));
+  });
+
+  it("上限に収まる長さへ戻すと、伝えるのをやめて送る", async () => {
+    const { screen, router } = await renderNotesPage({ notes: [] });
+    const field = noteSearchbox(screen);
+    await field.fill("あ".repeat(17));
+    await expect.element(field).toBeInvalid();
+    await field.fill("あ".repeat(16));
+    await expect.element(field).not.toBeInvalid();
+    await expect
+      .poll(() => router.visits.map((visit) => visit.url))
+      .toEqual([`/notes?q=${encodeURIComponent("あ".repeat(16))}`]);
   });
 });
