@@ -20,10 +20,13 @@ import {
 const REQUEST_TIMEOUT_MS = 2000;
 
 /**
- * 書き込みの要求は body を付けずに送り、middleware の 401 だけを見る。action のあるページで middleware が通すと、
- * body の無い要求は JSON の parse で 400 になって落ちる。body を付けると、検証を通る body は action の `requireAuth(c)` が、
- * 検証に落ちる body は Void が走らせ直す loader (`pages/protocol.ts` の `handlePageMutation`) の `requireAuth(c)` が
- * 401 を返し、middleware が通しても落ちない。検証を通る body は、守りが壊れると dev と共有の D1 に書き込む (ADR-0054)
+ * 書き込みの要求は body を付けずに送り、middleware の 401 だけを見る。middleware の 401 の分岐は path によらないので、
+ * action の無い `POST /` の行が見る。middleware が通すと route が無く 404 になって落ちる。action のあるページの行が
+ * 落ちるのは、action が body を検証するときだけである。body の無い要求が JSON の parse で 400 になる。body を検証しない
+ * action では、body が無くても handler の `requireAuth(c)` が 401 を返す。body を付けると、検証を通る body は action の
+ * `requireAuth(c)` が、検証に落ちる body は Void が走らせ直す loader (`pages/protocol.ts` の `handlePageMutation`) の
+ * `requireAuth(c)` が 401 を返す。どちらも middleware が通しても落ちない。検証を通る body は、守りが壊れると dev と
+ * 共有の D1 に書き込む (ADR-0054)
  */
 const EXPECTATIONS: readonly ExpectedResponse[] = [
   { path: "/", status: 302, location: "/login" },

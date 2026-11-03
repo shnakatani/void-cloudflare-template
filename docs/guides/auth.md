@@ -17,7 +17,7 @@
 ### 保護する path を足す
 
 1. `src/features/auth/access.ts` の `PROTECTED_PATHS` に、そのページの path の定数を import して足す。文字列を直に書くと、ページを動かして定数だけを直したときに、動かした先が黙って守られなくなる (ADR-0059)。下位の path (`/x/1`) も守られる。`/` だけは `/` そのものに限る
-2. `scripts/checks/runtime/auth-redirect.ts` の `EXPECTATIONS` に、その path が未ログインで `/login` へ送られる行を足す。書き込みの要求の 401 の行を足すときは body を付けない。付けると、middleware が通しても handler か loader の `requireAuth(c)` が 401 を返し、落ちない (`EXPECTATIONS` の docstring)
+2. `scripts/checks/runtime/auth-redirect.ts` の `EXPECTATIONS` に、その path が未ログインで `/login` へ送られる行を足す。書き込みの要求の 401 の行は path ごとに足さない。middleware は守る path の `GET`・`HEAD` 以外を path によらず 401 で止め、その分岐は action の無い `POST /` の行が見る (`EXPECTATIONS` の docstring)
 3. その path がページなら、`scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` に `signedIn: true` の行を足す。足さないと、そのページの HTML に CSP で止まる script があっても落ちない (`docs/guides/security-headers.md`「CSP の下で script を足す」)
 4. `vp build` のあと `vp run verify:auth-redirect` と `vp run verify:security-headers` で確かめる
 
