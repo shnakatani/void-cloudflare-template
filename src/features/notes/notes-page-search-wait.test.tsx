@@ -90,6 +90,18 @@ describe("NotesPage の検索の待ち", () => {
     await expect.element(field).toHaveValue("あ".repeat(17));
   });
 
+  // 上限ちょうどの 16 文字の待ちが残ったまま 17 文字目を打つ。17 文字を schema に通すと 16 文字に切れて、
+  // 待っていた語と一致する
+  it("上限ちょうどの語の待ちの間に上限を超えたら、待っていた語へも移らない", async () => {
+    const { screen, router } = await renderNotesPage({ notes: [] });
+    const field = noteSearchbox(screen);
+    await field.fill("あ".repeat(16));
+    await field.fill("あ".repeat(17));
+    await expect.element(field).toBeInvalid();
+    await waitPastSearchDebounce();
+    expect(router.visits).toEqual([]);
+  });
+
   it("上限に収まる長さへ戻すと、伝えるのをやめて送る", async () => {
     const { screen, router } = await renderNotesPage({ notes: [] });
     const field = noteSearchbox(screen);
