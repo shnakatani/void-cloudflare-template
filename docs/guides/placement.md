@@ -5,7 +5,7 @@
 | 決定                                                                                                                                            | ADR      |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | テスト専用コードの import は `no-restricted-imports` で止める                                                                                   | ADR-0008 |
-| tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ                        | ADR-0047 |
+| tsconfig は実行環境ごとに app・worker・node の 3 つに分け、ルートの tsconfig.json から project references でつなぐ                              | ADR-0047 |
 | ドメインの schema と query と画面の部品は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
 | Void の規約のディレクトリは `sourceDir` を設定せずプロジェクトのルートに置き、アプリのコードは `src/` に置く                                    | ADR-0064 |
 
@@ -88,6 +88,22 @@ registry 由来でない付随ファイル (テスト・story とその helper) 
 | テストだけが使う fixture                                            | そのテストと同じディレクトリ | `scripts/lib/` に置くと共有物と見分けが付かない                                    |
 | 1 つの実行口だけが使い、実行口と拡張子が違う                        | `scripts/<ツール>/` 直下     | 拡張子で見分けが付く                                                               |
 | 1 つの実行口だけが使い、実行口と拡張子が同じ                        | `scripts/<ツール>/lib/`      | 直接実行するファイルと読まれるだけのファイルが見分けられない (`scripts/contrast/`) |
+
+### tsconfig にファイルを割り当てる
+
+型検査の tsconfig は、ディレクトリと `*.server.ts`・`*.server.tsx` の接尾辞で決まる (ADR-0047)。テストと story も、置いたディレクトリと接尾辞で決まる。`src/` と `pages/` の `*.server.test.ts` は app に入る。
+
+| 足すもの                                                                         | すること                                                                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/` か `pages/` のファイル、ディレクトリ、付随ファイルの種別                  | 何もしない。`tsconfig.app.json` の `include` が `src/` と `pages/` を丸ごと持ち、`*.server.ts`・`*.server.tsx` だけを `exclude` で `tsconfig.worker.json` に渡す                                                                                                                       |
+| Void の規約のディレクトリ                                                        | `tsconfig.worker.json` の `include` に `.ts` と `.tsx` の 2 行を足す。`scripts/lib/void-source-dirs.ts` の docstring が挙げるほかの箇所にも足す (「Void の規約のディレクトリと `src/` を分ける」)                                                                                      |
+| ルートのファイルか、上のどれでもないディレクトリ (設定ファイル、ツール)          | 動く環境の tsconfig の `include` に足す。Node.js で動くなら `tsconfig.node.json`、Worker で動くなら `tsconfig.worker.json`。どの `include` にも入らないファイルは推論した program で検査され、実行環境に合った誤りが出ない (ADR-0047)                                                  |
+| `.` で始まるディレクトリのファイル                                               | `include` に字面で書く (`.storybook/preview.tsx`)。`**` は `.` で始まるディレクトリに降りない (`docs/guides/dependencies-and-toolchain.md`「走査対象を持つ config を足す」)                                                                                                            |
+| app の program の global の型 (Vite の client の型、Vitest の provider の型など) | `src/env.d.ts` に `/// <reference types="..." />` を足す。`tsconfig.app.json` の `types` には書かない。`typeRoots` を書いた program は `types` の名前を node_modules から探さず、どのファイルも参照していない名前は TS2688 で落ちる (ADR-0047)                                         |
+| 新しい tsconfig                                                                  | ルートの `tsconfig.json` の `references` に足し、`tsconfig.base.json` を `extends` する。Void の生成する型を読むなら、`.void/tsconfig.json` と `tsconfig.paths.json` をこの順で `extends` の後ろに足す。既にある tsconfig の `include` と重なるファイルは、どちらかの `exclude` で外す |
+
+- 重なったファイルを `references` の並び順で割り当てない。並び順の意味は tsgolint の実装に拠り、`tsc -b` やエディタが同じに割り当てる保証が無い (ADR-0047)
+- tsconfig を足し引きしたら、ADR-0047 の Consequences の手順で、3 つの tsconfig の根のファイルが重ならず、型検査に入れるファイルがどれかに入ることを確かめる。`vp check` の合格だけでは、推論した program で通ったファイルに気付けない
 
 ### 落とし穴
 
