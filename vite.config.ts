@@ -64,6 +64,12 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  server: {
+    // ブラウザの console.error・console.warn と未処理の error を端末へ送る。既定は AI の coding agent を
+    // 検出したときだけ有効なので、人の端末でも働くよう明示する。Storybook の dev には、この server が
+    // 届かないので .storybook/main.ts の viteFinal が同じ値を渡す (ADR-0062)
+    forwardConsole: true,
+  },
   test: testConfig,
   // config をメタデータとしてだけ読む経路で plugin の factory を呼ばない (先頭の import は遅れない)。
   // 関数は同期のままにする (docs/guides/vite-configuration.md「plugin を先頭で import する理由」)
@@ -76,8 +82,9 @@ export default defineConfig({
     return [
       // devtools のサーバ (既定の port は 4206) を起こさない。認証の無いメッセージで、dev server の上で
       // パッケージの install をシェル越しに走らせる (TanStack/devtools#464)。画面はこのサーバにつながない
-      // (<TanStackDevtools> の eventBusConfig.connectToServerBus は既定で false) ので、止めても失う機能は無い
-      devtools({ eventBusConfig: { enabled: false } }),
+      // (<TanStackDevtools> の eventBusConfig.connectToServerBus は既定で false) ので、止めても失う機能は無い。
+      // Console Piping も切り、ブラウザ → 端末は上の server.forwardConsole に任せる (ADR-0062)
+      devtools({ eventBusConfig: { enabled: false }, consolePiping: { enabled: false } }),
       tailwindcss(),
       voidPlugin(),
       // bail out はビルドログへ出す (ADR-0014)
