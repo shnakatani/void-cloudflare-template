@@ -6,7 +6,7 @@
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | 開発環境のツールチェーンは mise と Vite+ に寄せる                                                                                                          | ADR-0004 |
 | mutation は Action 層の `action` prop から `usePageAction` で呼び、二重発火は state だけで塞ぐ                                                             | ADR-0016 |
-| tsconfig は実行環境ごとに app・test・worker・node の 4 つに分け、ルートの tsconfig.json から project references でつなぐ                                   | ADR-0047 |
+| tsconfig は実行環境ごとに app・worker・node の 3 つに分け、ルートの tsconfig.json から project references でつなぐ                                         | ADR-0047 |
 | Void のページの context に依存する部品は、export された router・navigation・shared の context を通して story とブラウザテストで描く                        | ADR-0048 |
 | 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                                                                | ADR-0053 |
 | ページの path は定数と URL を組む関数に 1 か所で持ち、Link・visit・redirect にはそれを渡す                                                                 | ADR-0059 |
