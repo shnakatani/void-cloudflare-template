@@ -1,13 +1,9 @@
 import type { AnyFormApi } from "@tanstack/react-form";
 import { type action, useRouter } from "@void/react";
-import {
-  getValidationErrors,
-  interpolateRouteParams,
-  isAbortError,
-  submitAction,
-} from "void/pages-client";
+import { interpolateRouteParams, submitAction, type VoidRouter } from "void/pages-client";
 import type { ActionUrl, ResolveActionBody } from "void/routes";
 
+import { fieldErrorsOf, isAbortError } from "@/lib/action-error";
 import { toastMutationError } from "@/lib/mutation-error";
 import { setServerFieldError, submitClearingServerFieldErrors } from "@/lib/server-field-errors";
 
@@ -93,17 +89,50 @@ function routeParams(params: unknown): Record<string, string> | undefined {
 }
 
 /**
+ * `action()` (`@void/react` 1.5.0) の中身の写しに、`preserveScroll` と `viewTransition` を足したもの。
+ *
+ * `action()` は `submitAction(router, interpolateRouteParams(url, params), { method, data, _resolveOnShell: true })`
+ * を呼ぶだけで (`void` 1.5.0 の `dist/pages/client.mjs` の `createActionClient`、`@void/react` の `dist/action-*.mjs`)、
+ * options (`ActionOptions`) は `data`・`method`・`params` だけである。同じページに残る送信の後に scroll を保つ
+ * `preserveScroll` と、送信をクロスフェードにしない `viewTransition: false` (ADR-0058) を渡す口が無いので、ここだけ
+ * `void/pages-client` (docs の User-Facing Imports に無い path) の `submitAction` を直に呼ぶ。`_resolveOnShell` は
+ * `action()` が既定で付ける `@internal` の option で、付けないと Action の中の await が新しい props の commit と互いを
+ * 待って決着しない (ADR-0015)。
+ *
+ * 撤去の条件: Void の `ActionOptions` が `preserveScroll` と `viewTransition` を受けるようになったら、この関数を
+ * `action(url, { method, data, params, preserveScroll, viewTransition: false })` に替え、`void/pages-client` の import を
+ * 消す (ADR-0016)。このファイルのテストは `submitAction` を mock するので、option が型から消えたときは `vp check` が落ちる
+ */
+function sendPageAction(
+  router: VoidRouter,
+  url: string,
+  {
+    method,
+    data,
+    params,
+    preserveScroll,
+  }: {
+    method: string | undefined;
+    data: unknown;
+    params: unknown;
+    preserveScroll: boolean | undefined;
+  },
+) {
+  return submitAction(router, interpolateRouteParams(url, routeParams(params)), {
+    method: method ?? "POST",
+    data,
+    preserveScroll,
+    viewTransition: false,
+    _resolveOnShell: true,
+  });
+}
+
+/**
  * Void の page の action を、Action (`startTransition` に渡す非同期関数) から呼ぶ入口。
  *
- * 送るのは `action()` ではなく、`action()` が中で呼ぶ `submitAction` である。`action()` の options は `data`・`method`・
- * `params` だけで、`preserveScroll` を渡せない (`void` 1.5.0 の `dist/pages/client.d.mts` の `ActionOptions`)。
- * `submitAction` に渡す値は `@void/react` 1.5.0 の `useForm` (`packages/react/src/runtime/use-form.ts`) と同じにし、
- * `_resolveOnShell` で shell の到着で決着させる。付けないと Action の中の await が新しい props の commit と互いを待ち、
- * 決着しない (ADR-0015)。`_resolveOnShell` は `@internal` の option なので、Void を上げたら、Action の中で `run` を
- * await して pending が解け、props が入れ替わることを dev で確かめる。このファイルのテストは `submitAction` を
- * mock するので捕まえない。option が型から消えたときは `vp check` が落ちる
- *
- * `run` は送信を await し、結果ごとに次を行う。送信の失敗では reject しない。
+ * 送るのは `sendPageAction` (`action()` の写しに scroll とクロスフェードの指定を足したもの) で、結果の分かれ方は
+ * `action()` と同じである (Void docs「Actions & Forms」の Validation Errors)。`run` は送信を await し、結果ごとに次を行う。
+ * 送信の失敗では reject しない。
  *
  * | `action()` の結果 | `run` |
  * | --- | --- |
@@ -130,13 +159,11 @@ export function usePageAction<U extends ActionUrl>(
   const router = useRouter();
 
   async function run(data: ResolveActionBody<U>): Promise<boolean> {
-    const result = await submitAction(router, interpolateRouteParams(target, routeParams(params)), {
-      method: method ?? "POST",
+    const result = await sendPageAction(router, target, {
+      method,
       data,
+      params,
       preserveScroll,
-      // 送信は遷移ではないので、クロスフェードにしない。送信の後に描き直すのは同じページか、redirect した先である (ADR-0058)
-      viewTransition: false,
-      _resolveOnShell: true,
     }).catch((error: unknown) => {
       if (!isAbortError(error)) {
         toastMutationError(error);
@@ -157,7 +184,7 @@ export function usePageAction<U extends ActionUrl>(
       return true;
     }
     // Void の useForm と同じく、フィールドのエラーとして読むのは 422 だけにする
-    const fieldErrors = result.error.status === 422 ? getValidationErrors(result.error.body) : null;
+    const fieldErrors = result.error.status === 422 ? fieldErrorsOf(result.error.body) : null;
     if (fieldErrors && Object.keys(fieldErrors).length === 0) {
       // `{ errors: {} }` を field に写すと何も出ないので、フィールドのエラーを持たない失敗と同じく toast に出す
       console.warn("[usePageAction] 422 にフィールドのエラーがありません", {

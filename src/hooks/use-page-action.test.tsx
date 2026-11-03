@@ -124,6 +124,7 @@ describe("usePageAction", () => {
   // その形でない 422 の body をフィールドに写すと、何も描かれないか文字列でない値が field に入る
   it.each([
     { note: "errors が配列", body: { errors: ["必須です"] } },
+    { note: "errors の値が文字列でない", body: { errors: { title: 5 } } },
     { note: "body が文字列", body: "Unprocessable Content" },
   ])("422 の body の $note なら、フィールドに写さず toast に出す", async ({ body }) => {
     vi.mocked(submitAction).mockResolvedValue({ ok: false, error: actionError(422, body) });
