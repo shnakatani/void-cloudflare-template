@@ -41,6 +41,7 @@ Console Piping の注入先: plugin は、`<html`・`hydrateRoot`・`createRoot`
 - Console Piping を止めて失うのは、ブラウザの `console.log`・`console.info`・`console.debug` の端末への転送だけである。server → ブラウザは上の表のとおり働いていない
 - `server.forwardConsole` は既定のままだと人の端末で働かないので、`true` を明示する
 - Storybook の dev では `vite.config.ts` の `forwardConsole` が届かない。`@storybook/builder-vite` 10.6.4 は `vite.config.ts` の設定を読むが、`server` を自分の値で丸ごと差し替える (`dist/index.js` の `createViteServer`)。Storybook docs「Vite」は、builder の設定を変える口に `viteFinal` と `mergeConfig` を案内する。2026-11-03 に Storybook の dev で story を開き、ブラウザで `console.warn`・`console.error` を出して端末の行を数えた。`viteFinal` が無いと人の端末に 0 行で、渡すと人の端末でも agent の端末でも `Vite [console.warn] <message>` と `Vite [console.error] <message>` が 1 行ずつ出た
+- `@storybook/addon-vitest` 10.6.4 も `viteFinal` の結果を story のテストの config に重ねる (`dist/vitest-plugin/index.js`)。そのまま渡すと、story のテストの出力で、Vitest が出す console の行に `[vite] (client) [console.warn] <message>` の行が重なった (2026-11-03)。`process.env.VITEST` が `"true"` のときは渡さない
 - plugin が外すのは、devtools の本体のパッケージ (`@tanstack/react-devtools` など 7 つ) を import したファイルの、その import と `<TanStackDevtools>` の JSX と、`plugins` の `render` だけから参照される import である (`@tanstack/devtools-bundler-core` の `remove-devtools.ts`)。`plugins` に関数の呼び出し (`tableDevtoolsPlugin()`) で渡した import は外さないが、JSX が外れると参照が無くなり、build が bundle から落とす (上の表の除去の行)
 - `DataTable` が Table Devtools に table を登録する hook (`useTanStackTableDevtools`) は、plugin が外す対象に入らない。dev だけ `import()` で読む形を残す (`src/components/parts/data-table.tsx`)
 
