@@ -116,7 +116,7 @@ lint では見ないのでレビューで見る。
 - 再試行の `router.refresh()` には `{ viewTransition: false }` を渡す。渡さないと、Void の既定で失敗の表示と読み直した画面がクロスフェードで重なる (ADR-0058)
 - `HTTPException` の `message`、`ValidationError` の文言、validator の message に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。production でもそのまま client に届く (ADR-0055)
 - server で調べたい失敗は、`HTTPException` を投げる前に `logger.error` に残す。`HTTPException` は server のログに出ない (ADR-0055)
-- server のログは `void/log` の `logger.error(<固定の message>, <fields>)` で書き、`console.error` に文字列と Error を並べて渡さない。Cloudflare の docs が勧める 1 つの JSON にならない (`docs/guides/data-loading.md`「server のログに失敗を残す」)
+- server のログは `void/log` の `logger.error(<固定の message>, <fields>)` で書き、`console.error` に文字列と Error を並べて渡さない。fields を項目で絞れない (`docs/guides/data-loading.md`「server のログに失敗を残す」)
 - 捕まえた例外は `{ error }` のように Error のまま fields に渡し、fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない (ADR-0055)
 
 ## 一覧の上のフォームのダイアログは一覧のページの query で開く
