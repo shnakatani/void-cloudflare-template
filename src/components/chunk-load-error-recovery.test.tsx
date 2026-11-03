@@ -60,6 +60,32 @@ describe("ChunkLoadErrorRecovery", () => {
     expect(vi.mocked(loadDocument).mock.calls).toEqual([[{ kind: "assign", url: destination }]]);
   });
 
+  it("1 つの遷移の中で chunk の失敗が 2 回届いても、文書を開くのは 1 回", async () => {
+    // redirect で別のページが選ばれると、一致した側と選ばれた側の chunk の失敗が同じ遷移に届く
+    const screen = await renderRecovery({ state: "loading", location: destination, method: "GET" });
+    await expect.element(screen.getByRole("heading", { name: "ホーム" })).toBeVisible();
+
+    dispatchPreloadError();
+    dispatchPreloadError();
+
+    expect(vi.mocked(loadDocument).mock.calls).toEqual([[{ kind: "assign", url: destination }]]);
+  });
+
+  it("文書を開いた遷移のあとに始まった遷移では、また開く", async () => {
+    const screen = await renderRecovery({ state: "loading", location: destination, method: "GET" });
+    await expect.element(screen.getByRole("heading", { name: "ホーム" })).toBeVisible();
+    dispatchPreloadError();
+    await screen.rerender(recovery({ state: "idle", location: null, method: null }));
+    await screen.rerender(recovery({ state: "loading", location: destination, method: "GET" }));
+
+    dispatchPreloadError();
+
+    expect(vi.mocked(loadDocument).mock.calls).toEqual([
+      [{ kind: "assign", url: destination }],
+      [{ kind: "assign", url: destination }],
+    ]);
+  });
+
   it("遷移していないときの chunk の失敗では文書を開かない", async () => {
     const screen = await renderRecovery({ state: "idle", location: null, method: null });
     await expect.element(screen.getByRole("heading", { name: "ホーム" })).toBeVisible();
