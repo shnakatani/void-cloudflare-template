@@ -11,7 +11,7 @@
 ### CSP の下で script を足す
 
 - `<script>` は `src` を持つ module の script にする。inline の `<script>` は本番で実行されない。dev は `script-src` に `'unsafe-inline'` が付くので止まらず、違反は本番の成果物でしか見えない (ADR-0051)
-- Void の deferred props は使わない。値が nonce の無い inline の script で届き、解決しない (ADR-0051)
+- Void の deferred props は使わない。値が nonce の無い inline の script で届いて解決せず、CSP を緩めても React の error 419 を出す (ADR-0051)
 - 本番の HTML に CSP で止まる script が無いことは、`vp run verify:security-headers` が `scripts/checks/runtime/security-headers.ts` の `CHECKED_RESPONSES` の HTML で見る。inline の `<script>`、別の origin の `src`、イベントハンドラの属性、`javascript:` の URL を落とす。判定は `scripts/lib/script-src-violations.ts`
 - ログインが要るページは、検査のユーザーでログインして読む。ページを足したら、`CHECKED_RESPONSES` に `signedIn: true` で 1 行足す。足さないと、そのページの HTML は検査されず、何も落ちない
 - 検査のユーザー (`scripts/checks/runtime/security-headers.ts` の `CHECK_USER`) は、検査が初めて走ったときにローカルの D1 に作られ、dev の D1 にも残る。preview は dev と同じ D1 を使う。検査は走るたびに未適用の migration を当て、終わるとログアウトして session を消す

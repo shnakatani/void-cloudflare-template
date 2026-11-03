@@ -42,7 +42,7 @@
 | loader の props だけで読む                                       | Void の docs の形。初めの HTML に中身が入り、action の応答と遷移で Void が props を取り直す。client に写しを持たない                                                                                                                                                                                       | **採用** |
 | loader で初期値を渡し、client では TanStack Query で読み書きする | 同じ値の写しが、Void の先読みの cache、ページの props、Query の cache の 3 つになる。action の応答で props が入れ替わるのに Query の cache は古いままなので、どれが取り直すかを規範で決め、props から Query への hydration を書くことになる。2026-11-01 の時点で、Void の docs と issue に併用する形は無い | 却下     |
 | loader を使わず、client で TanStack Query だけで読む             | 初めの HTML に中身が入らず、取得は JS の読み込みと hydration のあとに始まる                                                                                                                                                                                                                                | 却下     |
-| 副次的な値を deferred props で流す                               | 値が nonce の無い inline の `<script>` で届き、CSP の下で解決しない (ADR-0051)                                                                                                                                                                                                                             | 却下     |
+| 副次的な値を deferred props で流す                               | 値が CSP の下で解決せず、CSP を緩めても React の error 419 を出す (ADR-0051)                                                                                                                                                                                                                               | 却下     |
 | 副次的な値を `routes/` の API から client で取る                 | 取得の経路が loader と API の 2 本になり、表示中の値と URL の対応が崩れる (ADR-0057 の検討した選択肢と同じ)                                                                                                                                                                                                | 却下     |
 | TanStack DB の collection に楽観状態を重ねる                     | client にサーバの状態の写しを持つ層で、2 行目と同じ理由で退ける。楽観表示は `useOptimistic` で足りる (ADR-0015)                                                                                                                                                                                            | 却下     |
 
@@ -63,7 +63,7 @@
 - hover では要求が出ない。client の遷移は visit ごとに loader を 1 回走らせ、遷移の時間は往復と loader の時間になる。`verify` の所要時間と、遷移の時間を測るときは、この形を基準にする
 - 先読みを足したリンクは、行き先の値が hover の時点 (`cacheFor` の間) のものになる。行き先が編集のダイアログか、開くたびに最新の値が要るページなら足さない (ADR-0056)
 - 再評価の条件
-  - Void が nonce の CSP に対応し、deferred props を使えるようになったら (ADR-0051)、副次的な値を流す形を比べ直す
+  - ADR-0051 の deferred props の再評価の条件を満たしたら、副次的な値を流す形を比べ直す
   - Void が visit の時点で先読みの cache を再検証する口か、page data を読まずに chunk だけを先読みする口を持ったら、`ButtonLink`・`NavLink` の既定を比べ直す
   - 遷移の時間を測って loader の往復が支配的だと分かったら、読むだけのページへのリンクに `hover` を足すことを比べ直す
 

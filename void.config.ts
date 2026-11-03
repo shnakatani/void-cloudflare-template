@@ -2,7 +2,7 @@ import { defineConfig } from "void/config";
 
 import { APP_NAME } from "./src/lib/app-name";
 
-// nonce を発行しない Void では、inline の script を許さない形にする (ADR-0051)。
+// script に nonce を付ける口の無い Void では、inline の script を許さない形にする (ADR-0051)。
 // dev の HTML だけは React Refresh の preamble が inline の script で、止めると描画の hydration が
 // 落ちる。Void の docs「Custom Headers」に環境ごとに分ける口は無いので、この設定を読む時点の
 // NODE_ENV で分ける。`vp dev` は development、`vp build` は production で読む (Void 1.4.0、
