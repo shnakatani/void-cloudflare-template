@@ -5,7 +5,11 @@
   "extends": ["./tsconfig.base.json", "./.void/tsconfig.json", "./tsconfig.paths.json"],
   "compilerOptions": {
     "lib": ["ES2024", "ESNext.Error", "DOM", "DOM.Iterable"],
-    "types": ["vite-plus/client"]
+    // global の型は types/ だけから引く。types/ の空の @cloudflare/workers-types が、void/env などの型が足す
+    // Workers の型を空にする。typeRoots を書くと types は node_modules を探さないので、types/app-globals が参照する
+    // (ADR-0047)
+    "typeRoots": ["./types"],
+    "types": ["app-globals"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "pages/**/*.ts", "pages/**/*.tsx"],
   "exclude": [

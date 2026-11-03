@@ -7,8 +7,9 @@
   "extends": ["./tsconfig.base.json", "./.void/tsconfig.json", "./tsconfig.paths.json"],
   "compilerOptions": {
     "lib": ["ES2024", "ESNext.Error", "DOM", "DOM.Iterable"],
-    // vite-plus/test/browser-playwright は、playwright の provider が vitest/browser の cdp() に足す型を読む
-    "types": ["vite-plus/client", "vite-plus/test/browser-playwright", "node"]
+    // global の型は types/ だけから引く。理由は tsconfig.app.json と同じ (ADR-0047)
+    "typeRoots": ["./types"],
+    "types": ["test-globals"]
   },
   "include": [
     "**/*.test.ts",
