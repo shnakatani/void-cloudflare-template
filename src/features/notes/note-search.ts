@@ -16,6 +16,7 @@ export const NOTE_QUERY_TOO_LONG_MESSAGE = `検索語が長すぎます。日本
 
 /**
  * 打鍵が止まってから一覧の URL へ移るまでの待ち。移るたびに loader が一覧を読む。
+ * 上限を超えた語の読み上げも、この待ちの発火で出す (ADR-0057)
  * literal 型に固めない。ページのテストが `vi.mock` でこの値を広げる (`notes-page-search-submit.test.tsx`)
  */
 export const NOTE_SEARCH_DEBOUNCE_MS: number = 300;
