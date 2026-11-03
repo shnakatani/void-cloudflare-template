@@ -1,6 +1,6 @@
-// ブラウザで動くアプリのコードと、そのテストと story (DOM の型)。ページは Worker の SSR でも動くが、DOM の型で
-// 検査する。exclude の *.server.ts(x) は tsconfig.worker.json の include と揃える。ずれると、そのファイルは
-// どの tsconfig にも入らないか、2 つに入る (ADR-0047)
+// src/ と pages/ のコードと、そこに置いたテストと story (*.server.test.ts を含む) (DOM の型)。ページは
+// Worker の SSR でも動くが、DOM の型で検査する。exclude の *.server.ts(x) は tsconfig.worker.json の include と
+// 揃える。ずれると、そのファイルはどの tsconfig にも入らないか、2 つに入る (ADR-0047)
 {
   "extends": ["./tsconfig.base.json", "./.void/tsconfig.json", "./tsconfig.paths.json"],
   "compilerOptions": {
