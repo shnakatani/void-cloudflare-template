@@ -46,7 +46,7 @@ mise trust && mise install                        # .mise.toml を信頼して d
 vp install                                        # 依存パッケージ
 vp exec playwright install chromium --only-shell  # vp install では入らない。無いと browser project のテストが落ちる
 printf '\nBETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env # vp preview と vp run verify の secret (docs/guides/auth.md「preview に secret を渡す」)
-vp exec void db seed --yes                        # dev の D1 を作り、ログインに使う見本のユーザーを入れる。email と password は db/seed.ts の docstring
+vp exec void db seed --yes                        # dev の D1 を作り、ログインに使う見本のユーザーを入れる。email と password は db/seed.ts の DEV_EMAIL と DEV_PASSWORD
 mise run serve                                    # dev server。port は worktree ごとに変わる (.mise.toml の daemons)
 mise run storybook                                # 部品とデザイントークンのカタログ (docs/guides/storybook.md)
 ```

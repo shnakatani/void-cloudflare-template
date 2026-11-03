@@ -47,7 +47,7 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 `vp exec void db seed --yes` は、ローカルの D1 を reset と同じに作り直し、`db/seed.ts` を実行する ([Void docs「void db seed」][])。打ったあと dev server を起動し直す。
 
 - 打つたびに、dev の画面から作った行と登録したユーザーが消える (「dev の D1 を作り直す」)
-- ログインに使うユーザーは `db/seed.ts` が作る。email と password は `db/seed.ts` の docstring にある
+- ログインに使うユーザーは `db/seed.ts` が作る。email と password は `db/seed.ts` の `DEV_EMAIL` と `DEV_PASSWORD` にある。password の hash は seed の中で作るので、`DEV_PASSWORD` を書き換えて打ち直せば、新しい password でログインできる (「見本のユーザーの password の hash を seed の中で作る理由」)
 - `db/seed.ts` は `void/seed` の `defineSeed` で包んで default export にする ([Void docs「Database」][] の Seeding)。渡る `db` は better-sqlite3 の drizzle なので、書き込みは `.run()` で同期に打つ
 - 渡る `schema` は `db/schema.ts` の export だけで、auth の table を持たない。auth の table の行は ``db.run(sql`…`)`` で入れ、列は Better Auth の email の sign-up が入れる行に合わせる (`account` の `providerId` は `credential`、`accountId` は user の id)
 - `db/seed.ts` と、そこから実行時に読むファイルは `@/` で import しない。`void db seed` は jiti で読み、tsconfig の `paths` を渡さない (Void 1.4.0 の `cli/db.ts` の `importLocalModule`)。`import type` は実行時に消えるので、`@/` を使うファイルから型だけ引いてよい (2026-11-02 に実測)
@@ -206,30 +206,38 @@ D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs �
 
 `meta/` の JSON は drizzle-kit の生成物で、`vp check` の format に通すと落ちる (2026-11-02)。format し直すと、生成のたびに手で整える手順が要り、commit したものが drizzle-kit の出力のままかどうかを見分けにくくなる。deploy は `meta/` の snapshot を schema と比べるので ([Void docs「Database」][] の Hand-written migrations)、`vite.config.ts` の `fmt.ignorePatterns` で外し、生成したままの形で持つ。
 
-### 見本のユーザーの password を固定の hash で持つ理由
+### 見本のユーザーの password の hash を seed の中で作る理由
 
-見本のユーザーには、ログインできる password の hash が要る。作り方の候補は次のとおりで、固定の値を選んだ (Void 1.4.0、2026-11-02 にソースを読んだもの)。
+見本のユーザーには、Void の auth の照合を通る password の hash が要る。`void db seed` は `db/seed.ts` を CLI の Node の process で jiti で読み、better-sqlite3 で開いたローカルの D1 を渡して await する (Void 1.5.0 の `cli/db.ts` の `runSeedModule`)。seed の中で `node:crypto` を呼べる。
 
-| 候補                                                        | 採否 | 理由                                                                                                                                        |
-| ----------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Better Auth の sign-up の API を seed から呼ぶ              | 却下 | Void は Worker の外で Better Auth を組む口を公開しない。`auth/drizzle.ts` が組む options は auth の schema を作るためだけのもの             |
-| Void の hash 関数を呼ぶ                                     | 却下 | `voidAuthPassword` (`runtime/better-auth-shared.ts`) は export されていない                                                                 |
-| Better Auth の `hashPassword` (`better-auth/crypto`) を呼ぶ | 却下 | Void と同じ形を作るが、`better-auth` は `void` の依存で、直接の依存に足すと版を `void` と揃え続けることになる                               |
-| 固定の salt で作った値を置く                                | 採用 | Void の hash の形 (`<salt>:<鍵>` の hex、scrypt の N 16384・r 16・p 1・鍵 64 byte) が変わると、見本のユーザーでログインできなくなって分かる |
+作り方の候補は次のとおりで、seed の中で scrypt で作る形を選んだ (Void 1.5.0・better-auth 1.7.14、2026-11-04 にソースと docs を読んだもの)。
+
+| 候補                                                                             | 採否     | 理由                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| seed の中で `node:crypto` の scrypt で作る (`scripts/lib/void-auth-password.ts`) | **採用** | password を `db/seed.ts` の 1 か所に持つ。scrypt のパラメータは Void の写しになる。写しの誤りは、[Void のテスト「verifies existing Better Auth scrypt hashes」][] が照合を通すと確かめている hash と同じ値を作るかを、単体テストで見る |
+| 固定の salt で作った値を置く                                                     | 却下     | password と、それから作った hash を別々に持つ。password だけを書き換えると、seed は通り、見本のユーザーのログインだけが失敗する                                                                                                        |
+| Better Auth の `hashPassword` (`better-auth/crypto`) を呼ぶ                      | 却下     | 採用の形と同じ値を作り、パラメータを写さずに済む。`better-auth` は `void` の依存でルートから解決できないので、直接の依存と `.github/dependabot.yml` の `void` グループへの追加が要る。見本のユーザー 1 人の hash に見合わない          |
+| Void の hash 関数を呼ぶ                                                          | 却下     | `voidAuthPassword` (`runtime/better-auth-shared.ts`) は export されていない。`void/auth` が export するのは `defineAuth`・`getSession`・`getUser`・`requireAuth` などで、hash の関数は無い                                             |
+| Better Auth の sign-up の API (`auth.api.signUpEmail`) を seed から呼ぶ          | 却下     | Void は auth の instance を Worker の中で組み、外へ出す口を公開しない。seed の中で `betterAuth()` を組むと、adapter・auth の schema・secret を Void と別に揃えることになる                                                             |
+
+- [Void docs「Database」][] の Seeding と [Void docs「Authentication」][]、[Better Auth docs「Email & Password」][] は、seed でユーザーを作る手段を案内しない。Better Auth docs は既定の hash を scrypt とする
+- Void の hash の形は Better Auth の既定の `hashPassword` と同じである。`<salt>:<鍵>` で、salt は 16 byte の乱数の hex を文字列のまま scrypt に渡し、password は NFKC に正規化し、scrypt は N 16384・r 16・p 1・鍵 64 byte で、鍵を hex にする
+- `BETTER_AUTH_SECRET` は hash に入らない。Void の照合は password と salt だけから鍵を作る
+- Void が hash の形を変えると、採用の形でも固定の値でも seed は通り、見本のユーザーのログインが失敗して分かる。単体テストの期待値は Void のテストの値の写しなので、Void が形を変えても落ちない。Void を上げたら、見本のユーザーでログインして確かめる (`docs/guides/dependencies-and-toolchain.md`「依存を上げたときに見直すもの」)
 
 ### seed に drizzle-seed を使わない理由
 
 [drizzle docs「Seed Overview」][] は、見本のデータを作るライブラリとして drizzle-seed を案内する。`defineSeed` が渡す `db` は drizzle の instance なので、組めなくはない。
 
-| 案                                             | 評価                                                                                                                                                                                | 採否     |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 固定の配列を `defineSeed` の中で `insert` する | 長いタイトルや空の本文のような、確かめたい値をそのまま書ける。どの値が入力のスキーマと CHECK を通るかを、配列の単体テストで確かめられる。見本のユーザーの固定の hash も同じ形で入る | **採用** |
-| drizzle-seed で生成する                        | 生成器の既定の値は確かめたい値にならず、確かめたい値を作るにはどのみち列ごとに値を渡すことになる。ログインに使う見本のユーザーの password の hash は生成器では作れない              | 却下     |
-| migration の `.sql` に INSERT を書く           | 見本が migration の経路に乗り、本番の DB にも入る (ADR-0052)                                                                                                                        | 却下     |
+| 案                                             | 評価                                                                                                                                                                      | 採否     |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 固定の配列を `defineSeed` の中で `insert` する | 長いタイトルや空の本文のような、確かめたい値をそのまま書ける。どの値が入力のスキーマと CHECK を通るかを、配列の単体テストで確かめられる。見本のユーザーの行も同じ形で入る | **採用** |
+| drizzle-seed で生成する                        | 生成器の既定の値は確かめたい値にならず、確かめたい値を作るにはどのみち列ごとに値を渡すことになる。ログインに使う見本のユーザーの password の hash は生成器では作れない    | 却下     |
+| migration の `.sql` に INSERT を書く           | 見本が migration の経路に乗り、本番の DB にも入る (ADR-0052)                                                                                                              | 却下     |
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に原文と照らした。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に、Better Auth docs は 2026-11-04 に原文と照らした。Void のテストも v1.5.0 に固定した版を指す。
 
 [Void docs「Database」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database.md
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md
@@ -245,6 +253,8 @@ D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs �
 [Cloudflare docs「Import and export data」]: https://developers.cloudflare.com/d1/best-practices/import-export-data/
 [Void docs「void db seed」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md
 [drizzle docs「Seed Overview」]: https://orm.drizzle.team/docs/seed-overview
+[Void のテスト「verifies existing Better Auth scrypt hashes」]: https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/test/unit/better-auth.test.ts
+[Better Auth docs「Email & Password」]: https://www.better-auth.com/docs/authentication/email-password
 [Cloudflare docs「Global read replication」]: https://developers.cloudflare.com/d1/best-practices/read-replication/
 [Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/integrations/cloudflare.md
 [Cloudflare docs「Real-time logs」]: https://developers.cloudflare.com/workers/observability/logs/real-time-logs/
