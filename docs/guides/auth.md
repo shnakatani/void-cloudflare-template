@@ -169,7 +169,7 @@ Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か�
 
 ### action の要求を redirect しない理由
 
-session が切れたまま action を送ったとき、middleware が `/login` へ redirect すると、Void の client は redirect を辿った先のページを action の結果として受け取る。Void 1.4.0 の `pages/navigation-engine.ts` は、`fetch` が redirect を辿った応答を行き先の GET の結果として扱い、`submitAction` (`pages/client.ts`) は `ok: true` を返す。`usePageAction` の `run` は成功として `onSuccess` を走らせ、書き込んでいないのに完了を読み上げ、ログインのページへ移って入力が消える (2026-11-03、`vp preview`)。
+session が切れたまま action を送ったとき、middleware が `/login` へ redirect すると、Void の client は redirect を辿った先のページを action の結果として受け取る。Void 1.5.0 の `dist/pages/client.mjs` の `router.visit` は、`fetch` が redirect を辿った応答を行き先の GET の結果として扱い、同じファイルの `submitAction` は `ok: true` を返す。`usePageAction` の `run` は成功として `onSuccess` を走らせ、書き込んでいないのに完了を読み上げ、ログインのページへ移って入力が消える (2026-11-03、`vp preview`)。
 
 middleware が action の要求に 401 を返すと、Void の client は 401 を throw する ([Void docs「Actions & Forms」][] の Validation Errors、`pages/action-result.ts` の `categorizeActionError`)。`run` は toast でログインし直しを案内し (`src/lib/mutation-error.ts`)、ダイアログと入力は残る。cookie はタブをまたいで効くので、別のタブでログインし直せば、残った入力のまま送り直せる (2026-11-03、`vp preview`)。
 
