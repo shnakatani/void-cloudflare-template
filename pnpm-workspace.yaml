@@ -32,7 +32,7 @@ minimumReleaseAgeExclude:
   - vitest
   - "@vitest/*"
   # 公開 3 日未満の版を、provenance を確かめて前倒しする (docs/guides/dependencies-and-toolchain.md「待機を前倒しする」)
-  # void@1.5.0 と、それが引く版。撤去条件: 2026-11-05 に公開後 3 日を過ぎる。行を消して vp install し、lockfile が変わらないことを見る
+  # void@1.5.0 と、それが引く版。撤去条件: 2026-11-05 04:04 UTC 以降 (最後に公開された @void/deploy-core@1.5.0 が 3 日を過ぎる)。行を消して vp install が通り、lockfile が変わらないことを見る
   - void@1.5.0
   - "@void/react@1.5.0"
   - "@void/deploy-cloudflare@1.5.0"
