@@ -56,7 +56,12 @@ export function NoteSearchField({
             <InputGroupButton type="submit">検索</InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
-        {error === null ? null : <FieldError id={errorId}>{error}</FieldError>}
+        {error === null ? null : (
+          // 文言の幅で検索欄を広げない。広げると、打っている最中に入力欄が横へ動く
+          <div className="w-0 min-w-full">
+            <FieldError id={errorId}>{error}</FieldError>
+          </div>
+        )}
       </form>
     </search>
   );
