@@ -92,16 +92,31 @@ function routeParams(params: unknown): Record<string, string> | undefined {
  * `action()` (`@void/react` 1.5.0) の中身の写しに、`preserveScroll` と `viewTransition` を足したもの。
  *
  * `action()` は `submitAction(router, interpolateRouteParams(url, params), { method, data, _resolveOnShell: true })`
- * を呼ぶだけで (`void` 1.5.0 の `dist/pages/client.mjs` の `createActionClient`、`@void/react` の `dist/action-*.mjs`)、
- * options (`ActionOptions`) は `data`・`method`・`params` だけである。同じページに残る送信の後に scroll を保つ
- * `preserveScroll` と、送信をクロスフェードにしない `viewTransition: false` (ADR-0058) を渡す口が無いので、ここだけ
- * `void/pages-client` (docs の User-Facing Imports に無い path) の `submitAction` を直に呼ぶ。`_resolveOnShell` は
- * `action()` が既定で付ける `@internal` の option で、付けないと Action の中の await が新しい props の commit と互いを
- * 待って決着しない (ADR-0015)。
+ * を呼ぶだけで、options (`ActionOptions`) は `data`・`method`・`params` だけである。`_resolveOnShell` の既定は Void の
+ * `packages/react/src/runtime/action.ts` が、送り方は `packages/void/src/pages/client.ts` の `createActionClient` が持つ。
+ * 同じページに残る送信の後に scroll を保つ `preserveScroll` と、送信をクロスフェードにしない `viewTransition: false`
+ * (ADR-0058) を渡す口が無いので、ここだけ `void/pages-client` (docs の User-Facing Imports に無い path) の
+ * `submitAction` を直に呼ぶ。`_resolveOnShell` は `@internal` の option で、付けないと Action の中の await が新しい
+ * props の commit と互いを待って決着しない (ADR-0015)。
  *
- * 撤去の条件: Void の `ActionOptions` が `preserveScroll` と `viewTransition` を受けるようになったら、この関数を
- * `action(url, { method, data, params, preserveScroll, viewTransition: false })` に替え、`void/pages-client` の import を
- * 消す (ADR-0016)。このファイルのテストは `submitAction` を mock するので、option が型から消えたときは `vp check` が落ちる
+ * 写しの中身 (`action()` の既定の option と送り方) が Void とずれても、型の検査とテストは落ちない。テストのうち
+ * Void の `submitAction` を通すのは、422 の body と throw の読み方を見るものだけである。Void を上げたら、上の 2 ファイル
+ * を前の版の tag と比べて読み (`gh api repos/voidzero-dev/void/compare/v<前の版>...v<上げた版>`)、`createActionClient`
+ * の `action` と `submitAction` の変更をここと `src/lib/action-error.ts` に写す。option の名前が型から消えたときだけは
+ * `vp check` が落ちる。
+ *
+ * 撤去の条件 (先に成り立った方):
+ * - `router.visit` が `resolveOn: "data"` を受ける版 (voidzero-dev/void#663 を閉じた commit 2248088。1.5.0 の公開より後で、
+ *   2026-11-03 の時点で未公開) に上げたら、Void の docs「React navigation completion」の形の
+ *   `router.visit(url, { method, data, preserveScroll, viewTransition: false, resolveOn: "data" })` に替え、`submitAction`
+ *   の import を消す。GET でない visit では、`resolveOn: "data"` は `_resolveOnShell` と同じ時点で決着する (commit 2248088 の
+ *   `packages/react/src/runtime/pages-client.ts` の `resolveOnData`)。422 は戻り値の `errors` を `fieldErrorsOf` で、ほかの
+ *   失敗は throw を `isActionError` で読む。戻り値の形は docs に無いので、その版の `submitAction` で確かめる。
+ *   `interpolateRouteParams` も消すには、action の URL を `?` の前後に分け、前を `routeUrl(<path>, { params })`
+ *   (`void/routes`) で組んで後ろを足す。`routeUrl` に action の URL を丸ごと渡すと、`?` が pathname の中で escape される
+ * - Void の `ActionOptions` が `preserveScroll` と `viewTransition` を受けるようになったら、この関数を
+ *   `action(url, { method, data, params, preserveScroll, viewTransition: false })` に替え、`void/pages-client` の import を
+ *   消す (ADR-0016)
  */
 function sendPageAction(
   router: VoidRouter,
