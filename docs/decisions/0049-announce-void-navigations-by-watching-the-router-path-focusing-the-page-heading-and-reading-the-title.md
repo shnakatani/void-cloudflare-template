@@ -191,7 +191,7 @@ HTML の応答に `Cache-Control: no-cache` は足さない。Vite docs の同�
 
 - `routing.headers` の key は URL の path の pattern で、拡張子の無い SSR のページだけには当てられない。`/*` に足すと `public/` のファイルと API の応答にも当たる
 - Cloudflare の CDN は既定で HTML を cache しない (Cloudflare docs「Default Cache Behavior」の "The Cloudflare CDN does not cache HTML or JSON by default.")
-- RFC 9111 4.2.2 は、明示の有効期限の無い応答に cache が経験則の有効期限を付けることを許し、cache させたくない origin には `Cache-Control: no-cache` のような明示の指定を勧める。ログインしていない要求へのページは、Chromium 以外では cache されるかを測っていない
+- RFC 9111 4.2.2 は、明示の有効期限の無い応答に cache が経験則の有効期限を付けることを許し、cache させたくない origin には `Cache-Control: no-cache` のような明示の指定を勧める。ログインしていない要求へのページは `Last-Modified` も持たないので、Chromium・WebKit・Firefox はどれも経験則の有効期限を 0 にする (下の出典の 3 つのブラウザの cache のソース)
 
 ### title の組み方
 
@@ -215,7 +215,7 @@ HTML の応答に `Cache-Control: no-cache` は足さない。Vite docs の同�
 - chunk の読み込みの失敗の受け口は、Vite の build がページの `import()` を包む preload の helper が出す event に乗る。Vite docs はこの event を「Building for Production」の節で案内する。dev で event が出るかは測っていないので、確かめるのは `vp build` の後の `vp preview` で行う
 - 部品は、`vite:preloadError` が `fail` の dispatch より前に出るという Void の内部の順序に乗る (その時点の `useNavigation()` が行き先を持つ)。docs に書かれていない。崩れると event の時点の `useNavigation()` が idle になり、前のページへ戻るだけの挙動に戻る。読み直しを繰り返さないことは、idle の失敗では開かない判定が持ち、Void の描画の順序には頼らない。Void を上げたら、preview でページの chunk の要求を落としてリンクを押すことと、戻るで hash を持つ URL へ戻ることを試し、行き先の文書が開くことと、落とし続けても文書の読み込みが 1 回で止まることを確かめる (下の「実測: chunk の読み込みの失敗」の形)
 - Void が chunk の失敗も文書の読み込みに替えるようになったら、`src/components/chunk-load-error-recovery.tsx` を外す
-- ログインしていない要求へのページに `Last-Modified`・`ETag`・`Cache-Control` の `max-age` を付けるなら、そのページに `Cache-Control: no-cache` も付ける。古い HTML が cache から出ると、消えた chunk を指して最初の描画が止まる
+- ログインしていない要求へのページに `Last-Modified` か `Cache-Control` の `max-age` を付けるなら、そのページに `Cache-Control: no-cache` も付ける。古い HTML が cache から出ると、消えた chunk を指して最初の描画が止まる
 - 偽の router (ADR-0048) は title の書き換えを再現しない。`src/components/route-announcer.test.tsx` は、新しいページの描画と遷移の完了の間に `document.title` を置き換えて確かめる。title の順序は下の「調査結果」の dev server の実測が持つ
 
 ## 調査結果
@@ -306,3 +306,6 @@ idle に戻った effect で読み上げる形では、続けてブラウザの�
 - Cloudflare docs「Default Cache Behavior」: https://developers.cloudflare.com/cache/concepts/default-cache-behavior/
 - RFC 9111 4.2.2「Calculating Heuristic Freshness」: https://www.rfc-editor.org/rfc/rfc9111.html#section-4.2.2
 - HTML Standard の navigate の手順 (今の URL と fragment を除いて等しく、fragment を持つ URL は fragment の移動になる): https://html.spec.whatwg.org/multipage/browsing-the-web.html#navigate
+- Chromium の `HttpResponseHeaders::GetFreshnessLifetimes` ("Our heuristic freshness estimate for this resource is 0 seconds"): https://github.com/chromium/chromium/blob/270ff09f88b568f61ac6f19a94dc28bf4653aa95/net/http/http_response_headers.cc#L1336-L1442
+- WebKit の `computeFreshnessLifetimeForHTTPFamily` (`Last-Modified` が無いと `0_us`): https://github.com/WebKit/WebKit/blob/0f132d347b1a388665553474448ab64eb6e13541/Source/WebCore/platform/network/CacheValidation.cpp#L128-L161
+- Firefox の `nsHttpResponseHead::ComputeFreshnessLifetime` ("Insufficient information to compute a non-zero freshness lifetime!"): https://github.com/mozilla-firefox/firefox/blob/112b98932d21154eb1c2019faedbe336edac4ab6/netwerk/protocol/http/nsHttpResponseHead.cpp#L627-L701
