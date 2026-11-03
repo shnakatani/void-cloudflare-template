@@ -13,10 +13,11 @@ const CSP = `script-src ${SCRIPT_SRC}; object-src 'none'; base-uri 'none'; frame
 
 export default defineConfig({
   worker: {
-    // Cloudflare Workers の compatibility date。dev と preview の workerd が受ける最新の日付にする
-    // (Cloudflare Workers「Best Practices」の Keep your compatibility date current)。それより新しい日付では
-    // preview が起動しない。上げ方は docs/guides/dependencies-and-toolchain.md「依存を上げたときに見直すもの」の Void の行
-    compatibility_date: "2026-10-30",
+    // Cloudflare Workers の compatibility date。手元で Worker を動かす workerd (dev と preview、output: "static" の
+    // build の prerender) がすべて受ける最新の日付にする (Cloudflare Workers「Best Practices」の Keep your
+    // compatibility date current)。それより新しい日付では、その workerd が起動しない。上げ方は
+    // docs/guides/dependencies-and-toolchain.md「依存を上げたときに見直すもの」の Void の行
+    compatibility_date: "2026-11-03",
   },
   cloudflare: {
     // Workers Logs と Traces (Cloudflare Workers「Best Practices」の Enable Workers Logs and Traces)。率の理由は
