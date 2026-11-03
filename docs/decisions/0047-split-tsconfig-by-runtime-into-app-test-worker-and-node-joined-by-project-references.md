@@ -49,7 +49,7 @@ tsconfig を分けても、server のファイルは次の経路で app と test
 境界の判断:
 
 - `pages/*.tsx` は、Worker の SSR でも動くが app に入れ、DOM の型で検査する。`src/components/` を描くのはブラウザが主で、DOM の型が要る
-- worker の Workers の型は、Void の docs「Type Safety」の Setup どおり `types` の `void/env` から引く。Cloudflare の docs「Write Cloudflare Workers in TypeScript」は Worker の runtime の型に `wrangler types` の生成物を勧めるが、使わない。Void の公開の型は `@cloudflare/workers-types` を package の名前で参照し (Context)、Void の docs「AI」も model の名前と入力の型をこの package から引く。生成物を足しても、worker の program からこの package は外れない (Void 1.4.0)
+- worker の Workers の型は、Void の docs「Type Safety」の Setup どおり `types` の `void/env` から引く。Cloudflare の docs「Write Cloudflare Workers in TypeScript」は Worker の runtime の型に `wrangler types` の生成物を勧めるが、使わない。Void の公開の型は `@cloudflare/workers-types` を package の名前で参照し (Context)、Void の docs「AI」も model の名前と入力の型をこの package から引く。生成物を足しても、worker の program からこの package は外れない (Void 1.5.0)
 - `src/` の `*.server.ts`・`*.server.tsx` は worker に入れる。app に入れると、Void の型を経た Workers の値 (`c.env.DB` など) の型が解決しない (Consequences)。`c.env.DB` を `string` に入れる誤りは型検査を通り、正しい `c.env.DB.prepare()` は `typescript/no-unsafe-*` で落ちた (2026-11-03)
 - テストと story は app から分けて test に入れる。Vitest と Storybook の型が Node の型を読み込む (`storybook/dist/node-logger`、`undici-types`、`vite-plus-core` の `vite/node` が `/// <reference types="node" />` を持つ)。app に入れると、アプリのコードの `process` と `Buffer` が型検査を通ってしまう
 - unit のテストは Node で走るが、app のコードを読むので test に入れる。test は DOM の型も Node の型も持つ
@@ -85,7 +85,7 @@ Workers の型を app と test から外す:
 | I. `tsconfig.paths.json` の `paths` で `@cloudflare/workers-types` を空の宣言へ向ける                         | `paths` は triple-slash の `types` の解決に効かず、TS2345 が残った (2026-11-03 に実測)                                                                                                                                                                                                                                                                                                                                                                                                                                   | 却下     |
 | J. Workers の型を app に受け入れ、DOM の `append` の呼び出しを書き換える                                      | ブラウザのコードが Worker にしか無い global (`HTMLRewriter` など) を使っても型検査を通る                                                                                                                                                                                                                                                                                                                                                                                                                                 | 却下     |
 | K. app から `.void/routes.d.ts` を外す                                                                        | `usePageAction` が読む `void/routes` の `ActionUrl`・`ResolveActionBody` の型が無くなる                                                                                                                                                                                                                                                                                                                                                                                                                                  | 却下     |
-| L. Void の公開の型が、Workers の型を global に足さず、import できる型で参照する                               | `@cloudflare/workers-types` の README「Importable Types」の形で、Cloudflare の docs「Write Cloudflare Workers in TypeScript」もライブラリと共有の package の型にこの package を勧める。DOM の型とぶつからず、`typeRoots` も空の宣言も要らない。ただし `/// <reference types="@cloudflare/workers-types" />` は `void/dist/runtime/` の 8 本の型にあり (Void 1.4.0)、テンプレートの設定からは選べない。Workers の型が DOM の型を上書きする衝突は、Cloudflare の側でも cloudflare/workerd#2874 が open のまま (2026-11-03) | 選べない |
+| L. Void の公開の型が、Workers の型を global に足さず、import できる型で参照する                               | `@cloudflare/workers-types` の README「Importable Types」の形で、Cloudflare の docs「Write Cloudflare Workers in TypeScript」もライブラリと共有の package の型にこの package を勧める。DOM の型とぶつからず、`typeRoots` も空の宣言も要らない。ただし `/// <reference types="@cloudflare/workers-types" />` は `void/dist/runtime/` の 8 本の型にあり (Void 1.5.0)、テンプレートの設定からは選べない。Workers の型が DOM の型を上書きする衝突は、Cloudflare の側でも cloudflare/workerd#2874 が open のまま (2026-11-03) | 選べない |
 
 F の実測 (2026-11-03、Void 1.4.0、TypeScript 6.0.3)。probe は、`env.ts` に `defineEnv`、action を持つ `pages/<path>.server.ts` に `void/env` の `env` と `void/handler` の `ValidationError` の値の使用、`routes/probe.ts` に `void/sandbox` の `getSandbox`、`src/lib/probe-email.test.ts` に `void/email/testing` を置いた形である。
 
@@ -149,15 +149,15 @@ U の実測 (2026-11-02、TypeScript 6.0.3、Vite 8.3.5。Vite は vite-plus-cor
 
 ## 出典
 
-- `void/env` の Setup と、loader の型をページが `import type` で受ける形 (Void docs「Type Safety」、1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/type-safety.md
-- `env.ts` で `void/env` の `defineEnv` を import する (Void docs「Environment variables」、1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/env-vars.md
-- action で `void/handler` の `ValidationError` を throw する (Void docs「Actions & Forms」、1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/actions-and-forms.md
-- `void/email` の `sendEmail` と `void/email/testing` (Void docs「Sending Email」、1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/email/sending.md
-- `src/live.ts` の `void/live` を route から import する (Void docs「Live Event Streams」、1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/live.md
-- Workers AI の model の名前と入力の型を `@cloudflare/workers-types` から引く (Void docs「AI」、1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/ai.md
-- route で `void/sandbox` の `getSandbox` を呼ぶ (Void docs「Sandboxes」、1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/sandboxes.md
-- `.void/routes.d.ts` の `typeof import(...)` (1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/packages/void/src/codegen/route-types.ts
-- `.void/env.d.ts` の `typeof import(...)` (1.4.0): https://github.com/voidzero-dev/void/blob/v1.4.0/packages/void/src/codegen/env-types.ts
+- `void/env` の Setup と、loader の型をページが `import type` で受ける形 (Void docs「Type Safety」、1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/type-safety.md
+- `env.ts` で `void/env` の `defineEnv` を import する (Void docs「Environment variables」、1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md
+- action で `void/handler` の `ValidationError` を throw する (Void docs「Actions & Forms」、1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/actions-and-forms.md
+- `void/email` の `sendEmail` と `void/email/testing` (Void docs「Sending Email」、1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/email/sending.md
+- `src/live.ts` の `void/live` を route から import する (Void docs「Live Event Streams」、1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/live.md
+- Workers AI の model の名前と入力の型を `@cloudflare/workers-types` から引く (Void docs「AI」、1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/ai.md
+- route で `void/sandbox` の `getSandbox` を呼ぶ (Void docs「Sandboxes」、1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/sandboxes.md
+- `.void/routes.d.ts` の `typeof import(...)` (1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/src/codegen/route-types.ts
+- `.void/env.d.ts` の `typeof import(...)` (1.5.0): https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/src/codegen/env-types.ts
 - `typeRoots` を書くと、その下の package だけを含める (TSConfig Reference「typeRoots」): https://www.typescriptlang.org/tsconfig/#typeRoots
 - 依存の型を global に足さず import できる型で引く (`@cloudflare/workers-types` の README「Importable Types」): https://github.com/cloudflare/workerd/blob/b690abbf0fd205c210edae545731fc6b9929bc6e/npm/workers-types/README.md
 - Worker の runtime の型に `wrangler types` を、ライブラリと共有の package の型に `@cloudflare/workers-types` を勧める (Cloudflare docs「Write Cloudflare Workers in TypeScript」の「Migrating from `@cloudflare/workers-types` to `wrangler types`」): https://developers.cloudflare.com/workers/languages/typescript/
