@@ -37,7 +37,7 @@ Console Piping の注入先: plugin は、`<html`・`hydrateRoot`・`createRoot`
 
 **`@tanstack/devtools-vite` を `vite.config.ts` の最初の plugin に置き、`eventBusConfig.enabled: false` と `consolePiping.enabled: false` を渡す。ブラウザの console は `server.forwardConsole: true` で端末へ送り、Storybook の dev には `.storybook/main.ts` の `viteFinal` で同じ値を渡す。`<TanStackDevtools>` は環境で分けずに import し、本番からは plugin に外させる。**
 
-- event bus のサーバは、認証の無いメッセージで dev server の上でパッケージの install をシェル越しに走らせる (TanStack/devtools#464)。panel はこのサーバにつながない (`<TanStackDevtools>` の `eventBusConfig.connectToServerBus` の既定は false) ので、止めても panel の機能は減らない
+- event bus のサーバは認証の無い要求を受け、有効な npm パッケージなら何でも、その install scripts も含めて dev server の上で install させる (TanStack/devtools#464、TanStack/devtools#545)。panel はこのサーバにつながない (`<TanStackDevtools>` の `eventBusConfig.connectToServerBus` の既定は false) ので、止めても panel の機能は減らない
 - Console Piping を止めて失うのは、ブラウザの `console.log`・`console.info`・`console.debug` の端末への転送だけである。server → ブラウザは上の表のとおり働いていない
 - `server.forwardConsole` は既定のままだと人の端末で働かないので、`true` を明示する
 - Storybook の dev では `vite.config.ts` の `forwardConsole` が届かない。`@storybook/builder-vite` 10.6.4 は `vite.config.ts` の設定を読むが、`server` を自分の値で丸ごと差し替える (`dist/index.js` の `createViteServer`)。Storybook docs「Vite」は、builder の設定を変える口に `viteFinal` と `mergeConfig` を案内する。2026-11-03 に Storybook の dev で story を開き、ブラウザで `console.warn`・`console.error` を出して端末の行を数えた。`viteFinal` が無いと人の端末に 0 行で、渡すと人の端末でも agent の端末でも `Vite [console.warn] <message>` と `Vite [console.error] <message>` が 1 行ずつ出た
@@ -72,6 +72,6 @@ Console Piping の注入先: plugin は、`<html`・`hydrateRoot`・`createRoot`
 - TanStack Devtools「Vite Plugin」: https://tanstack.com/devtools/latest/docs/vite-plugin (2026-11-03 に確認)
 - TanStack Devtools「Production」: https://tanstack.com/devtools/latest/docs/production (2026-11-03 に確認)
 - `@voidzero-dev/vite-plus-core` 1.4.0 の `dist/vite/node/chunks/node.js` (`resolveForwardConsoleOptions`、`forwardConsolePlugin`、同梱の `std-env` 4.3.0)
-- `@tanstack/devtools-vite` 0.8.6 の同梱 skill `devtools-vite-plugin` と `src/plugin.ts`、`@tanstack/devtools-bundler-core` 0.1.4 の `src/remove-devtools.ts`・`src/devtools-packages.ts`・`src/virtual-console.ts`・`src/enhance-logs.ts`
+- `@tanstack/devtools-vite` 0.8.6 の同梱 skill `devtools-vite-plugin` と `src/plugin.ts`、`@tanstack/devtools-bundler-core` 0.1.4 の `src/remove-devtools.ts`・`src/devtools-packages.ts`・`src/virtual-console.ts`・`src/enhance-logs.ts`・`dist/esm/package-manager.js` (`installPackage`。2026-11-05 に確認)
 - `@cloudflare/vite-plugin` 1.66.0 の `dist/index.mjs` (`ASSETS` の node の binding) と、miniflare 5.20261023.1-beta の `dist/src/index.js` (`#handleLoopback`)
-- event bus の install の経路: TanStack/devtools#464
+- event bus の install の経路: TanStack/devtools#464、TanStack/devtools#545 (本文の「Linked issues」)
