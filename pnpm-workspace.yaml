@@ -31,31 +31,6 @@ minimumReleaseAgeExclude:
   - "@oxfmt/*"
   - vitest
   - "@vitest/*"
-  # 公開 3 日未満の版を、provenance を確かめて前倒しする (docs/guides/dependencies-and-toolchain.md「待機を前倒しする」)
-  # void@1.5.0 と、それが引く版。撤去条件: 2026-11-05 04:04 UTC 以降 (最後に公開された @void/deploy-core@1.5.0 が 3 日を過ぎる)。行を消して vp install が通り、lockfile が変わらないことを見る
-  - void@1.5.0
-  - "@void/react@1.5.0"
-  - "@void/deploy-cloudflare@1.5.0"
-  - "@void/deploy-core@1.5.0"
-  - "@void/edge@1.5.0"
-  - "@void/isr@1.5.0"
-  - "@void/platform@1.5.0"
-  - "@cloudflare/build-output-utils@0.9.7"
-  - "@cloudflare/codemods@0.7.1"
-  - "@cloudflare/config@0.29.1"
-  - "@cloudflare/runtime-types@0.1.20"
-  - "@cloudflare/vite-plugin@2.0.0-beta.v.9"
-  - "@cloudflare/workerd-darwin-64@1.20261101.1"
-  - "@cloudflare/workerd-darwin-arm64@1.20261101.1"
-  - "@cloudflare/workerd-linux-64@1.20261101.1"
-  - "@cloudflare/workerd-linux-arm64@1.20261101.1"
-  - "@cloudflare/workerd-windows-64@1.20261101.1"
-  - "@cloudflare/workers-auth@0.15.4"
-  - "@cloudflare/workers-types@5.20261102.1"
-  - "@cloudflare/workers-utils@0.50.2"
-  - hono@4.13.16
-  - miniflare@5.20261101.0-beta
-  - workerd@1.20261101.1
 
 # vite / vitest の行は vp migrate が書き、消しても書き戻す (docs/guides/dependencies-and-toolchain.md「peer の食い違いを数える」)
 peerDependencyRules:
