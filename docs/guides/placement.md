@@ -93,17 +93,30 @@ registry 由来でない付随ファイル (テスト・story とその helper) 
 
 型検査の tsconfig は、ディレクトリと `*.server.ts`・`*.server.tsx` の接尾辞で決まる (ADR-0047)。テストと story は、置いたディレクトリで決まる。`src/` と `pages/` の `*.server.test.ts` は app に入る。
 
-| 足すもの                                                                         | すること                                                                                                                                                                                                                                                                               |
-| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/` か `pages/` のファイル、ディレクトリ、付随ファイルの種別                  | 何もしない。`tsconfig.app.json` の `include` が `src/` と `pages/` を丸ごと持ち、`*.server.ts`・`*.server.tsx` だけを `exclude` で `tsconfig.worker.json` に渡す                                                                                                                       |
-| Void の規約のディレクトリ                                                        | `tsconfig.worker.json` の `include` に `.ts` と `.tsx` の 2 行を足す。`scripts/lib/void-source-dirs.ts` の docstring が挙げるほかの箇所にも足す (「Void の規約のディレクトリと `src/` を分ける」)                                                                                      |
-| ルートのファイルか、上のどれでもないディレクトリ (設定ファイル、ツール)          | 動く環境の tsconfig の `include` に足す。Node.js で動くなら `tsconfig.node.json`、Worker で動くなら `tsconfig.worker.json`。どの `include` にも入らないファイルは推論した program で検査され、実行環境に合った誤りが出ない (ADR-0047)                                                  |
-| `.` で始まるディレクトリのファイル                                               | `include` に字面で書く (`.storybook/preview.tsx`)。`**` は `.` で始まるディレクトリに降りない (`docs/guides/dependencies-and-toolchain.md`「走査対象を持つ config を足す」)                                                                                                            |
-| app の program の global の型 (Vite の client の型、Vitest の provider の型など) | `src/env.d.ts` に `/// <reference types="..." />` を足す。`tsconfig.app.json` の `types` には書かない。`typeRoots` を書いた program は `types` の名前を node_modules から探さず、どのファイルも参照していない名前は TS2688 で落ちる (ADR-0047)                                         |
-| 新しい tsconfig                                                                  | ルートの `tsconfig.json` の `references` に足し、`tsconfig.base.json` を `extends` する。Void の生成する型を読むなら、`.void/tsconfig.json` と `tsconfig.paths.json` をこの順で `extends` の後ろに足す。既にある tsconfig の `include` と重なるファイルは、どちらかの `exclude` で外す |
+| 足すもの                                                                         | すること                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/` か `pages/` のファイル、ディレクトリ、付随ファイルの種別                  | 何もしない。`tsconfig.app.json` の `include` が `src/` と `pages/` を丸ごと持ち、`*.server.ts`・`*.server.tsx` だけを `exclude` で `tsconfig.worker.json` に渡す                                                                                                                                                                                                  |
+| Void の規約のディレクトリ                                                        | `tsconfig.worker.json` の `include` に `.ts` と `.tsx` の 2 行を足す。`scripts/lib/void-source-dirs.ts` の docstring が挙げるほかの箇所にも足す (「Void の規約のディレクトリと `src/` を分ける」)                                                                                                                                                                 |
+| ルートのファイルか、上のどれでもないディレクトリ (設定ファイル、ツール)          | 動く環境の tsconfig の `include` に足す。Node.js で動くなら `tsconfig.node.json`、Worker で動くなら `tsconfig.worker.json`。どの `include` にも入らないファイルも `vp check` は既定の設定の program で検査する。DOM の global は通り、`paths` が無いので `@/` の import は TS2307、Node の型も無いので `process` は TS2591 で落ちる (2026-11-07、vite-plus 1.4.0) |
+| `.` で始まるディレクトリのファイル                                               | `include` に字面で書く (`.storybook/preview.tsx`)。`**` は `.` で始まるディレクトリに降りない (`docs/guides/dependencies-and-toolchain.md`「走査対象を持つ config を足す」)                                                                                                                                                                                       |
+| app の program の global の型 (Vite の client の型、Vitest の provider の型など) | `src/env.d.ts` に `/// <reference types="..." />` を足す。`tsconfig.app.json` の `types` には書かない。`typeRoots` を書いた program は `types` の名前を node_modules から探さず、どのファイルも参照していない名前は TS2688 で落ちる (ADR-0047)                                                                                                                    |
+| 新しい tsconfig                                                                  | ルートの `tsconfig.json` の `references` に足し、`tsconfig.base.json` を `extends` する。Void の生成する型を読むなら、`.void/tsconfig.json` と `tsconfig.paths.json` をこの順で `extends` の後ろに足す。`lib` は自分で書く。既にある tsconfig の `include` と重なるファイルは、どちらかの `exclude` で外す                                                        |
 
 - 重なったファイルを `references` の並び順で割り当てない。並び順の意味は tsgolint の実装に拠り、`tsc -b` やエディタが同じに割り当てる保証が無い (ADR-0047)
-- tsconfig を足し引きしたら、ADR-0047 の Consequences の手順で、3 つの tsconfig の根のファイルが重ならず、型検査に入れるファイルがどれかに入ることを確かめる。`vp check` の合格だけでは、推論した program で通ったファイルに気付けない
+- `files`・`include`・`exclude` は `extends` の元とマージされず、書いた側の値で置き換わる ([TSConfig Reference「extends」][])。app と worker は `files` を書かないので、`.void/tsconfig.json` の `files` (`.void/routes.d.ts` など) を受け継ぐ。`files` を書くと、Void の生成する型が program から外れる
+- `tsconfig.base.json` は `lib` を持たない。`lib` を書かない tsconfig には、`target` から決まる既定の `lib` が入り、DOM の型も入る ([TSConfig Reference「lib」][])。DOM の型を `lib` から入れない tsconfig (worker・node) は、DOM を含まない `lib` を書く
+- tsconfig の `include`・`exclude`・`files` を変えたら、次の 2 つが何も出さないことを確かめる。`vp check` は、ファイルが 2 つの tsconfig に入っても (ADR-0047 の `references` の並び順の案)、どれにも入らなくても (上の表)、それを知らせない
+
+```bash
+for p in app worker node; do
+  vp dlx -p typescript@6.0.3 tsc -p "tsconfig.$p.json" --showConfig | jq -r '.files[]'
+done | sed 's|^\./||' | grep -v '^\.void/' | sort > /tmp/tsconfig-files.txt
+uniq -d /tmp/tsconfig-files.txt  # 2 つの tsconfig に入るファイル
+git ls-files -co --exclude-standard '*.ts' '*.tsx' ':!docs/registry-baseline/**' ':!types/**' | sort | comm -13 /tmp/tsconfig-files.txt -  # どの tsconfig にも入らないファイル
+```
+
+- `.void/` のファイルを外すのは、app と worker が `.void/tsconfig.json` の `files` を共に受け継ぐからである。`types/` は app の `typeRoots` が読む空の宣言で、どの `include` にも入れない (ADR-0047)
+- `typescript@6.0.3` は、ADR-0047 で実測した版である。`typescript` は直接の依存に無いので、`vp exec tsc` は動かない
 
 ### 落とし穴
 
@@ -132,7 +145,9 @@ registry 由来でない付随ファイル (テスト・story とその helper) 
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。TSConfig Reference は TypeScript-Website の `205122bb73` に固定した版を指す (2026-11-07 に確認)。
 
 [Void docs「Project Structure」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/structure.md
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/overview.md
+[TSConfig Reference「extends」]: https://github.com/microsoft/TypeScript-Website/blob/205122bb73dcbf6f3b373de5bdb0d9fa5434d015/packages/tsconfig-reference/copy/en/options/extends.md
+[TSConfig Reference「lib」]: https://github.com/microsoft/TypeScript-Website/blob/205122bb73dcbf6f3b373de5bdb0d9fa5434d015/packages/tsconfig-reference/copy/en/options/lib.md
