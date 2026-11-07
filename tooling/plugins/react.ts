@@ -20,5 +20,8 @@ type ReactPluginOptions = { compiler: false } | { compiler: true; reportDiagnost
 export function reactPluginOptions(options: ReactPluginOptions): Parameters<typeof viteReact>[0] {
   return {
     compiler: options.compiler && { reportDiagnostics: options.reportDiagnostics ?? false },
+    // Web Worker で動く JSX/TSX を Fast Refresh の注入から外す。`exclude` は既定の値を置き換えるので
+    // node_modules も書く (`docs/guides/vite-configuration.md`「Web Worker で JSX を書く」)
+    exclude: [/\/node_modules\//, /\.worker\.tsx$/],
   };
 }
