@@ -12,7 +12,7 @@ dev の画面に TanStack Devtools の panel (`<TanStackDevtools>`) を出す。
 - docs「Production」は、Vite の project では plugin が本番の build から devtools を外すとする。devtools を import したファイルを環境で分けて読む形は、Vite でない project のための形である
 - Void の docs は `voidPlugin()` を framework の plugin より前に置く (`node_modules/void/docs/guide/pages-routing/overview.md` の `plugins: [voidPlugin(), voidReact()]`。"must come before the framework plugin" の注記は `integrations/frameworks/tanstack-start.md`)。devtools の plugin を最初に置いても、この順は崩れない
 - Vite docs「Server Options」の `server.forwardConsole` は "Forward browser runtime events to the Vite server console during development." で、`true` は未処理の error と `console.error`・`console.warn` を送る。object では、`unhandledErrors` が未処理の error と rejection を、`logLevels` が送る `console.*` の level (`error`・`warn`・`info`・`log`・`debug` の列挙) を決める。既定は、AI の coding agent を検出したときだけ `true` になる
-- Vite 8.3.5 以降は、`std-env` の判定で agent を検出し、`AI_AGENT`・`CLAUDECODE`・`CLAUDE_CODE`・`CODEX_THREAD_ID` などの環境変数で agent とみなす (vitejs/vite#23744。Vite+ 1.4.0 が同梱する Vite 8.3.5 の `resolveForwardConsoleOptions` で確かめた)。2026-11-03 の時点で、公開中の vite.dev のページは `@vercel/detect-agent` の判定と書く。Vite の repository の `docs/config/server-options.md` は `std-env` と書く
+- Vite 8.3.5 以降は、`std-env` の判定で agent を検出し、`AI_AGENT`・`CLAUDECODE`・`CLAUDE_CODE`・`CODEX_THREAD_ID` などの環境変数で agent とみなす (vitejs/vite#23744。Vite+ 1.4.0 が同梱する Vite 8.3.5 の `resolveForwardConsoleOptions` で確かめた)
 
 ### Void の dev で各機能が働くか
 
@@ -39,7 +39,7 @@ Console Piping の注入先: plugin は、`<html`・`hydrateRoot`・`createRoot`
 
 - event bus のサーバは認証の無い要求を受け、有効な npm パッケージなら何でも、その install scripts も含めて dev server の上で install させる (TanStack/devtools#464、TanStack/devtools#545)。panel はこのサーバにつながない (`<TanStackDevtools>` の `eventBusConfig.connectToServerBus` の既定は false) ので、止めても panel の機能は減らない
 - Console Piping を止めて失うのは、ブラウザの `console.info`・`console.debug` の端末への転送だけである。server → ブラウザは上の表のとおり働いていない
-- `server.forwardConsole` は既定のままだと人の端末で働かないので、値を明示する。値は `tooling/dev/forward-console.ts` に 1 つだけ置き、`vite.config.ts` と `.storybook/main.ts` が import する
+- `server.forwardConsole` は既定のままだと人の端末で働かないので、値を明示する。値は `tooling/server/forward-console.ts` に 1 つだけ置き、`vite.config.ts` と `.storybook/main.ts` が import する
 - `logLevels` に `info` と `debug` を入れないのは、ブラウザの console に出る Vite の client の接続と HMR の行 (`[vite] connected.`、`[vite] hot updated: <path>`) が `console.debug`、React DevTools の案内が `console.info` だからである。`log` だけを足した値では、部品のファイルを 2 回書き換えても、ブラウザから送った `[console.*]` の行は端末に足されなかった (2026-11-07)
 - Storybook の dev では `vite.config.ts` の `forwardConsole` が届かない。`@storybook/builder-vite` 10.6.5 は `vite.config.ts` の設定を読むが、`server` を自分の値で丸ごと差し替える (`dist/index.js` の `createViteServer`)。Storybook docs「Vite」は、builder の設定を変える口に `viteFinal` と `mergeConfig` を案内する。2026-11-03 に Storybook の dev で story を開き、ブラウザで `console.warn`・`console.error` を出して端末の行を数えた。`viteFinal` が無いと人の端末に 0 行で、渡すと人の端末でも agent の端末でも `Vite [console.warn] <message>` と `Vite [console.error] <message>` が 1 行ずつ出た。2026-11-07 に決定の値を渡すと、人の端末で `Vite [console.log] <message>` と未処理の error と rejection も 1 行ずつ出た
 - `@storybook/addon-vitest` 10.6.4 も `viteFinal` の結果を story のテストの config に重ねる (`dist/vitest-plugin/index.js`)。そのまま渡すと、story のテストの出力で、Vitest が出す console の行に `[vite] (client) [console.warn] <message>` の行が重なった (2026-11-03)。`process.env.VITEST` が `"true"` のときは渡さない
@@ -62,7 +62,7 @@ Console Piping の注入先: plugin は、`<html`・`hydrateRoot`・`createRoot`
 - `<TanStackDevtools>` は JSX のまま、devtools の本体のパッケージを import したファイルに書く。変数に入れたり、別の部品で包んで `lazy` で読んだりすると、plugin がその JSX を見つけられず本番に残る
 - ブラウザの console の Enhanced Logs のリンクは開けない。panel の source inspector (既定の hotkey は Shift+Alt+Ctrl/Meta) は、dev の port の middleware に要求を送る。エディタが開くかは確かめていない
 - アプリのコードの `console.log` と `console.error` を端末へ送った行には、Enhanced Logs がブラウザ向けに足した前置き (`LOG Go to Source: http://localhost:<loopback の port>/__tsd/open-source?source=<path>:<line>:<column>`) が付く。リンクは開けないが、path と行は読める。`console.warn` には前置きが付かない (`@tanstack/devtools-bundler-core` の `enhance-logs.ts` は `console.log` と `console.error` だけを書き換える)
-- ブラウザの `console.info`・`console.debug` は端末に出ない。端末で読みたくなったら、`tooling/dev/forward-console.ts` の `logLevels` に足す
+- ブラウザの `console.info`・`console.debug` は端末に出ない。端末で読みたくなったら、`tooling/server/forward-console.ts` の `logLevels` に足す
 - server の console の出力は端末に出るが、ブラウザの console には出ない
 - `vp build` の出力を `tanstack-devtools` で grep すると、`@tanstack/react-form` が引く `@tanstack/devtools-event-client` のコードが当たる。この plugin の除去の対象ではなく、plugin を足す前の build にも同じ chunk がある (2026-11-03)
 
@@ -70,7 +70,7 @@ Console Piping の注入先: plugin は、`<html`・`hydrateRoot`・`createRoot`
 
 - Vite「Server Options」の `server.forwardConsole`: https://vite.dev/config/server-options#server-forwardconsole (2026-11-07 に確認)
 - Storybook「Vite」の `viteFinal`: https://storybook.js.org/docs/builders/vite (2026-11-03 に確認)
-- `@storybook/builder-vite` 10.6.4 の `dist/index.js` (`commonConfig`・`createViteServer`)
+- `@storybook/builder-vite` 10.6.5 の `dist/index.js` (`commonConfig`・`createViteServer`)
 - TanStack Devtools「Vite Plugin」: https://tanstack.com/devtools/latest/docs/vite-plugin (2026-11-03 に確認)
 - TanStack Devtools「Production」: https://tanstack.com/devtools/latest/docs/production (2026-11-03 に確認)
 - `@voidzero-dev/vite-plus-core` 1.4.0 の `dist/vite/node/chunks/node.js` (`resolveForwardConsoleOptions`、`forwardConsolePlugin`、同梱の `std-env` 4.3.0)
