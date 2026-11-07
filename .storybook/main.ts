@@ -1,6 +1,8 @@
 import type { StorybookConfig } from "@storybook/react-vite";
 import { mergeConfig } from "vite-plus";
 
+import { forwardConsole } from "../tooling/dev/forward-console";
+
 const config: StorybookConfig = {
   // src/components/ の外は対象にしない (docs/guides/storybook.md「story を置く」)
   stories: ["../src/components/**/*.stories.@(ts|tsx)"],
@@ -14,7 +16,7 @@ const config: StorybookConfig = {
   viteFinal: (viteConfig) =>
     process.env.VITEST === "true"
       ? viteConfig
-      : mergeConfig(viteConfig, { server: { forwardConsole: true } }),
+      : mergeConfig(viteConfig, { server: { forwardConsole } }),
 };
 
 export default config;
