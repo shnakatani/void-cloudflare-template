@@ -6,6 +6,7 @@ import { voidPlugin } from "void";
 
 import { lintConfig } from "./tooling/lint/config";
 import { reactPluginOptions } from "./tooling/plugins/react";
+import { forwardConsole } from "./tooling/server/forward-console";
 import { testConfig } from "./tooling/test/config";
 
 // CI はこの手順を 1 つずつ別の step で打つ。足したら .github/workflows/ci.yml にも step を足す。
@@ -66,10 +67,9 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   server: {
-    // ブラウザの console.error・console.warn と未処理の error を端末へ送る。既定は AI の coding agent を
-    // 検出したときだけ有効なので、人の端末でも働くよう明示する。Storybook の dev には、この server が
-    // 届かないので .storybook/main.ts の viteFinal が同じ値を渡す (ADR-0062)
-    forwardConsole: true,
+    // ブラウザの console.error・console.warn・console.log と未処理の error を端末へ送る。範囲と、
+    // Storybook の dev へ渡し直す理由は tooling/server/forward-console.ts (ADR-0062)
+    forwardConsole,
   },
   test: testConfig,
   // config をメタデータとしてだけ読む経路で plugin の factory を呼ばない (先頭の import は遅れない)。
