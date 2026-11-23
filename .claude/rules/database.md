@@ -43,5 +43,5 @@ paths:
 
 - 行の所有は query の関数の `userId` の条件で判定し、ロールなど所有以外の条件は page の loader・action と `routes/` の handler の先頭で、`requireAuth(c)` で読んだ user から判定する。global の middleware にロールの判定を載せない (ADR-0065)
 - ロールは `auth.ts` の Better Auth の `admin()` plugin で `AuthUser` に持たせ、判定は `src/features/auth/` の純粋関数に書く。`role` はコンマ区切りの文字列 (`docs/guides/auth.md`「認可を足す」)
-- loader で判定が外れたら `HTTPException(403)` を throw せず、権限が無いことを表す値を返してページが説明を描く。throw すると `text/plain` の 403 になる。action と `routes/` の handler は `throw new HTTPException(403, { message })` (`docs/guides/auth.md`「認可を足す」)
+- loader で判定が外れたら `HTTPException(403)` を throw せず、権限が無いことを表す値を返してページが説明を描く。throw するとページ自身の props で権限が無いことを説明できず、`_error` の無いこのテンプレートでは `text/plain` の 403 になる。action と `routes/` の handler は `throw new HTTPException(403, { message })` (`docs/guides/auth.md`「認可を足す」)
 - 画面の出し分け (`useShared()` のロール) を判定の代わりにしない。loader・action・handler は client を通さずに呼べる (ADR-0065)
