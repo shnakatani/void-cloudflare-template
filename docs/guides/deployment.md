@@ -164,7 +164,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.4.0、v1.5.0、v1.11.0) を固定して指す。v1.11.0 のリンクと同じ内容が、同梱の `node_modules/void/docs/` にある。「Static Assets Caching」は、Worker を通さずに配る条件の一覧が v1.5.0 の docs に無いので、v1.4.0 を指す。Cloudflare docs と Hono docs は 2026-11-03 に読んだ (Workers「Best Practices」は 2026-10-12 更新)。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.4.0、v1.5.0、v1.11.0) を固定して指す。「Static Assets Caching」は、Worker を通さずに配る条件の一覧が v1.5.0 の docs に無いので、v1.4.0 を指す。Cloudflare docs と Hono docs は 2026-11-03 に読んだ (Workers「Best Practices」は 2026-10-12 更新)。
 
 [Void docs「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/deployment.md
 [Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/integrations/cloudflare.md

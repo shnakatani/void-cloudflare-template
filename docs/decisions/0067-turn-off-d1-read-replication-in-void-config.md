@@ -52,7 +52,7 @@ bookmark の形へ移すのは、primary から遠い利用者の読みの遅さ
 
 ## 出典
 
-Void の docs とソースは v1.11.0 を読んだ。v1.11.0 のリンクと同じ内容の docs が、同梱の `node_modules/void/docs/` にある。Cloudflare の docs「Global read replication」は 2026-11-03 に、「Spans and attributes」は 2026-11-23 に原文と照らした。
+Void の docs とソースは v1.11.0 を読んだ。Cloudflare の docs「Global read replication」は 2026-11-03 に、「Spans and attributes」は 2026-11-23 に原文と照らした。
 
 - Void の docs「D1 (SQLite)」(Read replication、Avoid stale reads with a primary-first session、See your writes in subsequent requests): https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database/d1.md
 - Void の docs「Configuration」(`database.readReplication`): https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/config.md

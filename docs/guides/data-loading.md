@@ -110,7 +110,7 @@ Void 1.4.0 は、loader の結果ごとに次の応答を返す。出典は ADR-
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は v1.11.0 で、v1.5.0 と同じ内容とは限らない。Cloudflare docs は 2026-11-03 に確認した。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。Cloudflare docs は 2026-11-03 に確認した。
 
 [Cloudflare docs「Workers Best Practices」]: https://developers.cloudflare.com/workers/best-practices/workers-best-practices/#enable-workers-logs-and-traces
 [react.dev「Component」]: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary

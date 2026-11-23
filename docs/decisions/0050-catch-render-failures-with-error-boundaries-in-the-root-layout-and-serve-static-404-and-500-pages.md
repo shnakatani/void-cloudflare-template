@@ -145,7 +145,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は v1.11.0 で、読んだ版と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - react.dev「Component」の Catching rendering errors with an Error Boundary: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
 - `react-error-boundary` 6.1.6 の README と型の docstring: `node_modules/react-error-boundary/`

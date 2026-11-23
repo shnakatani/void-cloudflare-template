@@ -69,7 +69,7 @@
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.4.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.4.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は v1.11.0 で、v1.4.0 と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.4.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.4.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.4.0 と同じ内容とは限らない。
 
 - Void docs「Loaders & Props」: `node_modules/void/docs/guide/pages-routing/loaders.md`
 - Void docs「Pages Routing」(How Navigation Works): `node_modules/void/docs/guide/pages-routing/overview.md`

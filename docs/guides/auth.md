@@ -190,7 +190,7 @@ voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.vis
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.4.0 か v1.11.0) を固定して指す。v1.11.0 のリンクと同じ内容が、同梱の `node_modules/void/docs/` にある。Better Auth docs は 2026-11-02 に読んだ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.4.0 か v1.11.0) を固定して指す。Better Auth docs は 2026-11-02 に読んだ。
 
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
 [Void docs「Sending Email」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/email/sending.md

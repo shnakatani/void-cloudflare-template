@@ -329,7 +329,7 @@ Vite+ の `docs/guide/local-cli.md`「Best Practices」は、`vp` を呼ぶ scri
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は v1.11.0 で、読んだ版と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - Void の docs「Deployment」の Other runtimes (`node` で動く成果物は `target` を Node.js・Bun・Deno にしたときだけ): `node_modules/void/docs/guide/deployment.md`
 - アプリの環境変数を `env.ts` に宣言して `void/env` で読む形、ローカルと本番の値の渡し方、検証の契機: Void docs「Environment variables」(https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md)

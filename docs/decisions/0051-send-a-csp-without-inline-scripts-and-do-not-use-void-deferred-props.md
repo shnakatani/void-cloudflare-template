@@ -84,7 +84,7 @@ Void 1.4.0 の React の adapter は、deferred props を次の形で描く。
 
 ## 出典
 
-Void の docs と source は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は v1.11.0 で、v1.5.0 と同じ内容とは限らない。React は 19.3.1 (`node_modules` の `react-dom/cjs/react-dom-client.development.js`) を読んだ。
+Void の docs と source は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。React は 19.3.1 (`node_modules` の `react-dom/cjs/react-dom-client.development.js`) を読んだ。
 
 - Void の docs「Custom Headers」(`routing.headers` は静的な値。"Header rules do not apply to ISR cache responses"): https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/headers.md
 - Void の docs「Revalidation」: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/edge/revalidation.md
