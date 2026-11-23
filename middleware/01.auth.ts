@@ -21,8 +21,8 @@ export default defineMiddleware(async (c, next) => {
   const guard = authGuard(pathAccess(c.req.path), user !== null, c.req.method);
   switch (guard.kind) {
     case "redirect":
-      // 絶対 URL で返す。Void 1.6.2 から相対の path も request の query を混ぜない (voidzero-dev/void#648 の修正) が、
-      // 相対に替えられるかは確かめていない (docs/guides/auth.md「redirect を絶対 URL で書く理由」)
+      // middleware の c.redirect は相対の path でも request の query を足さない (Void の docs「Redirects」) が、すべての c.redirect を
+      // 絶対 URL にそろえ、verify:auth-redirect も絶対 URL で比べる (docs/guides/auth.md「redirect を絶対 URL で書く理由」)
       return c.redirect(new URL(guard.path, c.req.url).href);
     case "unauthorized":
       // handler の requireAuth(c) と同じ応答にする

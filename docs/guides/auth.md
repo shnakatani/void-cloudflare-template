@@ -148,7 +148,9 @@ printf '\nBETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
 
 ### redirect を絶対 URL で書く理由
 
-Void 1.4.0 の `c.redirect("/login")` は、要求の query を行き先に混ぜた (voidzero-dev/void#648)。`/?q=x` から相対の path で送ると、`location` は `/login?q=x` になった (2026-11-02、`vp preview`)。query が守るページの検索の条件なら、ログインの画面の URL に残る。issue が挙げる回避の 1 つの、絶対 URL を渡す形を採った。Void 1.6.2 で修正が入り、middleware と handler の `c.redirect()` は渡した location をそのまま送る。named action の redirect は、action の名前を除いたページの query を残す ([Void docs「Rewrites」][] の `c.redirect()`)。middleware の redirect を相対に替えられるかは確かめていない。`verify:auth-redirect` は `location` を絶対 URL で比べるので、相対に替えるときは検査も直す。
+middleware と handler の `c.redirect()` は、渡した location に要求の query を足さない ([Void docs「Redirects」][]: "It sends the location you provide without adding the request query.")。named action の相対の redirect は、action の URL に書いた query (action の名前を除く) を行き先に残す。`usePageAction` の `pageQuery` で載せたページの query もこれに入る。Void が今のページから足した query は残さない ([Void docs「Rewrites」][] の `c.redirect()`)。Void が query を足すのは `/` で始まる path を渡したときだけで、絶対 URL はそのまま送る (Void 1.11.0 の `runtime/routing/index.ts`)。
+
+絶対 URL で渡すのは、すべての `c.redirect` を 1 つの規範にそろえるためである。named action の保存のあとに一覧へ戻す redirect は、相対の path だとダイアログを開く query が行き先に残る (ADR-0056)。`verify:auth-redirect` も `location` を絶対 URL で比べるので、相対に替えると落ちる。
 
 ### 別の origin からの書き込みが止まる仕組み
 
@@ -193,6 +195,7 @@ voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.vis
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
 [Void docs「Sending Email」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/email/sending.md
 [Void docs「Loaders」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/pages-routing/loaders.md
+[Void docs「Redirects」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/edge/redirects.md
 [Void docs「Rewrites」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/api/rewrites.md
 [Void docs「Server Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/server-routing.md
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/overview.md

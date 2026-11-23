@@ -31,7 +31,7 @@ action の要求を redirect すると、Void 1.5.0 の client は redirect を�
 
 別の origin から資格情報つきで送る要求のうち、simple request でないものの前に、ブラウザは CORS の preflight (`OPTIONS`) を送る。preflight は資格情報を付けずに送られる (Fetch Standard の「HTTP responses」: "For a CORS-preflight request, request's credentials mode is always "same-origin", i.e., it excludes credentials")。応答が ok status (200-299) でなければ preflight は失敗し、本来の要求は送られない (Fetch Standard の「CORS-preflight fetch」)。Hono の `cors` は `OPTIONS` の要求に `next()` を呼ばずに 204 を返す (Hono 4.13.14 の `src/middleware/cors/index.ts`)。Void の docs は `cors` を global の middleware (`middleware/01.cors.ts`) に置く例 (docs「Hono」の Built-in Middleware) と、route の handler に渡す例 (docs「Server Routing」の Per-route middleware) を書く。route のファイルは `OPTIONS` も export でき、method を export したファイルは export した method の要求だけを受ける。method を 1 つも export しないファイルは、default export がすべての method を受ける (Void 1.5.0 の `dist/index.mjs` の route を張る処理)。
 
-Void 1.4.0 では、`c.redirect("/login")` のように相対の path を渡すと、要求の query が行き先に混ざった (voidzero-dev/void#648)。2026-11-02 に `vp preview` で、`/?q=x` から相対の path で送ると `location` が `/login?q=x` になった。絶対 URL を渡すと混ざらない。修正は Void 1.6.2 に入り、middleware の `c.redirect()` は渡した location をそのまま送る (Void の docs `reference/api/rewrites.md` の `c.redirect()`)。相対に替えられるかは確かめていない。
+middleware の `c.redirect()` は、渡した location に要求の query を足さない (Void の docs「Redirects」: "It sends the location you provide without adding the request query.")。それでも middleware の redirect を絶対 URL で渡すのは、すべての `c.redirect` を 1 つの規範にそろえるためである。named action の相対の redirect は action の URL に書いた query を行き先に残すので、保存のあとの redirect には絶対 URL が要る (ADR-0056)。`verify:auth-redirect` も `location` を絶対 URL で比べる。
 
 ## Decision
 
@@ -97,5 +97,6 @@ Void 1.4.0 では、`c.redirect("/login")` のように相対の path を渡す�
 - Better Auth の docs「Rate Limit」(Storage): https://www.better-auth.com/docs/concepts/rate-limit
 - Better Auth の docs「Email & Password」(Require Email Verification、Email Enumeration Protection、Request Password Reset): https://www.better-auth.com/docs/authentication/email-password
 - voidzero-dev/void#564 と、その修正の voidzero-dev/void#624 (Void 1.6.0 に入った)
-- voidzero-dev/void#606 (Void 1.7.0 の rich serialization で閉じた)、voidzero-dev/void#648 (修正は Void 1.6.2 に入った)
+- voidzero-dev/void#606 (Void 1.7.0 の rich serialization で閉じた)
+- Void の docs「Redirects」(`c.redirect()` は要求の query を足さない。Void 1.11.0): `node_modules/void/docs/guide/edge/redirects.md`
 - Void の docs「Loaders」(`Date` などの型を保つ) と `reference/api/rewrites.md` の `c.redirect()` (Void 1.11.0): `node_modules/void/docs/guide/pages-routing/loaders.md`、`node_modules/void/docs/reference/api/rewrites.md`
