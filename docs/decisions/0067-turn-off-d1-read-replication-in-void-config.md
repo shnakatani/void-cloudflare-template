@@ -42,7 +42,7 @@ auth の DB は、Void 1.11.0 が生成するモジュールが `createDb(<bindi
 | `readReplication: true` のまま、書いた直後に読む loader だけ `createDb(<binding>, { session: 'first-primary' })` で読む (Void の docs「D1 (SQLite)」の Avoid stale reads with a primary-first session) | 書き換えた loader だけ書き込みを読む                     | どの loader が書き込みの直後に読むかはページごとに決まり、規範にできない。漏れた loader の古い読みは deploy した環境でしか出ない。replica で読みを速くしたい場面がまだ無い                                            | 却下     |
 | `readReplication: true` のまま、要求をまたぐ遅れを受け入れる                                                                                                                                           | 保存の redirect の先で古い読みがありうる                 | 遅れは deploy した環境でしか起きず、dev と preview のテストでは見つからない                                                                                                                                           | 却下     |
 
-bookmark の形へ移すのは、primary から遠い利用者の読みの遅さが問題になったときにする。Traces で、root span の `cloudflare.colo` (要求を処理したデータセンター) ごとに、D1 の span の `cloudflare.d1.response.sql_duration_ms` と span の所要時間を見て判断する (Cloudflare の docs「Spans and attributes」、2026-11-23 に読んだ)。Traces の率は `void.config.ts` の `cloudflare.observability` が決める。
+bookmark の形へ移すのは、primary から遠い利用者の読みの遅さが問題になったときにする。Traces で、root span の `cloudflare.colo` (要求を処理したデータセンター) ごとに D1 の span の所要時間を見る。所要時間は primary までの往復を含むので、遠さの指標にする。D1 の span の `cloudflare.d1.response.sql_duration_ms` は database の中で SQL にかかった時間で、遠さを含まない対照として並べる (Cloudflare の docs「Spans and attributes」、2026-11-23 に読んだ)。`void/db` が session を張って送る query に D1 の span が付くかは docs に書かれていないので、deploy した環境で一度見て確かめる。Traces の率は `void.config.ts` の `cloudflare.observability` が決める。
 
 ## Consequences
 
