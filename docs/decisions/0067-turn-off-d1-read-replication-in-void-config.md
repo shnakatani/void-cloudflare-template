@@ -14,7 +14,7 @@ Void 1.11.0 は、replication を `void.config.ts` の `database.readReplication
 - 省いたとき: "When you omit `readReplication`, deployment leaves the database's replication setting unchanged. New databases default to replication off. Removing the option from a database that already has replication enabled keeps it enabled."
 - 要求をまたいで書き込みを読ませる形: replication を有効にし、`setSession()` と `getBookmark()` (`void/db`) で bookmark を cookie か header で次の要求へ運ぶ (同じ節の See your writes in subsequent requests)
 
-replication が有効なとき、このテンプレートで要求をまたぐ読みは次の場面で起こる。どれも、ソースと docs から組み立てた推論で、deploy した環境では測っていない。
+replication が有効なとき、このテンプレートで要求をまたぐ読みは、場面ごとに次のように振る舞う。どれも、ソースと docs から組み立てた推論で、deploy した環境では測っていない。
 
 | 場面                                       | 要求の分かれ方                                                                                          | 起こりうること                                                    |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -23,14 +23,14 @@ replication が有効なとき、このテンプレートで要求をまたぐ�
 
 auth の DB は、Void 1.11.0 が生成するモジュールが `createDb(<binding>, { session: "first-primary" })` で作る (`packages/void/src/auth/drizzle.ts`)。アプリの `void/db` の `db` は、要求ごとに `first-unconstrained` の session を張る (`packages/void/src/runtime/db/index.ts`)。
 
-`void deploy` が replication の設定を Cloudflare へ送るのは provision の中だけである。Cloudflare に直接出す deploy は、Worker がまだ無いときに `readReplication` があれば provision を走らせ、既にある Worker では `--provision` を付けたときか、宣言した資源が足りないときに走らせる (Void 1.11.0 の `cli/deploy-cloudflare-preflight.ts`。2026-11-23 にソースで読み、動かしていない)。
+Cloudflare に直接出す `void deploy` は、`readReplication` を書くと provision の中で D1 の設定を Cloudflare の API で書き換え、失敗すると "The credential needs D1 Edit permission." で止まる (Void 1.11.0 の `cli/provision.ts`)。Void の docs は、値を書いて `void deploy` を打つ手順を示す。既に Worker を deploy した環境で `--provision` を付けずに書き換わるかは、確かめていない。`cli/deploy-cloudflare-preflight.ts` は既にある Worker では `--provision` か資源の不足が無いと provision を走らせない一方、Void の `packages/void/AGENTS.md` は "Native deploy reconciles either explicit boolean on already-provisioned databases too." と書く (2026-11-23 に v1.11.0 のソースで読み、動かしていない)。
 
 ## Decision
 
 **`void.config.ts` に `database: { readReplication: false }` を書き、D1 の読みをすべて primary にする。bookmark を次の要求へ運ぶ仕組みは持たない。**
 
 - テンプレートから作ったアプリの最初の deploy で、Void が replication を `disabled` にする。新しい database は既定でも off だが、値を書いて意図を残す
-- 既に deploy した Worker で値を変えたら、`void deploy --provision` で出す。手順は `docs/guides/deployment.md`「read replication の設定を変えて deploy する」
+- 既に deploy した環境で値を変えたら、`void deploy` のあとに deploy 先の設定を確かめ、変わっていなければ `--provision` を付けて出し直す。手順は `docs/guides/deployment.md`「read replication の設定を変えて deploy する」
 
 ### 検討した選択肢
 
@@ -55,5 +55,5 @@ Void の docs とソースは v1.11.0 を読んだ。同じ docs が Void 1.11.0
 
 - Void の docs「D1 (SQLite)」(Read replication、See your writes in subsequent requests): https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database/d1.md
 - Void の docs「Configuration」(`database.readReplication`): https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/config.md
-- Void 1.11.0 のソース (`cli/deploy-cloudflare-preflight.ts`、`cli/provision.ts`、`auth/drizzle.ts`、`runtime/db/index.ts`): https://github.com/voidzero-dev/void/tree/bcc2abfb9009f2b7471fbcb25d0f388c4848ab98/packages/void/src
+- Void 1.11.0 のソース (`cli/deploy-cloudflare-preflight.ts`、`cli/provision.ts`、`auth/drizzle.ts`、`runtime/db/index.ts`) と `packages/void/AGENTS.md`: https://github.com/voidzero-dev/void/tree/bcc2abfb9009f2b7471fbcb25d0f388c4848ab98/packages/void/src
 - Cloudflare の docs「Global read replication」(Start a session from previous context (bookmark)、Replica lag and consistency model): https://developers.cloudflare.com/d1/best-practices/read-replication/

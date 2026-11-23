@@ -70,8 +70,8 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 
 ### read replication の設定を変えて deploy する
 
-- `void.config.ts` の `database.readReplication` を変えたら、既に Worker を deploy した環境では `void deploy --platform cloudflare --provision` で出す。Void が replication の設定を Cloudflare へ送るのは provision の中だけで、Worker が既にある deploy は `--provision` か資源の不足が無いと provision を走らせない (Void 1.11.0 の `cli/deploy-cloudflare-preflight.ts`、2026-11-23 にソースで読んだ)。Worker がまだ無い最初の deploy は、`readReplication` を書いてあれば provision を走らせる
-- deploy のあとに `docs/guides/database.md`「deploy 先の D1 の read replication を確かめる」の手順で値を確かめる
+- `void.config.ts` の `database.readReplication` を変えたら `void deploy` で出す ([Void docs「D1 (SQLite)」の Read replication][])。Void は deploy の provision の中で D1 の設定を書き換えるので、CI の token には D1 の Edit が要る。足りないと deploy が "The credential needs D1 Edit permission." で止まる (Void 1.11.0 の `cli/provision.ts`)
+- deploy のあとに `docs/guides/database.md`「deploy 先の D1 の read replication を確かめる」の手順で値を確かめる。既に Worker がある環境で値が変わっていなければ、`--provision` を付けて出し直す。`--provision` は、資源がそろっていても provision を走らせ直す ([Void docs「void deploy」][] の `--provision`)。付けずに書き換わるかは確かめていない (ADR-0067)
 - `readReplication` を消して deploy しても、deploy 先の設定は変わらない ([Void docs「Configuration」の database.readReplication][])。切るときは `false` を書く
 
 ### deploy しない repository で workflow を止める
@@ -178,6 +178,8 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 [GitHub Docs「Deployments and environments」]: https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
 [GitHub Docs「Secrets reference」]: https://docs.github.com/en/actions/reference/security/secrets
 [GitHub Docs「Disabling and enabling a workflow」]: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows
+[Void docs「D1 (SQLite)」の Read replication]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database/d1.md#read-replication
+[Void docs「void deploy」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/cli/deploy.md
 [Void docs「Configuration」の database.readReplication]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/config.md
 [Void docs「Configuration」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/config.md
 [Void CLI reference「Custom Domains」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/domains.md
