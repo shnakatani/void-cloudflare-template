@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { createFakeRouter, VoidRouterProvider } from "@/test/app/void-router";
 import { expectText } from "@/test/assert/screen-assertions";
 
@@ -10,7 +11,8 @@ import { ButtonLink } from "./button-link";
 
 /**
  * 状態のカタログは `button-link.stories.tsx` が持つ。ここに残すのは、要素が `a` であること・
- * `data-slot`・遷移の要求で、args だけで状態が決まる部品なので story に play が無い以上、ここでしか固定できない
+ * `data-slot`・遷移の要求と、部品の `render` に渡したときに部品の props を受けることと、そのとき `prefetch="visible"` が効かないことで、
+ * args だけで状態が決まる部品なので story に play が無い以上、ここでしか固定できない
  * (docs/guides/storybook.md「カタログと play の範囲」「story とブラウザテストの分担」)。
  *
  * 寸法の値は測らない。寸法は registry の size 目盛りが決め、上流が決める値なので、測ると上流が変えただけで落ちる。
@@ -123,5 +125,79 @@ describe("ButtonLink", () => {
     await expect.element(pending).toHaveAccessibleName("メモ一覧へ");
     const idleWidth = idle.element().getBoundingClientRect().width;
     await expect.poll(() => pending.element().getBoundingClientRect().width).toBe(idleWidth);
+  });
+
+  // 部品の render に渡すと、部品の props (イベントと ref) を受けた a として描かれる。
+  // docs/guides/lint/tailwind-and-shadcn.md「`ui/` の variant 関数を外で呼ぶ」が、render に渡すリンクに ButtonLink を勧める根拠
+  it("部品の render に渡すと、部品の props を受けた a として描かれ、押すと遷移を要求する", async () => {
+    const { router, screen } = await renderWithRouter(
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <ButtonLink href="/notes" variant="ghost">
+              メモ一覧へ
+            </ButtonLink>
+          }
+        />
+        <TooltipContent>一覧を開く</TooltipContent>
+      </Tooltip>,
+    );
+    const link = screen.getByRole("link", { name: "メモ一覧へ" });
+
+    await expect.element(link).toHaveAttribute("href", "/notes");
+    await userEvent.hover(link);
+    await expect.element(screen.getByText("一覧を開く")).toBeVisible();
+    await link.click();
+
+    expect(router.visits.map((visit) => visit.url)).toEqual(["/notes"]);
+  });
+
+  // render が渡す ref が、Link が prefetch="visible" の観測に使う内部の ref に代わる (@void/react 1.11.0)。
+  // docs/guides/styling-and-tokens.md「外見を層の外へ配る」の ButtonLink の項目が書く条件の見張り。
+  // 上流が ref を合わせるようになると落ちるので、そのときは文書の条件とこのテストを外す
+  it("部品の render に渡すと、prefetch=visible の先読みをしない", async () => {
+    const { router, screen } = await renderWithRouter(
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <ButtonLink href="/notes" prefetch="visible">
+              メモ一覧へ
+            </ButtonLink>
+          }
+        />
+        <TooltipContent>一覧を開く</TooltipContent>
+      </Tooltip>,
+    );
+    const prefetched: string[] = [];
+    router.prefetch = (target) => {
+      // Link は href の文字列で呼ぶ。ほかの形が来たら記録の形を決めていないので止める
+      if (typeof target !== "string") throw new Error(`想定外の行き先: ${JSON.stringify(target)}`);
+      prefetched.push(target);
+      return Promise.resolve(undefined);
+    };
+    await expect.element(screen.getByRole("link", { name: "メモ一覧へ" })).toBeVisible();
+
+    // 対照の render に渡さないリンクは、上のリンクより後に観測を始める。対照の先読みが届いた時点で、
+    // 上のリンクが先読みするならそれより先に届いている
+    await screen.rerender(
+      <VoidRouterProvider router={router}>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <ButtonLink href="/notes" prefetch="visible">
+                メモ一覧へ
+              </ButtonLink>
+            }
+          />
+          <TooltipContent>一覧を開く</TooltipContent>
+        </Tooltip>
+        <ButtonLink href="/login" prefetch="visible">
+          ログインへ
+        </ButtonLink>
+      </VoidRouterProvider>,
+    );
+    await expect.poll(() => prefetched).toContain("/login");
+
+    expect(prefetched).toEqual(["/login"]);
   });
 });

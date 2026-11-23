@@ -28,11 +28,10 @@ type ButtonLinkProps = Omit<
 /**
  * `buttonVariants` の見た目を纏う Void の `Link`。遷移と prefetch は `Link` が持つ。
  *
- * Base UI の `render` に `Link` を渡す形にしない。`Link` は prefetch の `visible` で IntersectionObserver を張る対象を
- * 内部の ref (`elementRef`) で持つ。`render` が ref を合成せず上書きすると観測する要素が無くなる、と推論している。
- * 推論であり、ブラウザで IntersectionObserver が張られるかは確かめていない。
- *
- * `ref` は型が許さない。実行時に渡すと `{...rest}` が `Link` 内部の ref を上書きし、`prefetch="visible"` の観測が働かなくなる。
+ * `ref` は型が許さない。部品 (`TooltipTrigger` など) の `render` に渡すと、`render` が渡す ref が `{...props}` で `Link` に届く。
+ * `Link` は prefetch の `visible` で IntersectionObserver を張る対象を内部の ref (`elementRef`) で持ち、残りの props をその後ろに広げるので、
+ * 観測する要素が無くなって `prefetch="visible"` の先読みが起きない (@void/react 1.11.0。`button-link.test.tsx` が見張る)。
+ * hover の先読みと遷移はイベントで動くので、`render` に渡しても効く。
  *
  * 無効は `disabled` で表し、`aria-disabled` は直に渡させない。`Link` は無効の状態を持たず、`href` も外せないので、
  * 無効の間は渡された `onClick` に代えて `preventDefault()` だけをする `onClick` を渡す。`Link` は自分の遷移の前に `onClick` を呼び、

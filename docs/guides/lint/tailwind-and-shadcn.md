@@ -23,7 +23,7 @@
 - 書き足す class は `cn(buttonVariants({ variant }), "mt-4")` のように `cn()` の引数に書く。`buttonVariants({ variant, className: "mt-4" })` のキーには書かない (「`cn()` の引数に書く理由」)
 - 戻り値を部品へ渡すと、`require-static-classes` が落とすことがある (どこへ渡すと落ちるかは [shadcn-ui/lint docs「require-static-classes」][] の Variant functions と [shadcn-ui/lint docs「How it works」][] の Wrappers にある)。落ちたら、variant 関数の戻り値を当てずに次のどれかで書く
   - 部品 (trigger など) を button の見た目にするなら、`render` に `Button` を variant つきで渡す (`<DialogTrigger render={<Button variant="outline" />}>`。[shadcn-ui/lint docs「How it works」][] の Wrappers の例と同じ形)
-  - アプリのページへの button の見た目のリンクは、部品の `render` に渡さず、部品の外に `ButtonLink` で置く。`Link` に `buttonVariants` を当てて渡す形も、`ButtonLink` を渡す形も採らない (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」の `ButtonLink` の項目)
+  - アプリのページへの button の見た目のリンクを部品の `render` に渡すなら、`Link` に `buttonVariants` を当てて渡さず、`ButtonLink` を渡す (部品の props を受けて描く)。`prefetch="visible"` は効かないので付けない (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」の `ButtonLink` の項目)
   - それ以外は、見た目は部品自身に任せ、足りない見た目は `ui/` の variant で配る (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
 - リンクを button の見た目にするときは、アプリのページへのリンクなら `ButtonLink` (`src/components/parts/button-link.tsx`) を使い、外部へのリンクなら素の `<a>` に `buttonVariants` を当てる。`Button` の `render` でリンクを描かない ([shadcn docs「Button」][] の As Link)
 - `settings.shadcn.variantFunctions` と `mergeFunctions` へ variant 関数を登録しない (ADR-0023)

@@ -129,7 +129,7 @@ Why: token 経由なら dark mode 対応とデザイン変更が `styles.css` �
 
 ## 操作できる要素の組み方
 
-- ボタンの見た目のリンクは `ButtonLink` で組み、Base UI の `render` に `Link` も `ButtonLink` も渡さない。無効にするときは `disabled` を渡し、無効のボタンに描き替えない。描き替えると、解けたときに focus が `<body>` へ落ちる (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
+- ボタンの見た目のリンクは `ButtonLink` で組み、`Button` の `render` でリンクを描かない。部品の `render` にリンクを渡すときも `ButtonLink` を渡し、`prefetch="visible"` を付けない (先読みが起きない)。無効にするときは `disabled` を渡し、無効のボタンに描き替えない。描き替えると、解けたときに focus が `<body>` へ落ちる (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
 - 段落に区切って書く長さの文字列 (本文、説明) は改行を許し、`FormTextareaField` (`form-fields.tsx`) で受け、表示では `whitespace-pre-wrap` で改行を保つ。`type="text"` の input は値から改行を取り除き、`whitespace-normal` は改行を空白にまとめる (`docs/guides/forms-and-inputs.md`「複数行の入力欄を組む」)
 - input の上に疑似要素や別の要素を重ねて hit 領域を広げない。重なった要素が pointer を受け、本体がクリックを受け取れなくなる (`docs/guides/forms-and-inputs.md`「入力欄の周りに要素を置く」)
 - checkbox 行を素の `<label>` や手書きの `role="group"` で組まない。複数選択の既定は `FieldSet` + `FieldLegend` の中の `FieldGroup data-slot="checkbox-group"` に `Field orientation="horizontal"` の行を並べる形。`FieldLegend` がまとまりの名前になり、行間は registry の間隔に寄る (`docs/guides/forms-and-inputs.md`「入力欄の周りに要素を置く」)
