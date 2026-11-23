@@ -229,7 +229,7 @@ D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs �
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に、Better Auth docs は 2026-11-04 に原文と照らした。Void のテストも v1.5.0 に固定した版を指す。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.5.0 か v1.11.0) を固定して指す。v1.11.0 のリンクと同じ内容が、同梱の `node_modules/void/docs/` にある。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に、Better Auth docs は 2026-11-04 に原文と照らした。Void のテストも v1.5.0 に固定した版を指す。
 
 [Void docs「Database」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database.md
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md
