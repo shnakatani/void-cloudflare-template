@@ -18,8 +18,7 @@ import { ButtonLink } from "./button-link";
  * 寸法の値は測らない。寸法は registry の size 目盛りが決め、上流が決める値なので、測ると上流が変えただけで落ちる。
  * 測るのは、pending の前後で幅が同じことだけ。
  */
-async function renderWithRouter(children: ReactNode) {
-  const router = createFakeRouter("/");
+async function renderWithRouter(children: ReactNode, router = createFakeRouter("/")) {
   const screen = await render(<VoidRouterProvider router={router}>{children}</VoidRouterProvider>);
   return { router, screen };
 }
@@ -153,10 +152,20 @@ describe("ButtonLink", () => {
   });
 
   // render が渡す ref が、Link が prefetch="visible" の観測に使う内部の ref に代わる (@void/react 1.11.0)。
-  // docs/guides/styling-and-tokens.md「外見を層の外へ配る」の ButtonLink の項目が書く条件の見張り。
-  // 上流が ref を合わせるようになると落ちるので、そのときは文書の条件とこのテストを外す
+  // docs/guides/styling-and-tokens.md「外見を層の外へ配る」の prefetch="visible" の項目が書く条件の見張り。
+  // 上流が ref を合わせるようになるとこのテストが落ちる。そのときは `git grep -n 'prefetch="visible"'` で当たる条件
+  // (styling-and-tokens.md と tailwind-and-shadcn.md の項目、button-link.tsx の docstring、ほかに書き写した条件) とこのテストを外す
   it("部品の render に渡すと、prefetch=visible の先読みをしない", async () => {
-    const { router, screen } = await renderWithRouter(
+    const router = createFakeRouter("/");
+    const prefetched: string[] = [];
+    // 描画の前に差し替える。描画の後だと、差し替える前に先読みが走っても記録に残らない
+    router.prefetch = (target) => {
+      // Link は href の文字列で呼ぶ。ほかの形が来たら記録の形を決めていないので止める
+      if (typeof target !== "string") throw new Error(`想定外の行き先: ${JSON.stringify(target)}`);
+      prefetched.push(target);
+      return Promise.resolve(undefined);
+    };
+    const { screen } = await renderWithRouter(
       <Tooltip>
         <TooltipTrigger
           render={
@@ -167,14 +176,8 @@ describe("ButtonLink", () => {
         />
         <TooltipContent>一覧を開く</TooltipContent>
       </Tooltip>,
+      router,
     );
-    const prefetched: string[] = [];
-    router.prefetch = (target) => {
-      // Link は href の文字列で呼ぶ。ほかの形が来たら記録の形を決めていないので止める
-      if (typeof target !== "string") throw new Error(`想定外の行き先: ${JSON.stringify(target)}`);
-      prefetched.push(target);
-      return Promise.resolve(undefined);
-    };
     await expect.element(screen.getByRole("link", { name: "メモ一覧へ" })).toBeVisible();
 
     // 対照の render に渡さないリンクは、上のリンクより後に観測を始める。対照の先読みが届いた時点で、
