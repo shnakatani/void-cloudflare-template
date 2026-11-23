@@ -30,8 +30,6 @@ overrides:
   vitest@*: 5.1.0
   drizzle-kit>@esbuild-kit/esm-loader: '-'
 
-packageExtensionsChecksum: sha256-ttdFC/5hpXZP+Ocsv+u7pWl9gzxONh3zAFJp9hbCbPE=
-
 patchedDependencies:
   '@tanstack/form-core': a7d59898a1c04a11065d76d83037902c4898dc295e4df32fe96c741ee608e0d4
   drizzle-orm: 1b25d77b0c3319ed5912e53a2593e1ac768337b324205b3fdc34fc01463df6d7
@@ -2850,9 +2848,6 @@ packages:
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
       typescript: '>=4.8.4 <6.1.0'
-    peerDependenciesMeta:
-      eslint:
-        optional: true
 
   '@typescript-eslint/project-service@8.70.0':
     resolution: {integrity: sha512-hFHbTNqhU9G+2eKFXCBVb1tjFT/LceiJ4+HfLO4pTpDI0KHi6iajpcFFkaSQ9gXmCh7n82A0PthaayEdN6mspQ==}
@@ -7266,9 +7261,8 @@ snapshots:
       '@typescript-eslint/typescript-estree': 8.70.0(supports-color@10.2.2)(typescript@6.0.3)
       '@typescript-eslint/visitor-keys': 8.70.0
       debug: 4.4.3(supports-color@10.2.2)
-      typescript: 6.0.3
-    optionalDependencies:
       eslint: 10.10.0(jiti@2.7.0)(supports-color@10.2.2)
+      typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
     optional: true
