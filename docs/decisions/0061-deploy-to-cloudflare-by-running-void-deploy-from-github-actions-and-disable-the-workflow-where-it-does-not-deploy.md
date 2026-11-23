@@ -29,7 +29,7 @@ workflow のファイルはテンプレートから作った repository にそ�
 
 | 生成物                                                              | `.github/workflows/void-deploy.yml`                                                          | 理由                                                                                                                                                                                                                                               |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `actions/checkout@v6` などの tag                                    | commit SHA と版のコメント                                                                    | ADR-0006。zizmor の `unpinned-uses` が落とす                                                                                                                                                                                                       |
+| `actions/checkout@v6` などの部分の版の tag                          | `@v7.0.1` などの full semver の tag と、`.github/workflows/actions.lock` の entry            | ADR-0006。lockfile に載っていない workflow は、zizmor の `unpinned-uses` が落とす。部分の版は、`gh actions-lock` が初めて固定するときに full semver へ書き換える                                                                                   |
 | checkout に `persist-credentials` が無い                            | `persist-credentials: false`                                                                 | ADR-0006。後続の step は push しない                                                                                                                                                                                                               |
 | `pnpm/action-setup`・`actions/setup-node` (`lts/*`)・`pnpm install` | `voidzero-dev/setup-vp` (`vp install` まで走らせる)                                          | ADR-0004。Node.js の版は `package.json` の `devEngines.runtime` から決まり、CI の `verify` の job と同じ版になる                                                                                                                                   |
 | `pnpm exec void deploy`                                             | `vp exec void deploy`                                                                        | ADR-0004                                                                                                                                                                                                                                           |
@@ -56,7 +56,7 @@ workflow のファイルはテンプレートから作った repository にそ�
 - workflow が初めて走ると、`production` の Environment が規則も secret も無いまま作られる (GitHub Docs「Managing environments for deployment」)。deploy できるブランチを main に絞る手順は `docs/guides/deployment.md`「本番へ初めて出す」にある
 - 最初の deploy は手元から行い、`void.lock.json` を commit してから CI に任せる。手順と理由は `docs/guides/deployment.md`「本番へ初めて出す」にある
 - Void を上げたら、`void init --github` の生成物と比べ、差が上の表の分だけかを確かめる。手順は `docs/guides/deployment.md`「Void を上げたら workflow を生成物と比べる」にある
-- 再評価の条件は、Void の docs が Cloudflare の Git 連携を案内したとき、`void init --github` が SHA で固定した action を出すようになったとき
+- 再評価の条件は、Void の docs が Cloudflare の Git 連携を案内したとき、`void init --github` が `.github/workflows/actions.lock` も作るようになったとき
 
 ## 出典
 

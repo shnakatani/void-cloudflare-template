@@ -104,7 +104,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 1. `git archive HEAD` を一時のディレクトリに展開し、`node_modules` をこのリポジトリのものへ symlink する
 2. 写しの `.github/workflows/void-deploy.yml` を消す。あると `void init --github` は生成を飛ばす
 3. 写しに `.void/project.json` を `{"platform":"cloudflare"}` の中身で作る。`.void/` は ignore 済みで、無いと Cloudflare ではなく Void の platform 向けの workflow を作ろうとする (Void 1.4.0 の `cli/init.ts`)
-4. 写しで `./node_modules/.bin/void init --github` を打ち、できた `void-deploy.yml` をこのリポジトリのものと比べる。差が ADR-0061 の「生成物との差」の表の分だけなら、何もしない。ほかの差は、取り込むか、表に足すかを決める
+4. 写しで `./node_modules/.bin/void init --github` を打ち、できた `void-deploy.yml` をこのリポジトリのものと比べる。写しで `git status` を打ち、`void-deploy.yml` のほかに生成物が作ったり変えたりしたファイル (`.github/workflows/actions.lock` など) が無いかも見る。差が ADR-0061 の「生成物との差」の表の分だけなら、何もしない。ほかの差は、取り込むか、表に足すかを決める
 
 ## explanation
 
