@@ -186,7 +186,7 @@ GET の `router.visit` の Promise は、新しいページの描画が commit �
 
 Void 1.4.0 の docs は programmatic な遷移を `router.visit('/users');` と await せずに書き ([Void docs「Pages Routing」][] の How Navigation Works)、1.5.0 の docs は transition の外の例で `await router.visit(profile)` と書く ([Void docs「Pages Routing」の v1.5.0][])。transition・`<form action>`・`useActionState` の中で `router.visit()` と `router.refresh()` を await すると決着しないことは、voidzero-dev/void#663 (2026-11-02、1.5.0) が表で示す。1.5.0 の `action()` と `useForm` は shell の到着で決着するので止まらない (ADR-0016)。`startVisit` は await しない形に、失敗を toast に出す処理を足したものである。待たないので、Action の pending は遷移の commit より先に解ける。
 
-voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.visit()` と `router.refresh()` に `resolveOn: 'data' | 'commit'` を足し、docs「React navigation completion」で transition の中の await に `{ resolveOn: 'data' }` を案内する。この commit は v1.5.0 の公開より後で、2026-11-03 の時点で含む版は無い。含む版に上げたら、Action の中の遷移を `await router.visit(path, { resolveOn: "data" })` に替え、`startVisit` を消す (`src/lib/start-visit.ts` の docstring)。
+voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.visit()` と `router.refresh()` に `resolveOn: 'data' | 'commit'` を足し、docs「React navigation completion」で transition の中の await に `{ resolveOn: 'data' }` を案内する。この commit を含む最初の tag は v1.6.0 である。Action の中の遷移を `await router.visit(path, { resolveOn: "data" })` に置き換えるまでは、`startVisit` を使う (`src/lib/start-visit.ts` の docstring)。
 
 ## 出典
 
