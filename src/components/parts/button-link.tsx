@@ -55,7 +55,7 @@ export function ButtonLink({
       // registry の Button と同じ意匠 (buttonVariants) を纏うので slot 名も揃える。
       // registry の子孫セレクタ (button-group.tsx の `[data-slot=button]` 等) はこの属性で対象を選ぶ
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
       {...(disabled && { "aria-disabled": true, "data-disabled": "", onClick: preventNavigation })}
     >
