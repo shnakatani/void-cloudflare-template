@@ -65,6 +65,8 @@ updates:
       # miniflare は exact で持ち、版は Void が引く @cloudflare/vite-plugin が解決する版に揃える (src/test/app/d1.ts が直接 import する)。
       # 別の版が入ると、テストの workerd と dev の workerd が食い違う。Void を上げたら vp why miniflare で
       # @cloudflare/vite-plugin の下の版を確かめ、package.json の miniflare を同じ版に書き換える。
+      # Dependabot は miniflare を上げない。v5 は prerelease でだけ出ていて、Dependabot は今の版と release の部分が同じ
+      # prerelease しか候補にしないので、void グループの PR に入らない (docs/guides/dependencies-and-toolchain.md「依存を上げたときに見直すもの」)
       # 撤去条件: Void が Miniflare の D1 を返すテスト用の入口を公開し、src/test/app/d1.ts が miniflare を import しなくなったとき (ADR-0005)
       # void と @void/react も exact で持つ。撤去条件: @void/react の peer の void が範囲になり、上の miniflare の撤去条件も成り立ったとき (ADR-0005)
       void:
