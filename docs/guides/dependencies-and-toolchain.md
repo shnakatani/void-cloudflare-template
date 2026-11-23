@@ -47,7 +47,7 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 - 依存は `vp add` / `vp remove` で足し外す ([Vite+ docs「Package Management」][] の「Add and Remove」)。素の `pnpm` / `npm` / `yarn` で足し外さない。理由は「入口を `vp` にそろえる理由」にある
 - `vp` が中継しないサブコマンドだけは素の `pnpm` で打つ。`pnpm peers check` がこれに当たる (「peer の食い違いを数える」)
-- 依存を外したら、その依存が必須の peer として入れていたパッケージが残っていないかを `vp why <パッケージ>` で確かめる。pnpm は optional peer を、範囲に合う版がすでに入っているときだけ入れ ([pnpm 11.x docs「Optional peer dependencies」][])、変えていない依存の optional peer を lock にある版のまま保つことがある。残っていたら、それを optional peer に持つ依存を `vp remove` して `vp add` し直す。2026-11-24 に pnpm 11.28.0 で、lock の写しから `eslint-plugin-testing-library` を外すと、ESLint は `@shadcn/lint` の optional peer として lock に残り、`@shadcn/lint` を外して入れ直すと消えた
+- 依存を外したら、その依存が必須の peer として入れていたパッケージが残っていないかを `vp why <パッケージ>` で確かめる。pnpm は optional peer を、範囲に合う版がすでに入っているときだけ入れる ([pnpm 11.x docs「Optional peer dependencies」][])。残っていたら、それを optional peer に持つ依存を `vp remove` して `vp add` し直す。2026-11-24 に pnpm 11.28.0 で、lock の写しから `eslint-plugin-testing-library` を外すと、ESLint は `@shadcn/lint` の optional peer として lock に残り (変えていない依存の optional peer が lock にある版のまま保たれた)、`@shadcn/lint` を外して入れ直すと消えた
 
 ### Void の skill を扱う
 
