@@ -58,6 +58,8 @@
 
 ## 出典
 
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は v1.11.0 で、読んだ版と同じ内容とは限らない。
+
 - Void docs「Authentication」(Server Usage): `node_modules/void/docs/guide/auth.md`
 - Void docs「Auth API」(`AuthUser`): `node_modules/void/docs/reference/api/auth.md`
 - Void docs「Server Routing」(Per-route middleware): `node_modules/void/docs/guide/server-routing.md`

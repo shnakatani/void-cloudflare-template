@@ -78,6 +78,8 @@ probe のモジュールはトップレベルで目印の文字列を `console.i
 
 ## 出典
 
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.5.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.5.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は v1.11.0 で、v1.5.0 と同じ内容とは限らない。
+
 - Void の docs「Loaders & Props」の Using the Data in Page Components: `node_modules/void/docs/guide/pages-routing/loaders.md`
 - Void 1.5.0 の `void init` が書く tsconfig: `node_modules/void/dist/init-*.mjs` (2026-11-07 に確認)
 - `@vitejs/plugin-react` 6.2.1 の `vite:react-compiler`: `node_modules/@vitejs/plugin-react/dist/index.js`

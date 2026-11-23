@@ -184,7 +184,7 @@ Void の docs は、route ごとの middleware を `defineHandler(middleware, ha
 
 GET の `router.visit` の Promise は、新しいページの描画が commit されてから決着する (`@void/react` 1.4.0 の `runtime/pages-client.ts` の `finishNavigation`)。Void はその描画を Transition で予約し、React は進行中の Transition をまとめる ([React docs「useTransition」][] の Caveats: "If there are multiple ongoing Transitions, React currently batches them together.")。Action の中で visit を await すると、Action は commit を待ち、commit は Action の終わりを待つ。2026-11-02 に dev で、登録の送信のボタンが pending のまま止まり、URL も変わらなかった。
 
-Void 1.4.0 の docs は programmatic な遷移を `router.visit('/users');` と await せずに書き ([Void docs「Pages Routing」][] の How Navigation Works)、1.5.0 の docs は transition の外の例で `await router.visit(profile)` と書く (`node_modules/void/docs/guide/pages-routing/overview.md`)。transition・`<form action>`・`useActionState` の中で `router.visit()` と `router.refresh()` を await すると決着しないことは、voidzero-dev/void#663 (2026-11-02、1.5.0) が表で示す。1.5.0 の `action()` と `useForm` は shell の到着で決着するので止まらない (ADR-0016)。`startVisit` は await しない形に、失敗を toast に出す処理を足したものである。待たないので、Action の pending は遷移の commit より先に解ける。
+Void 1.4.0 の docs は programmatic な遷移を `router.visit('/users');` と await せずに書き ([Void docs「Pages Routing」][] の How Navigation Works)、1.5.0 の docs は transition の外の例で `await router.visit(profile)` と書く ([Void docs「Pages Routing」の v1.5.0][])。transition・`<form action>`・`useActionState` の中で `router.visit()` と `router.refresh()` を await すると決着しないことは、voidzero-dev/void#663 (2026-11-02、1.5.0) が表で示す。1.5.0 の `action()` と `useForm` は shell の到着で決着するので止まらない (ADR-0016)。`startVisit` は await しない形に、失敗を toast に出す処理を足したものである。待たないので、Action の pending は遷移の commit より先に解ける。
 
 voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.visit()` と `router.refresh()` に `resolveOn: 'data' | 'commit'` を足し、docs「React navigation completion」で transition の中の await に `{ resolveOn: 'data' }` を案内する。この commit は v1.5.0 の公開より後で、2026-11-03 の時点で含む版は無い。含む版に上げたら、Action の中の遷移を `await router.visit(path, { resolveOn: "data" })` に替え、`startVisit` を消す (`src/lib/start-visit.ts` の docstring)。
 
@@ -198,6 +198,7 @@ voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.vis
 [Void docs「Redirects」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/edge/redirects.md
 [Void docs「Rewrites」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/api/rewrites.md
 [Void docs「Server Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/server-routing.md
+[Void docs「Pages Routing」の v1.5.0]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/overview.md
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/overview.md
 [Void の commit 2248088]: https://github.com/voidzero-dev/void/commit/2248088ea9dc5e8fb70431772443b5349748d806
 [Void docs「Actions & Forms」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/actions-and-forms.md

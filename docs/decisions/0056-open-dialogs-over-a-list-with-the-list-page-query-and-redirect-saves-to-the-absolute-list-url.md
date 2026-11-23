@@ -134,6 +134,8 @@ Void 1.4.0 には、一覧の上に子のページを重ねる仕組みが無い
 
 ## 出典
 
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は v1.11.0 で、読んだ版と同じ内容とは限らない。
+
 - Void docs「Layouts & Shared Data」: `node_modules/void/docs/guide/pages-routing/layouts.md`
 - Void docs「Pages API」(`useNavigation()`): `node_modules/void/docs/reference/api/pages.md`
 - Void docs「Scroll Restoration」: `node_modules/void/docs/guide/pages-routing/overview.md`

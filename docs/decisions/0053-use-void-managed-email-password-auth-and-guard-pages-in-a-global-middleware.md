@@ -84,11 +84,13 @@ middleware の `c.redirect()` は、渡した location に要求の query を足
 
 ## 出典
 
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は v1.11.0 で、読んだ版と同じ内容とは限らない。
+
 - Void の docs「Authentication」(Config、Server Usage、Behavior、Customization): `node_modules/void/docs/guide/auth.md`
-- Void の docs「Actions & Forms」の Validation Errors: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
-- Void の docs「Layouts & Shared Data」の Shared Data: `node_modules/void/docs/guide/pages-routing/layouts.md`
 - Void の docs「Auth API」(`getAuth(c)`、`requireAuth(c, options?)`) と「Not Found & Errors」(HTTP exceptions)、Void 1.11.0: `node_modules/void/docs/reference/api/auth.md`、`node_modules/void/docs/guide/pages-routing/errors.md`
 - Void 1.11.0 の `packages/void/src/pages/client.ts` (`submitAction`): https://github.com/voidzero-dev/void/blob/bcc2abfb9009f2b7471fbcb25d0f388c4848ab98/packages/void/src/pages/client.ts
+- Void の docs「Actions & Forms」の Validation Errors: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
+- Void の docs「Layouts & Shared Data」の Shared Data: `node_modules/void/docs/guide/pages-routing/layouts.md`
 - Void の docs「Server Routing」の Global middleware と Per-route middleware: `node_modules/void/docs/guide/server-routing.md`
 - Void の docs「Hono」の Built-in Middleware と Utilities (`HTTPException`): `node_modules/void/docs/integrations/hono.md`
 - Fetch Standard の「HTTP responses」(`Access-Control-Allow-Credentials` の注記) と「CORS-preflight fetch」(2026-11-03 に読んだ): https://fetch.spec.whatwg.org/#http-responses、https://fetch.spec.whatwg.org/#cors-preflight-fetch
