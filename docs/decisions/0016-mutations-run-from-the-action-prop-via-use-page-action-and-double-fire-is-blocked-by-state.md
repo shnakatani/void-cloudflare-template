@@ -122,7 +122,7 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 ページの URL が query (ダイアログを開く key、絞り込みの条件) を持つときは、`pageQuery` に `?` を除いた query を渡し、`run` が action の URL の後ろに載せて送る。検証の失敗でも、ページは同じ query の URL で描き直される (「制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない」)。
 
 - 型を抑えるのは hook の中の 1 か所 (`src/hooks/use-page-action.ts` の `actionUrlWithPageQuery`) にする。呼び出し側は query の無い `ActionUrl` を渡すので、送る値の型は生成された型のまま検査される
-- action はページの条件を body ではなく `c.req.query()` で読み、redirect は `new URL(<path>, c.req.url).href` の絶対 URL で返す。相対の URL は、載せた query (閉じるはずのダイアログの key を含む) を行き先に混ぜる (voidzero-dev/void#648)
+- action はページの条件を body ではなく `c.req.query()` で読み、redirect は `new URL(<path>, c.req.url).href` の絶対 URL で返す。named action の相対の redirect は、載せたページの query (閉じるはずのダイアログの key を含む) を行き先に残す (Void の docs `reference/api/rewrites.md` の `c.redirect()`、Void 1.11.0)
 
 ページの query の運び方は次から選んだ。
 

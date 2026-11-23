@@ -47,7 +47,7 @@
 
 - 画面では `const { user } = useShared<AppShared>().auth;` で読む。`user` は `SharedUser` (`id`・`email`・`name`) か `null` である。型引数は省けない。`CloudContextVariables` の augmentation (`middleware/01.auth.ts`) は worker の program にだけあり、省くと app の program で `.auth` が `unknown` になる (ADR-0047)
 - server (`pages/*.server.ts` など) では `void/auth` で読む。守る path の loader と action は `requireAuth(c)` で読み、未ログインでも開く path は `getUser()` で読んで `null` を分岐する ([Void docs「Authentication」][] の Server Usage)。`requireAuth(c)` は user が無ければ 401 を throw するので、middleware の守りを抜けた要求 (一覧に無い path) も、loader と action の中で止まる
-- 画面に出す項目を足すときは、`src/features/auth/shared.ts` の `SharedUser` と、`middleware/01.auth.ts` の詰め替えの両方に足す。`Date` の項目はそのまま入れず、文字列か数値にする。page data の JSON を通ると browser で文字列になり、型と食い違う (voidzero-dev/void#606)
+- 画面に出す項目を足すときは、`src/features/auth/shared.ts` の `SharedUser` と、`middleware/01.auth.ts` の詰め替えの両方に足す。Void 1.7.0 から shared data の `Date` は browser でも `Date` のまま届く ([Void docs「Loaders」][])。`Date` の項目をそのまま入れてよいかは、まだ確かめていない
 - story とブラウザテストでは、`VoidRouterProvider` に `shared` を渡す。渡さないと `useShared()` が throw する (ADR-0048)
 - `shared` を入れるのは middleware だけで、middleware を通らずに描かれたページでは `pages/layout.tsx` が描画の先頭で throw し、受ける境界が無い (ADR-0053)。middleware の外で描かれるページ (prerender するページ) を足すときは、layout の読み方を先に直す
 
@@ -148,7 +148,7 @@ printf '\nBETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
 
 ### redirect を絶対 URL で書く理由
 
-Void 1.4.0 の `c.redirect("/login")` は、要求の query を行き先に混ぜる (voidzero-dev/void#648、2026-11-02 の時点で open)。`/?q=x` から相対の path で送ると、`location` は `/login?q=x` になった (2026-11-02、`vp preview`)。query が守るページの検索の条件なら、ログインの画面の URL に残る。issue が挙げる回避の 1 つの、絶対 URL を渡す形を採る。`verify:auth-redirect` は `location` を絶対 URL で比べるので、相対に戻すと落ちる。
+Void 1.4.0 の `c.redirect("/login")` は、要求の query を行き先に混ぜた (voidzero-dev/void#648)。`/?q=x` から相対の path で送ると、`location` は `/login?q=x` になった (2026-11-02、`vp preview`)。query が守るページの検索の条件なら、ログインの画面の URL に残る。issue が挙げる回避の 1 つの、絶対 URL を渡す形を採った。Void 1.6.2 で修正が入り、middleware と handler の `c.redirect()` は渡した location をそのまま送る。named action の redirect は、action の名前を除いたページの query を残す ([Void docs「Rewrites」][] の `c.redirect()`)。middleware の redirect を相対に替えられるかは確かめていない。`verify:auth-redirect` は `location` を絶対 URL で比べるので、相対に替えるときは検査も直す。
 
 ### 別の origin からの書き込みが止まる仕組み
 
@@ -176,7 +176,7 @@ middleware が action の要求に 401 を返すと、Void の client は 401 �
 
 ### page の loader に middleware を渡さない理由
 
-Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.5.0 までは loader が 500、action が空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は 2026-11-02 に merge された。2026-11-03 の時点で最新の v1.5.0 は、その merge より前に公開され、修正を含まない)。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置く (ADR-0053)。
+Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.5.0 までは loader が 500、action が空の 204 を返し、validator の型が落ちた (voidzero-dev/void#564)。修正の voidzero-dev/void#624 は Void 1.6.0 に入った。page ごとの middleware へ保護を移せるかは確かめていない。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置いたままにする (ADR-0053)。
 
 ### 遷移を待たずに Action を終える理由
 
@@ -192,6 +192,8 @@ voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.vis
 
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
 [Void docs「Sending Email」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/email/sending.md
+[Void docs「Loaders」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/pages-routing/loaders.md
+[Void docs「Rewrites」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/api/rewrites.md
 [Void docs「Server Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/server-routing.md
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/overview.md
 [Void の commit 2248088]: https://github.com/voidzero-dev/void/commit/2248088ea9dc5e8fb70431772443b5349748d806

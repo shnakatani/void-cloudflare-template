@@ -24,7 +24,8 @@ export const head = defineHead<Props>((_c, props) => ({ title: notesDocumentTitl
 /**
  * 保存のあと戻る一覧の絶対 URL。画面は action の URL にページの query を載せて送る (`usePageAction` の `pageQuery`)。
  * 検証の失敗では Void がその URL のページを描き直すので、q とダイアログを開く query は body ではなく URL が運ぶ。
- * 相対の URL は request の query (ダイアログを開く `new`・`edit` を含む) を行き先に混ぜる (voidzero-dev/void#648) ので、絶対 URL で返す
+ * named action の相対の redirect は、action の名前を除いたページの query (ダイアログを開く `new`・`edit` を含む) を行き先に
+ * 残す (Void の docs `reference/api/rewrites.md` の `c.redirect()`、Void 1.11.0) ので、絶対 URL で返す
  */
 function listUrlOf(q: string | undefined, requestUrl: string): string {
   return new URL(notesListUrl(v.parse(noteListFilterSchema, { q }).q), requestUrl).href;

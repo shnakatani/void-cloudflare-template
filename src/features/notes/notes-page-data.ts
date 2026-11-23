@@ -10,8 +10,9 @@ import {
 import type { Note } from "./schema";
 
 /**
- * loader が画面へ渡す 1 件。`Note` から導き、日時だけを ISO の文字列に替える合成の型。loader の props の `Date` は
- * browser で文字列になり、型と食い違う (voidzero-dev/void#606)。所有者の id は画面に要らないので渡さない
+ * loader が画面へ渡す 1 件。`Note` から導き、日時だけを ISO の文字列に替える合成の型。Void 1.7.0 から loader の props の
+ * `Date` は browser でも `Date` のまま届く (Void の docs「Loaders」) ので、`Date` で渡す形へ移せるかは別に確かめる。
+ * 所有者の id は画面に要らないので渡さない
  */
 export type NoteView = Omit<Note, "userId" | "createdAt" | "updatedAt"> & {
   readonly createdAt: string;
