@@ -83,7 +83,7 @@ Base UI の popup (Dialog、AlertDialog、Drawer、Popover、Menu、Select、Com
 ### debounce のある入力をテストする
 
 - debounce のテストは、1 文字ずつ別の `userEvent.keyboard` で打つ。`fill` は 1 回の input、`type("abc")` は 3 文字を間を置かず送るので、どちらも debounce の欠落を検出しない (2026-09-23 に mutant で実測)
-- fake timers は使わない。browser mode では locator の操作が fake timer を進めない ([vitest-dev/vitest#10058][])。待ちを広げたいときは、定数を `vi.mock(import(...))` の partial mock で広げる
+- fake timers は使わない。browser mode では、要素を受け取る locator と `userEvent` の操作が実行中に fake timer を進め、進む量は操作にかかった実時間で決まり、実行ごとに揺れる。`expect.element` も再試行の間に進める ([Vitest docs「Automatic Advancing」][])。時計の進みをテストが決められない。`userEvent.keyboard` のように要素を受け取らない操作は進めない。待ちを広げたいときは、定数を `vi.mock(import(...))` の partial mock で広げる
 - 広げる定数は `number` の型注釈で宣言し、literal 型に固めない。literal 型のままだと、partial mock の factory が返す広げた値が `vi.mock` の型に合わず、`No overload matches this call` (TS2769) で落ちる (2026-10-05、vitest 5.0.1 で確認)
 
 ## explanation
@@ -197,7 +197,7 @@ Base UI の `FloatingFocusManager` (Dialog、Drawer、Popover、Menu、Select、
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vitest は 5.0.1、Playwright docs「Auto-waiting」は 1.65.0 に固定した版を指す。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vitest は 5.0.1 (「Automatic Advancing」だけは 5.1.0)、Playwright docs「Auto-waiting」は 1.65.0 に固定した版を指す。
 
 本文は引かないが、調べたときに読んだもの:
 
@@ -206,7 +206,7 @@ Base UI の `FloatingFocusManager` (Dialog、Drawer、Popover、Menu、Select、
 [Playwright docs「Auto-waiting」]: https://github.com/microsoft/playwright/blob/v1.65.0/docs/src/actionability.md
 [Vitest docs「userEvent.wheel」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/api/browser/interactivity.md#usereventwheel-410-userevent-wheel
 [Playwright docs「mouse.wheel」]: https://playwright.dev/docs/api/class-mouse#mouse-wheel
-[vitest-dev/vitest#10058]: https://github.com/vitest-dev/vitest/issues/10058
+[Vitest docs「Automatic Advancing」]: https://github.com/vitest-dev/vitest/blob/v5.1.0/docs/guide/mocking/timers.md#automatic-advancing
 [Vitest docs「Interactivity API」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/api/browser/interactivity.md
 [vitest-dev/vitest#5770]: https://github.com/vitest-dev/vitest/issues/5770
 [MDN「Event: cancelable property」]: https://developer.mozilla.org/en-US/docs/Web/API/Event/cancelable

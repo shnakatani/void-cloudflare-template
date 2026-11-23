@@ -41,7 +41,7 @@ probe のモジュールはトップレベルで目印の文字列を `console.i
 - この働きは plugin の実装による。Compiler を外したとき、または plugin が TypeScript を外さなくなったときに、表の太字の経路が開く
 - ADR-0055 の lint は `import { type T }` を型の import として通す。`true` のまま Compiler を外した build では、この書き方が lint にも型検査にも止められずに `.server` の module を client に入れる
 
-`vp check` の型検査 (oxlint-tsgolint 7.0.2004) が、型を `type` 無しで import・再 export する書き方を止めるかを測った (2026-11-07)。
+`vp check` の型検査 (vite-plus 1.7.0 の tsrs 7.1.0-beta.tsrs2) が、型を `type` 無しで import・再 export する書き方を止めるかを測った (2026-11-24)。
 
 | 書き方                                                                  | `true`          | `false` だけ | `false` と `isolatedModules: true` |
 | ----------------------------------------------------------------------- | --------------- | ------------ | ---------------------------------- |
