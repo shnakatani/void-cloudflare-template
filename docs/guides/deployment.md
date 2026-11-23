@@ -9,7 +9,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 | 認証は Void が管理する email とパスワードに限り、ページの保護は global の middleware で行う                                                     | ADR-0053 |
 | ドメインの schema と query と画面の部品は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
 | 本番へは GitHub Actions から void deploy で Cloudflare へ出し、deploy しない repository では workflow を Disable にする                         | ADR-0061 |
-| D1 の read replication は Void の既定のまま有効にし、要求をまたぐ読みの遅れを受け入れる                                                         | ADR-0067 |
+| D1 の read replication は void.config.ts の database.readReplication で切る                                                                     | ADR-0067 |
 
 ## how-to
 
@@ -68,9 +68,11 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 - file の upload のように上限を超える body を受ける route を足すときは、その path を `middleware/00.body-limit.ts` で上限から外し、handler で body を stream で読む。全部を読むと、128 MB の memory を超えて Worker が落ちる ([Cloudflare Workers「Best Practices」][] の Stream request and response bodies、[Cloudflare docs「Workers Limits」][] の Memory)
 - 上限の値を上げて済ませない。上限は全 route に 1 つの値で掛かるので、上げると、body を全部読むほかの route と auth の endpoint も同じ大きさの body を受けるようになる
 
-### read replication を切ったアプリを deploy する
+### read replication の設定を変えて deploy する
 
-- D1 の read replication を切ったアプリは、provision が走る deploy のたびに Void が replication を `auto` に戻す。走る条件は ADR-0067。その deploy のあとに `docs/guides/database.md`「D1 の read replication を切る」の手順で確かめ直し、切り直す (Void 1.5.0 の `cli/provision.ts` の `enableD1ReadReplicationViaApi`)
+- `void.config.ts` の `database.readReplication` を変えたら、既に Worker を deploy した環境では `void deploy --platform cloudflare --provision` で出す。Void が replication の設定を Cloudflare へ送るのは provision の中だけで、Worker が既にある deploy は `--provision` か資源の不足が無いと provision を走らせない (Void 1.11.0 の `cli/deploy-cloudflare-preflight.ts`、2026-11-23 にソースで読んだ)。Worker がまだ無い最初の deploy は、`readReplication` を書いてあれば provision を走らせる
+- deploy のあとに `docs/guides/database.md`「deploy 先の D1 の read replication を確かめる」の手順で値を確かめる
+- `readReplication` を消して deploy しても、deploy 先の設定は変わらない ([Void docs「Configuration」の database.readReplication][])。切るときは `false` を書く
 
 ### deploy しない repository で workflow を止める
 
@@ -176,6 +178,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 [GitHub Docs「Deployments and environments」]: https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
 [GitHub Docs「Secrets reference」]: https://docs.github.com/en/actions/reference/security/secrets
 [GitHub Docs「Disabling and enabling a workflow」]: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows
+[Void docs「Configuration」の database.readReplication]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/config.md
 [Void docs「Configuration」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/config.md
 [Void CLI reference「Custom Domains」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/domains.md
 [Void docs「Hono」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/integrations/hono.md

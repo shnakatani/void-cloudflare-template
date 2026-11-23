@@ -1,6 +1,6 @@
 # DB
 
-D1 の schema・migration・query を変える手順と、D1 の上限に収める手順と、index を足す手順と、部分一致の検索を組む手順と、見本のデータを入れる手順と、テストで D1 を使う手順と、deploy 先の D1 の read replication を切る・確かめる手順と、その形にしている理由を持つ。
+D1 の schema・migration・query を変える手順と、D1 の上限に収める手順と、index を足す手順と、部分一致の検索を組む手順と、見本のデータを入れる手順と、テストで D1 を使う手順と、deploy 先の D1 の read replication を確かめる手順と、その形にしている理由を持つ。
 
 | 決定                                                                                                                                            | ADR      |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -11,7 +11,7 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 | DB は void/db と D1 で持ち、migration は auth の table ごと void db generate で生成して commit する                                             | ADR-0052 |
 | query は Miniflare の D1 で試し、保護したページの経路は preview を HTTP で叩いて試す                                                            | ADR-0054 |
 | ドメインの schema と query と画面の部品は features に置き、server のファイルは薄く保ち、client から server のファイルの import を lint で止める | ADR-0055 |
-| D1 の read replication は Void の既定のまま有効にし、要求をまたぐ読みの遅れを受け入れる                                                         | ADR-0067 |
+| D1 の read replication は void.config.ts の database.readReplication で切る                                                                     | ADR-0067 |
 
 ## how-to
 
@@ -126,22 +126,13 @@ it("別のユーザーの行を返さない", async () => {
 - テストの `db` は schema と casing を持たない。アプリの `db` と同じ書き方の query だけが、テストで同じに動く (「`db.query.*` と casing に頼らない理由」)
 - tsconfig の `paths` を変えたあとに module の解決がおかしくなったら、`node_modules/.vitest-cache` を消してから打ち直す。Vitest 5 の module の cache が前の解決を返し、`paths` を戻しても失敗が続いた (2026-11-02、Vitest 5.0.5)
 
-### D1 の read replication を切る
+### deploy 先の D1 の read replication を確かめる
 
-保存の redirect の先やログインの直後にも、書いた行を読ませたいアプリは、deploy 先の D1 の read replication を切る。切らないときに起こりうることは ADR-0067 にある。
+`void.config.ts` の `database.readReplication` が、deploy 先の D1 の replication を決める (ADR-0067、[Void docs「D1 (SQLite)」の Read replication][])。値を変えて deploy する手順は `docs/guides/deployment.md`「read replication の設定を変えて deploy する」にある。deploy 先で切れているかは、Cloudflare の API で読む。
 
-1. D1 の Edit の権限を持つ Cloudflare の API token を用意する ([Cloudflare docs「Global read replication」][] の Disable read replication via REST API)
+1. D1 の Read の権限を持つ Cloudflare の API token を用意する ([Cloudflare docs「Global read replication」][] の Check if read replication is enabled)
 2. `void.lock.json` の `resolved` から、`account_id` と、`d1_databases` のうち `binding` が `DB` の項目の `database_id` を読む。Void は deploy で作った資源の ID を `void.lock.json` に残す ([Void docs「Cloudflare」][])
-3. `read_replication.mode` を `disabled` にする
-
-   ```sh
-   curl -X PUT "https://api.cloudflare.com/client/v4/accounts/<account_id>/d1/database/<database_id>" \
-     -H "Authorization: Bearer $TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{"read_replication": {"mode": "disabled"}}'
-   ```
-
-4. 同じ URL を `GET` で読み、`result.read_replication.mode` が `disabled` であることを見る。`GET` は D1 の Read の権限で打てる ([Cloudflare docs「Global read replication」][] の Check if read replication is enabled)
+3. 次を打ち、`result.read_replication.mode` が `disabled` であることを見る
 
    ```sh
    curl "https://api.cloudflare.com/client/v4/accounts/<account_id>/d1/database/<database_id>" \
@@ -150,7 +141,6 @@ it("別のユーザーの行を返さない", async () => {
 
 - 切ってから replica が要求を受けなくなるまで、最大 24 時間かかる ([Cloudflare docs「Global read replication」][])。その間は、古い読みがまだ起こりうる
 - `void/db` は切った database でもそのまま使える。Sessions API は replication の無い database でも動く ([Cloudflare docs「Global read replication」][])
-- `void deploy` が provision を走らせると、Void が replication を `auto` に戻す。`--provision` を付けた deploy や、新しい資源を宣言した deploy で走る。走る条件の一覧は ADR-0067 にある。その deploy のあとに `GET` で確かめ、`auto` なら `PUT` を打ち直す
 
 ### deploy した環境で読んだ instance を確かめる
 
@@ -170,7 +160,7 @@ D1 の結果の `meta.served_by_primary` は、その query を処理した inst
 3. 確かめ終えたら、足した行を消して deploy し直す
 
 - 足した query は loader の query と同じ session で動き、その query を処理した instance を返す。`db` は要求の中の query で 1 つの session を共有し (ADR-0067)、後の query はそれより古くない instance で読む ([Cloudflare docs「Global read replication」][] の Sessions API provides sequential consistency)
-- session の cookie を送る要求では、loader より先に Void の auth の middleware が同じ session で session の行を読む (ADR-0067)。その読みを処理した instance は、足した query では分からない
+- session の cookie を送る要求では、loader より先に Void の auth の middleware が `first-primary` の別の session で session の行を読む (ADR-0067)。その読みを処理した instance は、足した query では分からない
 - ローカルの dev では、`served_by_primary` と `served_by_region` は `undefined` になる ([Cloudflare docs「Global read replication」][])。deploy した環境でしか確かめられない
 - コードを足さずに傾向だけを見るなら、Cloudflare の dashboard の D1 の metrics で、要求を処理した region の内訳を見る ([Cloudflare docs「Global read replication」][] の Observability)
 
@@ -247,6 +237,7 @@ D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs �
 [SQLite docs「SQL Language Expressions」]: https://www.sqlite.org/lang_expr.html#like
 [SQLite docs「Query Planning」]: https://www.sqlite.org/queryplanner.html
 [SQLite docs「FTS5」]: https://www.sqlite.org/fts5.html#the_trigram_tokenizer
+[Void docs「D1 (SQLite)」の Read replication]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database/d1.md#read-replication
 [Void docs「D1 (SQLite)」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database/d1.md
 [Cloudflare docs「D1 Limits」]: https://developers.cloudflare.com/d1/platform/limits/
 [Cloudflare docs「D1 Database」]: https://developers.cloudflare.com/d1/worker-api/d1-database/#batch
