@@ -11,7 +11,8 @@ import type { Note } from "./schema";
 
 /**
  * loader が画面へ渡す 1 件。`Note` から導き、日時だけを ISO の文字列に替える合成の型。Void 1.7.0 から loader の props の
- * `Date` は browser でも `Date` のまま届く (Void の docs「Loaders」) ので、`Date` で渡す形へ移せるかは別に確かめる。
+ * `Date` は browser でも `Date` のまま届く (Void の docs「Loaders」)。`Date` のまま渡すなら、この型、`toNoteView` の
+ * `toISOString()`、文字列から `Date` を作り直す `note-cells.tsx` の整形、ISO の文字列で比べる `notes-page-data.test.ts` を一緒に替える。
  * 所有者の id は画面に要らないので渡さない
  */
 export type NoteView = Omit<Note, "userId" | "createdAt" | "updatedAt"> & {
