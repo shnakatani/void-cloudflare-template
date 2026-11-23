@@ -12,9 +12,8 @@ declare module "void" {
 }
 
 /**
- * 保護する path の未ログインの要求の redirect と 401、全ページへの user。page の loader・action に middleware を渡す形
- * (`defineHandler(middleware, handler)`) は Void 1.5.0 まで壊れ (voidzero-dev/void#564)、修正は 1.6.0 に入った。
- * page ごとの middleware へ移せるかは確かめていないので、global に置いたままにする (docs/guides/auth.md「page の loader に middleware を渡さない理由」)
+ * 保護する path の未ログインの要求の redirect と 401、全ページへの user。守るページごとに middleware を渡すと渡し忘れたページが
+ * 開くので、守る処理を global の middleware の 1 か所に置く (docs/guides/auth.md「page の loader に middleware を渡さない理由」)
  */
 export default defineMiddleware(async (c, next) => {
   const user = getUser();

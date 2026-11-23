@@ -40,7 +40,7 @@
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | 所有は query の `userId`、ほかは loader・action・handler の先頭で判定する          | 所有は query のテストで D1 ごと確かめられ (ADR-0054)、ロールの判定は純粋関数で試せる。loader は値で返すので、権限が無いことを説明する画面を描ける                                                                                                                                                                   | **採用**     |
 | ロールの判定も global の middleware に載せる                                       | 要否は loader・action ごとに違う。一律に掛けると、権限が無いことを本人に説明するページまで止まる。path の一覧に足し忘れた経路は public になり、何も落ちない (ADR-0053)。サブツリーを閉じる補助としてだけ使う                                                                                                        | 却下         |
-| `defineHandler(middleware, handler)` の route ごとの middleware で判定する         | page の loader と action では Void 1.5.0 まで壊れた (voidzero-dev/void#564。修正は 1.6.0 に入り、比べ直していない)。`routes/` だけで使うと判定の置き方が 2 通りになる                                                                                                                                               | 却下         |
+| `defineHandler(middleware, handler)` の route ごとの middleware で判定する         | loader の前で止める middleware は、権限が無いことを表す値をページへ返せず、応答で止めることになる。loader で `HTTPException(403)` を throw する案と同じく、ページも説明も描かれない                                                                                                                                 | 却下         |
 | query の関数に user を渡し、ロールの判定も query の中で行う                        | query が所有以外の条件も持ち、D1 のテストにロールの組み合わせが増える。所有 (データの条件) と権限 (要求の条件) が 1 つの関数に混ざる                                                                                                                                                                                | 却下         |
 | Better Auth の `userHasPermission` (access control の statement) で判定する        | `auth.api.*` を呼ぶ公開の口が Void に無い (ADR-0053)。`AuthUser` の `role` を読む形にする                                                                                                                                                                                                                           | 成り立たない |
 | ロールを `user.additionalFields` の自前の項目で持つ                                | `AuthUser` に項目が入る点は `admin()` と同じ (Void docs「Auth API」)。`admin()` は `role` の項目と `defaultRole`・`adminRoles` の既定、ban の項目をまとめて持ち、Better Auth の docs が `role` の例として挙げる。名前と既定を自分で決める理由が無い。ロール以外の項目 (plan など) には `additionalFields` を使う    | 却下         |
@@ -56,7 +56,7 @@
 - loader で `userId` を渡し間違えても、型検査も lint も気付かない。別の user の行が読めるかは、preview を HTTP で叩く検査か、dev で 2 人の user を使って確かめる
 - loader の判定が外れた応答は HTTP の 200 で届く (ADR-0057 と同じ)。権限が無いことに server で気付く手掛かりが要るなら、値を返す前に `void/log` の `logger.warn` に残す (ADR-0055)
 - 判定の付け忘れを止める機械の仕組みは持たない。loader・action・handler を足したらレビューで見る
-- 再評価の条件: Void が page の loader と action に route ごとの middleware を渡せるようになったら (voidzero-dev/void#564 の修正を含む版。Void 1.6.0 で成り立った)、ロールの判定を middleware に寄せられるかを比べ直す。Void が `auth.api.*` を公開したら、`userHasPermission` を比べ直す
+- 再評価の条件: Void が `auth.api.*` を公開したら、`userHasPermission` を比べ直す
 
 ## 出典
 

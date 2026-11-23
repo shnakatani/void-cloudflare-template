@@ -178,7 +178,7 @@ middleware が action の要求に 401 を返すと、Void の client は 401 �
 
 ### page の loader に middleware を渡さない理由
 
-Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.5.0 までは loader が 500、action が空の 204 を返し、validator の型が落ちた (voidzero-dev/void#564)。修正の voidzero-dev/void#624 は Void 1.6.0 に入った。page ごとの middleware へ保護を移せるかは確かめていない。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置いたままにする (ADR-0053)。
+Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.5.0 までは loader が 500、action が空の 204 を返し、validator の型が落ちた (voidzero-dev/void#564)。修正の voidzero-dev/void#624 は Void 1.6.0 に入った。いまも page ごとには渡さない。守るページごとに渡すと、渡し忘れたページが開く。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、守る処理を 1 か所に置ける (ADR-0053)。
 
 ### 遷移を待たずに Action を終える理由
 
