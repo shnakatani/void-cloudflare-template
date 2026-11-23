@@ -72,7 +72,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 
 - `void.config.ts` の `database.readReplication` を書いている間は、`void deploy` のたびに provision が走り、D1 の設定を書き直す (Void 1.11.0 の `cli/deploy-cloudflare-preflight.ts` とテスト。2026-11-23 に読み、動かしていない。ADR-0067)。値を変えたら、ふだんどおり `void deploy` で出す ([Void docs「D1 (SQLite)」の Read replication][])
 - CI の token には毎回 D1 の Edit が要る。書き直しの PUT が失敗すると、deploy が "The credential needs D1 Edit permission." で止まる (Void 1.11.0 の `cli/provision.ts`)
-- deploy が通ったら、`docs/guides/database.md`「deploy 先の D1 の read replication を確かめる」の手順で `disabled` を確かめる。`disabled` でなければ、`--debug` (または `VOID_DEPLOY_DEBUG=1`) を付けて出し直し、構造化した deploy のログの `cloudflare_provisioned` の `resources` に `d1:` が出ているかを見る ([Void docs「void deploy」][] の `--debug`)。出ていなければ provision が走っていないので、Wrangler からの handoff の記録 `.void/cloudflare-link.json` が残っていないかを見る
+- deploy が通ったら、`docs/guides/database.md`「deploy 先の D1 の read replication を確かめる」の手順で `disabled` を確かめる。`disabled` でなければ、`--debug` (または `VOID_DEPLOY_DEBUG=1`) を付けて出し直し、構造化した deploy のログの `cloudflare_provisioned` の `resources` に `d1:<action>` の形の項目が出ているかを見る ([Void docs「void deploy」][] の `--debug`。項目の形は Void 1.11.0 の `cli/deploy-cloudflare-preflight.ts`)。出ていなければ provision が走っていないので、Wrangler からの handoff の記録 `.void/cloudflare-link.json` が残っていないかを見る
 - `readReplication` を消して deploy しても、deploy 先の設定は変わらない ([Void docs「Configuration」の database.readReplication][])。切るときは `false` を書く
 
 ### deploy しない repository で workflow を止める
