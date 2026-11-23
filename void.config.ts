@@ -19,6 +19,11 @@ export default defineConfig({
     // docs/guides/dependencies-and-toolchain.md「依存を上げたときに見直すもの」の Void の行
     compatibility_date: "2026-11-03",
   },
+  database: {
+    // D1 の read replication を切り、読みをすべて primary にする (ADR-0067)。省くと既存の database の設定を変えず、
+    // 新しい database は off になる (Void の docs「D1 (SQLite)」の Read replication)。値を書いて意図を残す
+    readReplication: false,
+  },
   cloudflare: {
     // Workers Logs と Traces (Cloudflare Workers「Best Practices」の Enable Workers Logs and Traces)。率の理由は
     // docs/guides/deployment.md「Workers Logs と Traces の率を決めた理由」

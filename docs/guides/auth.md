@@ -26,7 +26,7 @@
 - 守るページは prerender しない。`.md` のページと loader の無い island のページは自動で prerender されるので、守る path の下に置かない (ADR-0053)
 - ログイン済みなら開く意味の無い path (ログインと登録の画面) は `GUEST_ONLY_PATHS` に足す。ログイン済みの要求は `/` へ送られる
 - middleware が送るのは画面を開く要求 (`GET`・`HEAD`) だけで、`OPTIONS` (CORS の preflight を含む) は通し、それ以外の method の未ログインの要求は 401 で止める (ADR-0053、「action の要求を redirect しない理由」)。守るページの loader と action も `requireAuth(c)` で user を読む
-- redirect の行き先は `new URL(<path>, c.req.url).href` の絶対 URL で渡す。相対の path を渡すと、要求の query が行き先に混ざる (「redirect を絶対 URL で書く理由」)
+- redirect の行き先は `new URL(<path>, c.req.url).href` の絶対 URL で渡す (「redirect を絶対 URL で書く理由」)
 
 ### `routes/` に書き込みの handler を足す
 
@@ -47,7 +47,7 @@
 
 - 画面では `const { user } = useShared<AppShared>().auth;` で読む。`user` は `SharedUser` (`id`・`email`・`name`) か `null` である。型引数は省けない。`CloudContextVariables` の augmentation (`middleware/01.auth.ts`) は worker の program にだけあり、省くと app の program で `.auth` が `unknown` になる (ADR-0047)
 - server (`pages/*.server.ts` など) では `void/auth` で読む。守る path の loader と action は `requireAuth(c)` で読み、未ログインでも開く path は `getUser()` で読んで `null` を分岐する ([Void docs「Authentication」][] の Server Usage)。`requireAuth(c)` は user が無ければ 401 を throw するので、middleware の守りを抜けた要求 (一覧に無い path) も、loader と action の中で止まる
-- 画面に出す項目を足すときは、`src/features/auth/shared.ts` の `SharedUser` と、`middleware/01.auth.ts` の詰め替えの両方に足す。`Date` の項目はそのまま入れず、文字列か数値にする。page data の JSON を通ると browser で文字列になり、型と食い違う (voidzero-dev/void#606)
+- 画面に出す項目を足すときは、`src/features/auth/shared.ts` の `SharedUser` と、`middleware/01.auth.ts` の詰め替えの両方に足す。`Date` の項目はそのまま入れてよい。shared data の `Date` は browser でも `Date` のまま届く ([Void docs「Loaders」][])
 - story とブラウザテストでは、`VoidRouterProvider` に `shared` を渡す。渡さないと `useShared()` が throw する (ADR-0048)
 - `shared` を入れるのは middleware だけで、middleware を通らずに描かれたページでは `pages/layout.tsx` が描画の先頭で throw し、受ける境界が無い (ADR-0053)。middleware の外で描かれるページ (prerender するページ) を足すときは、layout の読み方を先に直す
 
@@ -66,7 +66,7 @@
 | page の action       | `throw new HTTPException(403, { message })`。`usePageAction` の `run` が toast に出す (ADR-0016)                      |
 | `routes/` の handler | `throw new HTTPException(403, { message })`                                                                           |
 
-- loader で `HTTPException(403)` を throw しない。応答が `text/plain` の 403 になり、ページも説明も描かれない (ADR-0055)
+- loader で `HTTPException(403)` を throw しない。ページ自身の props で権限が無いことを説明できない。出るのは近い `_error` で、`_error` の無いこのテンプレートでは `text/plain` の 403 になる (ADR-0065)
 - global の middleware にロールの判定を載せない。path のサブツリーをまるごと 1 つのロールに閉じるときだけ、`src/features/auth/access.ts` の区分を足して redirect し、それでも loader・action・handler の先頭の判定は外さない (ADR-0065)
 - 画面の出し分けに使うなら、`SharedUser` と `middleware/01.auth.ts` の詰め替えに `role` を足す (「全ページで user を読む」)。出し分けは見せ方であって判定ではない
 - 所有は query のテストで、別の user の `userId` を渡して行が返らないことを確かめる (「テストで D1 を使う」)。経路 (loader・action・handler が判定を呼ぶこと) は、build した成果物を preview で叩いて確かめる (ADR-0054)。loader で `userId` を渡し間違えても、型検査も lint も気付かない
@@ -148,7 +148,9 @@ printf '\nBETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
 
 ### redirect を絶対 URL で書く理由
 
-Void 1.4.0 の `c.redirect("/login")` は、要求の query を行き先に混ぜる (voidzero-dev/void#648、2026-11-02 の時点で open)。`/?q=x` から相対の path で送ると、`location` は `/login?q=x` になった (2026-11-02、`vp preview`)。query が守るページの検索の条件なら、ログインの画面の URL に残る。issue が挙げる回避の 1 つの、絶対 URL を渡す形を採る。`verify:auth-redirect` は `location` を絶対 URL で比べるので、相対に戻すと落ちる。
+middleware と handler の `c.redirect()` は、渡した location に要求の query を足さない ([Void docs「Redirects」][]: "It sends the location you provide without adding the request query.")。named action の相対の redirect は、action の URL に書いた query (action の名前を除く) を行き先に残す。`usePageAction` の `pageQuery` で載せたページの query もこれに入る。Void が今のページから足した query は残さない ([Void docs「Rewrites」][] の `c.redirect()`)。Void が query を足すのは、named action の要求で `/` で始まる path を渡したときだけで、絶対 URL はそのまま送る (Void 1.11.0 の `runtime/routing/index.ts`)。
+
+絶対 URL で渡すのは、すべての `c.redirect` を 1 つの規範にそろえるためである。named action の保存のあとに一覧へ戻す redirect は、相対の path だとダイアログを開く query が行き先に残る (ADR-0056)。相対の path に替えるなら、`location` を絶対 URL で比べる `verify:auth-redirect` も直すことになる。
 
 ### 別の origin からの書き込みが止まる仕組み
 
@@ -170,29 +172,33 @@ Void 1.4.0 は、別の origin から送られた書き込みの要求を 2 か�
 
 ### action の要求を redirect しない理由
 
-session が切れたまま action を送ったとき、middleware が `/login` へ redirect すると、Void の client は redirect を辿った先のページを action の結果として受け取る。Void 1.5.0 の `dist/pages/client.mjs` の `router.visit` は、`fetch` が redirect を辿った応答を行き先の GET の結果として扱い、同じファイルの `submitAction` は `ok: true` を返す。`usePageAction` の `run` は成功として `onSuccess` を走らせ、書き込んでいないのに完了を読み上げ、ログインのページへ移って入力が消える (2026-11-03、`vp preview`)。
+session が切れたまま action を送ったとき、middleware が `/login` へ redirect すると、Void の client は redirect を辿った先のページを action の結果として受け取る。`submitAction` は、`router.visit` が redirect の行き先の GET で決着すれば `ok: true` を返す (Void 1.11.0 の `packages/void/src/pages/client.ts`)。`requireAuth(c, { throwRedirect })` を action で使っても redirect なので同じになる。`usePageAction` の `run` は成功として `onSuccess` を走らせ、書き込んでいないのに完了を読み上げ、ログインのページへ移って入力が消える (2026-11-03、`vp preview`)。
 
 middleware が action の要求に 401 を返すと、Void の client は 401 を throw する ([Void docs「Actions & Forms」][] の Validation Errors、`pages/action-result.ts` の `categorizeActionError`)。`run` は toast でログインし直しを案内し (`src/lib/mutation-error.ts`)、ダイアログと入力は残る。cookie はタブをまたいで効くので、別のタブでログインし直せば、残った入力のまま送り直せる (2026-11-03、`vp preview`)。
 
 ### page の loader に middleware を渡さない理由
 
-Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action にこの形を使うと、Void 1.5.0 までは loader が 500、action が空の 204 を返し、validator の型が落ちる (voidzero-dev/void#564。修正の voidzero-dev/void#624 は 2026-11-02 に merge された。2026-11-03 の時点で最新の v1.5.0 は、その merge より前に公開され、修正を含まない)。global の middleware は page の loader と action の前に走るので (Void 1.4.0 の `router/compile.ts`)、保護をそこに置く (ADR-0053)。
+Void の docs は、route ごとの middleware を `defineHandler(middleware, handler)` で渡す形を書く ([Void docs「Server Routing」][] の Per-route middleware)。page の loader と action には渡さない。守るページごとに渡すと、渡し忘れたページが開く。global の middleware はすべての要求で page の loader と action の前に走り ([Void docs「Server Routing」][] の Global middleware)、`src/features/auth/access.ts` の `isUnder` が下位の path も守るので、既存の守る path の下に足したページは何も書かずに守られる (ADR-0053)。
 
 ### 遷移を待たずに Action を終える理由
 
 GET の `router.visit` の Promise は、新しいページの描画が commit されてから決着する (`@void/react` 1.4.0 の `runtime/pages-client.ts` の `finishNavigation`)。Void はその描画を Transition で予約し、React は進行中の Transition をまとめる ([React docs「useTransition」][] の Caveats: "If there are multiple ongoing Transitions, React currently batches them together.")。Action の中で visit を await すると、Action は commit を待ち、commit は Action の終わりを待つ。2026-11-02 に dev で、登録の送信のボタンが pending のまま止まり、URL も変わらなかった。
 
-Void 1.4.0 の docs は programmatic な遷移を `router.visit('/users');` と await せずに書き ([Void docs「Pages Routing」][] の How Navigation Works)、1.5.0 の docs は transition の外の例で `await router.visit(profile)` と書く (`node_modules/void/docs/guide/pages-routing/overview.md`)。transition・`<form action>`・`useActionState` の中で `router.visit()` と `router.refresh()` を await すると決着しないことは、voidzero-dev/void#663 (2026-11-02、1.5.0) が表で示す。1.5.0 の `action()` と `useForm` は shell の到着で決着するので止まらない (ADR-0016)。`startVisit` は await しない形に、失敗を toast に出す処理を足したものである。待たないので、Action の pending は遷移の commit より先に解ける。
+Void 1.4.0 の docs は programmatic な遷移を `router.visit('/users');` と await せずに書き ([Void docs「Pages Routing」][] の How Navigation Works)、1.5.0 の docs は transition の外の例で `await router.visit(profile)` と書く ([Void docs「Pages Routing」の v1.5.0][])。transition・`<form action>`・`useActionState` の中で `router.visit()` と `router.refresh()` を await すると決着しないことは、voidzero-dev/void#663 (2026-11-02、1.5.0) が表で示す。1.5.0 の `action()` と `useForm` は shell の到着で決着するので止まらない (ADR-0016)。`startVisit` は await しない形に、失敗を toast に出す処理を足したものである。待たないので、Action の pending は遷移の commit より先に解ける。
 
-voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.visit()` と `router.refresh()` に `resolveOn: 'data' | 'commit'` を足し、docs「React navigation completion」で transition の中の await に `{ resolveOn: 'data' }` を案内する。この commit は v1.5.0 の公開より後で、2026-11-03 の時点で含む版は無い。含む版に上げたら、Action の中の遷移を `await router.visit(path, { resolveOn: "data" })` に替え、`startVisit` を消す (`src/lib/start-visit.ts` の docstring)。
+voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.visit()` と `router.refresh()` に `resolveOn: 'data' | 'commit'` を足し、docs「React navigation completion」で transition の中の await に `{ resolveOn: 'data' }` を案内する。この commit を含む最初の tag は v1.6.0 である。Action の中の遷移を `await router.visit(path, { resolveOn: "data" })` に置き換えるまでは、`startVisit` を使う (`src/lib/start-visit.ts` の docstring)。
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.4.0 に固定した版を指す。Better Auth docs は 2026-11-02 に読んだ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.4.0 か v1.11.0) を固定して指す。Better Auth docs は 2026-11-02 に読んだ。
 
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
 [Void docs「Sending Email」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/email/sending.md
+[Void docs「Loaders」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/pages-routing/loaders.md
+[Void docs「Redirects」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/edge/redirects.md
+[Void docs「Rewrites」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/api/rewrites.md
 [Void docs「Server Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/server-routing.md
+[Void docs「Pages Routing」の v1.5.0]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/overview.md
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/overview.md
 [Void の commit 2248088]: https://github.com/voidzero-dev/void/commit/2248088ea9dc5e8fb70431772443b5349748d806
 [Void docs「Actions & Forms」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/actions-and-forms.md

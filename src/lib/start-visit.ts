@@ -14,10 +14,10 @@ import { toastMutationError } from "./mutation-error";
  * 待たないので、Action の pending は遷移の commit より先に解ける。後から始めた遷移に取り消された GET は
  * `undefined` で決着するので何も出さず、それ以外の失敗は toast に出す。
  *
- * 撤去の条件: `router.visit` と `router.refresh` が `resolveOn: "data"` を受ける版 (voidzero-dev/void#663 を閉じた
- * commit 2248088。1.5.0 の公開より後で、2026-11-03 の時点で未公開) に上げたら、Action の中の遷移を
- * `await router.visit(url, { resolveOn: "data" })` に替え、この関数を消す。Void の docs「React navigation completion」
- * が transition・`<form action>`・`useActionState` の中の await に案内する形になる
+ * Void 1.6.0 から、`router.visit` と `router.refresh` は `resolveOn: "data"` を受ける (voidzero-dev/void#663 を閉じた
+ * commit 2248088。最初の tag は v1.6.0)。Action の中の遷移を `await router.visit(url, { resolveOn: "data" })` に置き換えるまでは、
+ * この関数を使う。置き換えたら消す。Void の docs「React navigation completion」が transition・`<form action>`・
+ * `useActionState` の中の await に案内する形である
  */
 export function startVisit(
   router: Pick<VoidRouter, "visit">,

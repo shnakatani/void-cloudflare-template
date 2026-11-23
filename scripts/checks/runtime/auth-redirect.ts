@@ -9,7 +9,7 @@ import {
  * 未ログインの文書の要求 (GET) が保護した path から `/login` へ送られ、書き込みの要求 (POST) は送られずに 401 で
  * 止まることを、ビルド成果物を `vp preview` で起動して確かめる。
  * 保護は `middleware/01.auth.ts` と `src/features/auth/access.ts` が持つ。判定の関数は unit のテストが見るが、
- * middleware が要求の経路に載っていること、redirect が絶対 URL で query を混ぜないこと (voidzero-dev/void#648)、
+ * middleware が要求の経路に載っていること、redirect が絶対 URL で要求の query を混ぜないこと、
  * 書き込みの要求が redirect ではなく 401 を返すことは、動かさないと分からない。
  * 書き込みの要求が redirect を返すと、Void の `action()` は行き先のページを成功として受け取り、保存していないのに
  * 成功の通知が出る (ADR-0053)。

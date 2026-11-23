@@ -43,6 +43,8 @@
 
 ## 出典
 
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.4.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.4.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.4.0 と同じ内容とは限らない。
+
 - Void docs「What is Void?」: `node_modules/void/docs/guide/index.md`
 - Void docs「Supported App Types」: `node_modules/void/docs/guide/app-types.md`
 - Void docs「Meta-Frameworks」: `node_modules/void/docs/integrations/frameworks/overview.md`

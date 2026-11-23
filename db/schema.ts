@@ -7,7 +7,8 @@ export const notes = sqliteTable(
   "notes",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    // auth の user の id。外部キーは張らない。Void の docs に auth の table へ張る公式の形が無い
+    // auth の user の id。外部キーは張っていない。Void の docs「Authentication」の Querying Authentication Tables は、
+    // `@auth-schema` の `userTable.id` へ張る形を示す (Void 1.11.0)。張るかは別に確かめる
     userId: text("user_id").notNull(),
     title: text("title").notNull(),
     body: text("body").notNull().default(""),

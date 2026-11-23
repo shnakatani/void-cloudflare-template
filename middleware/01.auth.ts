@@ -12,15 +12,16 @@ declare module "void" {
 }
 
 /**
- * 保護する path の未ログインの要求の redirect と 401、全ページへの user。page の loader・action に middleware を渡す形
- * (`defineHandler(middleware, handler)`) は Void 1.5.0 まで壊れる (voidzero-dev/void#564) ので、global に置く
+ * 保護する path の未ログインの要求の redirect と 401、全ページへの user。守るページごとに middleware を渡すと渡し忘れたページが
+ * 開くので、守る処理を global の middleware の 1 か所に置く (docs/guides/auth.md「page の loader に middleware を渡さない理由」)
  */
 export default defineMiddleware(async (c, next) => {
   const user = getUser();
   const guard = authGuard(pathAccess(c.req.path), user !== null, c.req.method);
   switch (guard.kind) {
     case "redirect":
-      // 相対の path を渡すと、request の query が行き先に混ざる (voidzero-dev/void#648)
+      // middleware の c.redirect は相対の path でも request の query を足さない (Void の docs「Redirects」) が、すべての c.redirect を
+      // 絶対 URL にそろえ、verify:auth-redirect も絶対 URL で比べる (docs/guides/auth.md「redirect を絶対 URL で書く理由」)
       return c.redirect(new URL(guard.path, c.req.url).href);
     case "unauthorized":
       // handler の requireAuth(c) と同じ応答にする

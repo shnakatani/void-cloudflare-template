@@ -106,10 +106,10 @@ function routeParams(params: unknown): Record<string, string> | undefined {
  * `vp check` が落ちる。
  *
  * 撤去の条件 (先に成り立った方):
- * - `router.visit` が `resolveOn: "data"` を受ける版 (voidzero-dev/void#663 を閉じた commit 2248088。1.5.0 の公開より後で、
- *   2026-11-03 の時点で未公開) に上げたら、Void の docs「React navigation completion」の形の
- *   `router.visit(url, { method, data, preserveScroll, viewTransition: false, resolveOn: "data" })` に替え、`submitAction`
- *   の import を消す。GET でない visit では、`resolveOn: "data"` は `_resolveOnShell` と同じ時点で決着する (commit 2248088 の
+ * - Void 1.6.0 から、`router.visit` は `resolveOn: "data"` を受ける (voidzero-dev/void#663 を閉じた commit 2248088。最初の tag は
+ *   v1.6.0)。Void の docs「React navigation completion」の形の
+ *   `router.visit(url, { method, data, preserveScroll, viewTransition: false, resolveOn: "data" })` に置き換えるまでは、この
+ *   関数を使う。置き換えたら `submitAction` の import を消す。GET でない visit では、`resolveOn: "data"` は `_resolveOnShell` と同じ時点で決着する (commit 2248088 の
  *   `packages/react/src/runtime/pages-client.ts` の `resolveOnData`)。422 は戻り値の `errors` を `fieldErrorsOf` で、ほかの
  *   失敗は throw を `isActionError` で読む。戻り値の形は docs に無いので、その版の `submitAction` で確かめる。
  *   `interpolateRouteParams` も消すには、action の URL を `?` の前後に分け、前を `routeUrl(<path>, { params })`

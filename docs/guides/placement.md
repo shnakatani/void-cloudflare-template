@@ -145,7 +145,7 @@ git ls-files -co --exclude-standard '*.ts' '*.tsx' ':!docs/registry-baseline/**'
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指し、同じ内容が Void 1.5.0 に同梱の `node_modules/void/docs/` にある。TSConfig Reference は TypeScript-Website の `205122bb73` に固定した版を指す (2026-11-07 に確認)。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。TSConfig Reference は TypeScript-Website の `205122bb73` に固定した版を指す (2026-11-07 に確認)。
 
 [Void docs「Project Structure」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/structure.md
 [Void docs「Pages Routing」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/overview.md

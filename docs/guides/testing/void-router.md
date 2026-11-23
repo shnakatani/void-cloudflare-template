@@ -56,4 +56,4 @@ await render(
 
 `VoidRouterProvider` は、`navigate` のたびに URL から作り直した router の値を `RouterContext` に渡す。React の context は値の同一性が変わらないと購読者を描き直さないので、同じ object を書き換えるだけでは `useRouter().path` を読む部品が古い path のまま残る (`src/test/app/void-router.tsx` の docstring)。
 
-Void の docs に、React の部品をテストする手順は無い (2026-11-01、`node_modules/void/docs/` を見た。ADR-0048 の Context)。
+Void の docs に、React の部品をテストする手順は無い (2026-11-01、Void 1.4.0 の同梱の `node_modules/void/docs/` を見た。ADR-0048 の Context)。

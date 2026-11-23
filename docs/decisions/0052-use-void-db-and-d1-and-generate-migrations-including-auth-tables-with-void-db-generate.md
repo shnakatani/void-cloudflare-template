@@ -61,6 +61,8 @@ Void は、schema と migration のずれ (drift) を CI で止める command �
 
 ## 出典
 
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.4.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.4.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.4.0 と同じ内容とは限らない。
+
 - Void の docs「Database」(Schema Definition、CLI Commands、Hand-written migrations): `node_modules/void/docs/guide/database.md`
 - Void の docs「D1 (SQLite)」: `node_modules/void/docs/guide/database/d1.md`
 - Void の docs「Authentication」(Database and Migrations): `node_modules/void/docs/guide/auth.md`

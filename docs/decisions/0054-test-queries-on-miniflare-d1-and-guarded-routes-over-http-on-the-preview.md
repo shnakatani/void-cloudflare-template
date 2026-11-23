@@ -49,11 +49,13 @@ Void 1.4.0 に、loader・action と D1 を利用者がテストする公式の�
 - テストの `db` は schema と `database.casing` を持たない。query は列名を明示し、`db.query.*` に頼らない (ADR-0052)
 - loader と action に分岐を足すほど、(c) でしか確かめられない部分が増える。loader と action は `getUser()` か `requireAuth(c)` で読んだ user と `db` を (b) の関数へ渡すだけに保つ (ADR-0055)
 - preview の D1 は dev の D1 (`.void/v3/d1`) と同じで、preview は migration を当てない (ADR-0052)。HTTP の検査は書き込まない。sign up すると開発者の dev のデータにテストのユーザーが溜まる。ログインした経路は dev で確かめる
-- `createTestD1()` は `miniflare` を直接使う。版は `@cloudflare/vite-plugin` が解決する版に exact で揃え、Dependabot の `void` グループで一緒に上げる (`.github/dependabot.yml`)。ずれると、テストの D1 と dev の D1 の挙動が分かれうる
+- `createTestD1()` は `miniflare` を直接使う。版は `@cloudflare/vite-plugin` が解決する版に exact で揃え、Void を上げるたびに手で書き換える。Dependabot は prerelease の `miniflare` を上げない (`.github/dependabot.yml` の `void` グループのコメント)。ずれると、テストの D1 と dev の D1 の挙動が分かれうる
 - `createTestD1()` は呼ぶたびに workerd を起動する。テストごとに `dispose()` で止める
 - loader と action が query の関数に渡す `userId` を取り違えても (別の値を渡す、固定の値を渡す)、(a) と (b) は捕まえない。(b) は渡された `userId` で正しく絞るだけで、(a) の型は文字列の取り違えを区別しない。捕まえるのは (c) で、2 人の user を用意して別の user の行が読めないことを叩く検査だけである。loader と action を薄く保つ (ADR-0055) のは、この届かない範囲を狭くするためでもある
 
 ## 出典
+
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.4.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.4.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.4.0 と同じ内容とは限らない。
 
 - Void の docs「User-Facing Imports」: `node_modules/void/docs/reference/api.md`
 - Void の docs の `createDb`: `node_modules/void/docs/reference/api/database.md`
