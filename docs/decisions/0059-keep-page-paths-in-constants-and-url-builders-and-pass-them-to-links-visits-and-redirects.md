@@ -55,7 +55,7 @@ Void 1.5.0 で、遷移の行き先を受ける口の型は次のとおりであ
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame` で引く)。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - `@void/react` 1.5.0 の `dist/index.d.mts` (`Link` の `CommonProps`)、`void` 1.5.0 の `dist/pages/client.d.mts` (`VoidRouter`)、`dist/routes-stub.mjs`、生成された `.void/routes.d.ts` (`RoutePathMap`・`RoutePath`・`PageActionMap`・`ActionUrl`)
 - Void の docs「Type Safety」の Typed URLs and Navigation: `node_modules/void/docs/guide/type-safety.md`
