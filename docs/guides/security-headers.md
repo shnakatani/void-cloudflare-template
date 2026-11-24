@@ -30,7 +30,7 @@
 
 ### CSP を広げる前に Report-Only で試す
 
-`style-src` のように、いま止めていない種類の資源を止めるディレクティブを足すときは、先に `Content-Security-Policy-Report-Only` で配って違反を集める。Report-Only は違反を止めず、報せるだけにする ([MDN「Content-Security-Policy-Report-Only」][])。2026-11-02 に Chromium 156 で確かめると、違反は `securitypolicyviolation` の event に `disposition: "report"` で出た。
+`style-src` のように、いま止めていない種類の資源を止めるディレクティブを足すときは、先に `Content-Security-Policy-Report-Only` で配って違反を集める。Report-Only は違反を止めず、報せるだけにする ([MDN「Content-Security-Policy-Report-Only」][])。違反は `securitypolicyviolation` の event に `disposition: "report"` で出る (2026-11-02、Chromium 156 で確かめた)。
 
 1. `void.config.ts` の `routing.headers` の `"/*"` に、`Content-Security-Policy` と並べて `"Content-Security-Policy-Report-Only: <試すディレクティブ>"` を足す。`Content-Security-Policy` の行は変えない
 2. `vp build` のあと `vp preview` で起動し、「違反を集める」の手順で、ページの表示・client の遷移・ダイアログの開閉・戻るを通して違反を集める。dev は CSP の値が本番と違うので (ADR-0051)、dev では試さない

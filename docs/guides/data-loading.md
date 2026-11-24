@@ -61,7 +61,7 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 
 - 区画の失敗を throw にしない。2026-11-02 時点 (Void 1.4.0) の記録では、ページごと静的な 500 になり、検索欄のような周りの要素も消えた (ADR-0057)
 - 失敗の値を返したら、「server のログに失敗を残す」の形で残す。応答は HTTP の 200 で届くので、ほかに気付く手掛かりが無い (ADR-0057)
-- not found に `throw new HTTPException(404)` を使わない。2026-11-02 時点 (Void 1.4.0) の記録では、本文が message だけの text の 404 になり、`public/404.html` を通らなかった (ADR-0050)
+- not found に `throw new HTTPException(404)` を使わない。合う error component の無いこのテンプレートでは、例外の応答がそのまま返る ([Void docs「Not Found & Errors」][] の HTTP exceptions)。2026-11-02 時点 (Void 1.4.0) の記録では、本文が message だけの text の 404 になり、`public/404.html` を通らなかった (ADR-0050)
 - loader の Props の型で、読めた値と失敗の値を区別できる形にする (一覧なら `readonly T[] | null`)。ページは型の分岐で失敗の区画を描く
 - loader が失敗の値を返した区画の見出しは、`StatusHeading` (`src/components/parts/status-heading.tsx`) で描く。遷移でページへ来たときの focus が、ページ名の `<h1>` でなく失敗の見出しへ移る (ADR-0057)
 - 区画がページの主な中身で、それが失敗の値なら、`head()` が loader の props から組む title に `errorPageTitle` (`src/lib/page-title.ts`) を付ける。付けないと、タブの title と遷移の読み上げにページ名だけが出て、失敗が伝わらない (ADR-0057)
@@ -110,7 +110,7 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。Cloudflare docs は 2026-11-03 に確認した (「Workers Logs」と「Spans and attributes」は 2026-11-24 に原文と照らした)。react.dev「hydrateRoot」は 2026-11-24 に原文と照らした。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。ただし「Not Found & Errors」は v1.11.0 に固定し、2026-11-24 に原文と照らした。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。Cloudflare docs は 2026-11-03 に確認した (「Workers Logs」と「Spans and attributes」は 2026-11-24 に原文と照らした)。react.dev「hydrateRoot」は 2026-11-24 に原文と照らした。
 
 [Cloudflare docs「Workers Best Practices」]: https://developers.cloudflare.com/workers/best-practices/workers-best-practices/#enable-workers-logs-and-traces
 [Cloudflare docs「Workers Logs」]: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#invocation-logs
@@ -119,3 +119,4 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 [react.dev「hydrateRoot」]: https://react.dev/reference/react-dom/client/hydrateRoot#error-logging-in-production
 [Void docs「Loaders & Props」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/loaders.md
 [Void docs「Resource Clients」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/api/resources.md
+[Void docs「Not Found & Errors」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/pages-routing/errors.md#http-exceptions

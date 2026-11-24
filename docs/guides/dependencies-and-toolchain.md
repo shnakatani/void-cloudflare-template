@@ -247,7 +247,7 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 
 ### 走査対象を持つ config を足す
 
-`tooling/test/config.ts` (test。project はここから継承する) / `tooling/lint/config.ts` (lint) / `vite.config.ts` (fmt) は、それぞれ `.claude/worktrees/**` を除外している。`tsconfig.*.json` は `.claude/worktrees/**` の除外を持たない。どの `include` もルートの直下の名前 (`src/**/*.ts`・`scripts/**/*.ts` など) から書くので、`.claude/` を拾わない。2026-11-02 時点 (TypeScript 6.0.3) の記録では、TypeScript の `include` の `**` は `.` で始まるディレクトリに降りなかった (`lib/typescript.js` の `doubleAsteriskRegexFragment` が、ディレクトリ名を `[^/.][^/]*` に限っていた)。2026-11-03 に `src/.<名前>/x.ts` を置くと `tsc -p tsconfig.app.json --listFilesOnly` に出ず、同じファイルを `.` で始まらないディレクトリに置くと出た。`.` で始まるディレクトリのファイルを型検査に入れるときは、`.storybook/preview.tsx` のように字面で書く。走査対象を持つ config を新しく足したら、同じ除外をその場で書くか、その config の glob が `.claude/` に降りないことを確かめる。除外の経路は config ごとに別で共通化できず、1 つ落とすと worktree のコードがその走査へ黙って混ざる。
+`tooling/test/config.ts` (test。project はここから継承する) / `tooling/lint/config.ts` (lint) / `vite.config.ts` (fmt) は、それぞれ `.claude/worktrees/**` を除外している。`tsconfig.*.json` は `.claude/worktrees/**` の除外を持たない。どの `include` もルートの直下の名前 (`src/**/*.ts`・`scripts/**/*.ts` など) から書くので、`.claude/` を拾わない。2026-11-01 時点 (TypeScript 6.0.3) の記録では、TypeScript の `include` の `**` は `.` で始まるディレクトリに降りなかった (`lib/typescript.js` の `doubleAsteriskRegexFragment` が、ディレクトリ名を `[^/.][^/]*` に限っていた)。2026-11-03 に `src/.<名前>/x.ts` を置くと `tsc -p tsconfig.app.json --listFilesOnly` に出ず、同じファイルを `.` で始まらないディレクトリに置くと出た。`.` で始まるディレクトリのファイルを型検査に入れるときは、`.storybook/preview.tsx` のように字面で書く。走査対象を持つ config を新しく足したら、同じ除外をその場で書くか、その config の glob が `.claude/` に降りないことを確かめる。除外の経路は config ごとに別で共通化できず、1 つ落とすと worktree のコードがその走査へ黙って混ざる。
 
 ### `git status` に出ないファイルを調べる
 

@@ -132,14 +132,14 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 | traces | `0.01` (1%)  | 2026-12-01 から、traces は logs と同じ取り込みの枠を使う。Free の枠は 1 日 0.5 GB で、超えるとその日の取り込みが止まる ([Cloudflare docs「Observability pricing」][])。traces の既定の率は `1` なので ([Cloudflare docs「Traces」][] の Sampling)、書かないと traces が logs の枠を食う |
 
 - `observability.enabled: true` だけでは traces は付かない。traces は `traces.enabled` で有効にする ([Cloudflare docs「Traces」][] の How to enable tracing)
-- `cloudflare.observability` は、Void が生成する Cloudflare の設定に渡る ([Void docs「Configuration」][] の `cloudflare`)。2026-11-03 に Void 1.4.0 の `vp build` で確かめると、`dist/ssr/wrangler.json` にもそのまま出た。2026-11-03 時点 (Void 1.5.0) の記録では、deploy は書いた値を Worker の設定へ送っていた (`cli/cf-version-runner.ts` と `cli/cf-worker-settings.ts`)
+- `cloudflare.observability` は、Void が生成する Cloudflare の設定に渡る ([Void docs「Configuration」の cloudflare][])。2026-11-03 に Void 1.4.0 の `vp build` で確かめると、`dist/ssr/wrangler.json` にもそのまま出た。2026-11-03 時点 (Void 1.5.0) の記録では、deploy は書いた値を Worker の設定へ送っていた (`cli/cf-version-runner.ts` と `cli/cf-worker-settings.ts`)
 - 料金と枠は 2026-11-03 に読んだ docs の値で、Workers Logs の料金は 2026-11-30 までは別の表による ([Cloudflare docs「Workers Logs」][] の Pricing)
 
 ### 要求の body の上限を 100 KiB にする理由
 
 [Cloudflare Workers「Best Practices」][] の Stream request and response bodies は、全部を読む body (JSON の payload など) には、読む前に上限を課すよう案内する。Worker の memory は isolate ごとに 128 MB で、1 つの isolate が並行する多くの要求を受ける ([Cloudflare docs「Workers Limits」][] の Memory)。
 
-- 2026-11-03 時点 (Void 1.5.0、better-auth 1.7.14) の記録では、page の action の validator と Better Auth の endpoint は、body を全部読んでから扱っていた。どちらも、フォームの値の JSON を受ける
+- 2026-11-03 時点 (Void 1.4.0、better-auth 1.7.14) の記録では、page の action の validator と Better Auth の endpoint は、body を全部読んでから扱っていた。どちらも、フォームの値の JSON を受けていた
 - Cloudflare が要求の body に掛ける上限は、zone の plan で決まり、Free と Pro で 100 MB ([Cloudflare docs「Workers Limits」][] の Request and response limits)。memory の 128 MB を守る値ではない
 - フォームの JSON の大きさは、入力欄の上限 (スキーマの `v.maxCodePoints`) の合計の 6 倍と項目の名前で上から押さえられる。UTF-8 は 1 code point を最大 4 byte で書き、JSON が `\uXXXX` に escape する文字は 6 byte になる。100 KiB (102,400 byte) は、入力欄の上限が合わせておよそ 17,000 code point (102,400 ÷ 6) までのフォームを受ける
 - 100 KiB は memory の 128 MB の 0.08% で、並行する要求が上限ちょうどの body を同時に読んでも memory を圧迫しない
@@ -199,3 +199,4 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 [Cloudflare docs「Observability pricing」]: https://developers.cloudflare.com/observability/pricing/
 [Cloudflare docs「Static Assets Billing and Limitations」]: https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/
 [Hono docs「Body Limit Middleware」]: https://hono.dev/docs/middleware/builtin/body-limit
+[Void docs「Configuration」の cloudflare]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/config.md#cloudflare

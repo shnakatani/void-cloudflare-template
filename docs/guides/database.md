@@ -170,7 +170,7 @@ D1 の結果の `meta.served_by_primary` は、その query を処理した inst
 
 2026-11-02 時点 (Void 1.4.0) の記録では、アプリの `void/db` は、voidPlugin が server の環境で差し替える virtual module で、drizzle に schema と casing を渡していた。Vitest の中では `vite.config.ts` が voidPlugin を外すので、`void/db` は package の `runtime/db.mjs` に解決し、drizzle に schema も casing も渡していなかった (`plugin-drizzle.ts` と `runtime/db.ts`。ソースを読んだもの)。
 
-同じ記録では、型も schema を持っていなかった。`void/db` の `paths` を写すと unit project で `void/db` が `.d.ts` に解決して実行時に壊れるので、写さない (ADR-0047)。型は package の `DrizzleD1Database` で、`db.query.*` に型が付かなかった。
+同じ記録では、型も schema を持っていなかった。`void/db` の `paths` は写さない。2026-11-02 に Void 1.4.0 で写すと、unit project で `void/db` が `.d.ts` に解決して実行時に壊れた (ADR-0047)。型は package の `DrizzleD1Database` で、`db.query.*` に型が付かなかった。
 
 記録の時点では、`db.query.*` と casing はアプリでだけ効き、テストと型では効かなかった。列名を schema で明示し、query builder で書くと、アプリとテストと型の 3 つで同じに動く。
 

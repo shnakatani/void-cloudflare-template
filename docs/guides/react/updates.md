@@ -22,7 +22,7 @@
 
 ### page の props は Transition で入れ替わり、ダイアログの close は乗らない
 
-2026-11-02 時点 (Void 1.4.0) の記録では、Void は action の応答で loader を走らせ直し、新しい props を Transition の中で入れ替えていた。`action()` は応答の到着で resolve し、新しい props は Action の終わりに commit されていた。そのため `run` は応答の到着で resolve し、`await run()` の後の処理と `onSuccess` は、新しい props が描かれる前に走る。
+2026-11-02 時点 (Void 1.4.0) の記録では、Void は action の応答で loader を走らせ直し、新しい props を Transition の中で入れ替えていた。`action()` は応答の到着で resolve し、新しい props は Action の終わりに commit されていた。その版では、`run` は応答の到着で resolve し、`await run()` の後の処理と `onSuccess` は、新しい props が描かれる前に走った。
 2026-11-02 時点 (`@base-ui/react` 1.9.0、React 19.3.1) の記録では、Base UI のダイアログの handle は `useSyncExternalStore` で購読されていて、`handle.close()` によるアンマウントは即座に起きた。`useSyncExternalStore` の store の更新は、Transition の中で起きても React が緊急更新として描く ([React docs「useSyncExternalStore」][] の Caveats)。
 Transition から得られるのは、pending の管理と、pending の切り替えと props の入れ替わりを `<ViewTransition>` で装飾できること (推論) である (ADR-0015)。Transition は Action の実行順を保証しない ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)。
 出典は ADR-0015「page の props は Transition の中で入れ替わる」「`action()` は shell の到着で resolve する」「制約: ダイアログの close は Transition に参加しない」が持つ。

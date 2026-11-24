@@ -148,7 +148,7 @@ printf '\nBETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
 
 ### redirect を絶対 URL で書く理由
 
-middleware と handler の `c.redirect()` は、渡した location に要求の query を足さない ([Void docs「Redirects」][]: "It sends the location you provide without adding the request query.")。named action の相対の redirect は、action の URL に書いた query (action の名前を除く) を行き先に残す。`usePageAction` の `pageQuery` で載せたページの query もこれに入る。Void が今のページから足した query は残さない ([Void docs「Rewrites」][] の `c.redirect()`)。2026-11-24 時点 (Void 1.11.0) の記録では、Void が query を足すのは、named action の要求で `/` で始まる path を渡したときだけで、絶対 URL はそのまま送っていた (`runtime/routing/index.ts`)。
+middleware と handler の `c.redirect()` は、渡した location に要求の query を足さない ([Void docs「Redirects」][]: "It sends the location you provide without adding the request query.")。named action の相対の redirect は、action の URL に書いた query (action の名前を除く) を行き先に残す。`usePageAction` の `pageQuery` で載せたページの query もこれに入る。Void が今のページから足した query は残さない ([Void docs「Rewrites」][] の `c.redirect()`)。2026-11-23 時点 (Void 1.11.0) の記録では、Void が query を足すのは、named action の要求で `/` で始まる path を渡したときだけで、絶対 URL はそのまま送っていた (`runtime/routing/index.ts`)。
 
 絶対 URL で渡すのは、すべての `c.redirect` を 1 つの規範にそろえるためである。named action の保存のあとに一覧へ戻す redirect は、相対の path だとダイアログを開く query が行き先に残る (ADR-0056)。相対の path に替えるなら、`location` を絶対 URL で比べる `verify:auth-redirect` も直すことになる。
 
@@ -172,7 +172,7 @@ middleware と handler の `c.redirect()` は、渡した location に要求の 
 
 ### action の要求を redirect しない理由
 
-2026-11-03 に Void 1.4.0 の `vp preview` で確かめると、session が切れたまま action を送り、middleware が `/login` へ redirect したとき、Void の client は redirect を辿った先のページを action の結果として受け取った。`usePageAction` の `run` は成功として `onSuccess` を走らせ、書き込んでいないのに完了を読み上げ、ログインのページへ移って入力が消えた。2026-11-24 時点 (Void 1.11.0) の記録では、`submitAction` は、`router.visit` が redirect の行き先の GET で決着すれば `ok: true` を返していた (`packages/void/src/pages/client.ts`)。`requireAuth(c, { throwRedirect })` を action で使っても redirect なので同じになる。
+2026-11-03 に Void 1.4.0 の `vp preview` で確かめると、session が切れたまま action を送り、middleware が `/login` へ redirect したとき、Void の client は redirect を辿った先のページを action の結果として受け取った。`usePageAction` の `run` は成功として `onSuccess` を走らせ、書き込んでいないのに完了を読み上げ、ログインのページへ移って入力が消えた。2026-11-23 時点 (Void 1.11.0) の記録では、`submitAction` は、`router.visit` が redirect の行き先の GET で決着すれば `ok: true` を返していた (`packages/void/src/pages/client.ts`)。`requireAuth(c, { throwRedirect })` を action で使っても redirect なので、同じ扱いになる作りだった。
 
 middleware が action の要求に 401 を返すと、Void の client は 401 を throw する ([Void docs「Actions & Forms」][] の Validation Errors、`pages/action-result.ts` の `categorizeActionError`)。`run` は toast でログインし直しを案内し (`src/lib/mutation-error.ts`)、ダイアログと入力は残る。cookie はタブをまたいで効くので、別のタブでログインし直せば、残った入力のまま送り直せる (2026-11-03 に Void 1.4.0 の `vp preview` で確かめた)。
 
