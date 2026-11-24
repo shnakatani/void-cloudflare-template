@@ -36,7 +36,7 @@ paths:
 
 ## 型検査
 
-- tsconfig の `include`・`exclude`・`files` を変えたら、`include` で入るファイルが app・worker・node のどれか 1 つにだけ入ることを `--showConfig` で確かめる。重なりは `exclude` で無くし、`references` の並び順で割り当てさせない。`vp check` は重なりも漏れも知らせない (`docs/guides/placement.md`「tsconfig にファイルを割り当てる」)
+- tsconfig の `include`・`exclude`・`files` を変えたら、`include` で入るファイルが app・worker・node のどれか 1 つにだけ入ることを `--showConfig` で確かめる。重なりは `exclude` で無くし、`references` の並び順で割り当てさせない。`vp check` は重なりも漏れも知らせないことがある (`docs/guides/placement.md`「tsconfig にファイルを割り当てる」)
 - `typescript` を直接の依存に置かない。型検査は `vp check` の type-aware lint (tsrs) が担い、`typescript` は推移依存として入る。直接の依存へ戻すのは、リポジトリのコードが `typescript` を import するときだけ (`docs/guides/dependencies-and-toolchain.md`「`typescript` を直接の依存に置かない理由」)
 
 ## Vitest の設定 (`vite.config.ts` の `test`)

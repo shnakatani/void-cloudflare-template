@@ -62,12 +62,12 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 - TanStack Form から page の action へ送るときは `usePageActionForm` を使い、返る `submit` を `ActionForm` の `submitAction` に渡す。`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが消えず、form が二度と送れなくなる (`docs/guides/react/updates.md`「mutation の書き方」)
 - ページの URL が query (ダイアログを開く key、絞り込みの語) を持つときは、`usePageAction` / `usePageActionForm` の `pageQuery` に `?` を除いて渡す。載せないと、server の検証の失敗 (422) でページが query の無い URL で描き直され、ダイアログと絞り込みが消えてエラーも出ない。その action の redirect は絶対 URL で返す (`docs/guides/react/updates.md`「mutation の書き方」)
 - TanStack Form から Better Auth の client (`void/client` の `auth`) で送るときは、`requestAuth` で呼び、`ActionForm` の `submitAction` に `submitClearingServerFieldErrors(form)` を渡す。理由は上の行と同じ (`docs/guides/auth.md`「Better Auth の client から送る」)
-- Action の中から遷移するときは `startVisit(router, path)` で始め、`router.visit` を await しない。Action と遷移の commit が互いを待ち、ボタンが pending のまま止まる (`docs/guides/auth.md`「Better Auth の client から送る」)
-- `router.refresh()` の決着を待つ処理 (全画面のエラー表示の再試行など) は、Action の外のハンドラで走らせ、`ActionButton` の `action` に渡さない。理由は上の行と同じで、読み直しの応答が返っても表示が替わらない。決着までの pending は部品の state に持ち、`ActionButtonShell` の `isPending` に渡す (ADR-0050)
+- Action の中から遷移するときは `startVisit(router, path)` で始め、`router.visit` を await しない。Action と遷移の commit が互いを待ち、ボタンが pending のまま止まることがある (`docs/guides/auth.md`「Better Auth の client から送る」)
+- `router.refresh()` の決着を待つ処理 (全画面のエラー表示の再試行など) は、Action の外のハンドラで走らせ、`ActionButton` の `action` に渡さない。理由は上の行と同じで、読み直しの応答が返っても表示が替わらないことがある。決着までの pending は部品の state に持ち、`ActionButtonShell` の `isPending` に渡す (ADR-0050)
 - `action()` は `usePageAction` を通して呼ぶ。直に呼ぶと `ok: false` が通知の無い失敗になる (ADR-0016)
 - 確定操作の直後に close するときも、Action は `run` を await して決着まで続け、対象の項目に楽観値から busy 表現を付ける。Action の中で閉じるのは `handle.close()` で行う。同期区間で React の state (`open`) を false にしても、ダイアログは Action の終わりまで残る (`docs/guides/react/updates.md`「完了点ごとに Transition を終える」)
 - 確定操作の直後に閉じる操作は、その Action の間、同じ種類の操作のほかの項目の起点を、対象の項目と同じ楽観値から `aria-disabled` で止める。止めないと、後の送信が前の送信を取り消し、届く前なら前の操作は知らされずに起きない。native の `disabled` は、確定のあと移した focus を `<body>` へ落とす (ADR-0017)
-- それ以外の起点 (遷移、別の種類の操作) を送信中に止める仕組みを足さない。`useNavigation().state` は、Action の最初の `await` より前に始めた送信の間 `"submitting"` を描かないので、止める信号にならない。busy の表現は対象の項目だけに付ける (ADR-0017)
+- それ以外の起点 (遷移、別の種類の操作) を送信中に止める仕組みを足さない。`useNavigation().state` は、Action の最初の `await` より前に始めた送信の間 `"submitting"` を描かないことがあるので、止める信号にならない。busy の表現は対象の項目だけに付ける (ADR-0017)
 - Action の中の `await` の後の state 更新は、上から順に当てる: サーバーの値は set せず action の応答で入れ替わる props に任せる / Action の結果を state に持つなら `useActionState` / それ以外は set を `startTransition` で包む。`await` の後の更新は Transition にならず、Transition の中の Action は実行順も保証されない (`docs/guides/react/updates.md`「mutation の書き方」)
 - 楽観表示は loader の props を元に `useOptimistic` で出し、reducer で書く。reducer は元の値に変更がすでに入っていても同じ結果を返す形にする。新しい props が Action の途中で commit されると、素直に足した reducer は同じ項目を 2 つ並べる (`docs/guides/react/updates.md`「楽観表示を出す」)
 - 操作の開始の announce は Action の中の `run` より前、完了は `usePageAction` の `onSuccess` に書く (`src/lib/live-announcer.ts` の `announce()`、ADR-0026)
@@ -90,10 +90,10 @@ lint では見ないのでレビューで見る。
 
 - アプリのページへ遷移する `Link`・`ButtonLink`・`NavLink` の `href`、`router.visit` と `startVisit` に path の文字列を直に書かず、path の定数か URL を組む関数を渡す。`href` の文字列は在らない path でも型検査を通り、押すまで 404 に気付けない (ADR-0059)
 - path の定数は `"<path>" satisfies RoutePath` (`void/routes` の型) で書く。当てないと、ページを動かしたあとも古い path のまま型検査を通る (ADR-0059)
-- ページを足す・動かす・消したら、`vp exec void prepare` を打つか dev server を起動してから `vp check` を打つ。`vp check` は route の型を作り直さず、古い型のまま通る (ADR-0059)
+- ページを足す・動かす・消したら、`vp exec void prepare` を打つか dev server を起動してから `vp check` を打つ。`vp check` は route の型を作り直さず、古い型のまま通ることがある (ADR-0059)
 - `c.redirect` には、path の定数か URL を組む関数の値を `new URL(<値>, c.req.url).href` で絶対 URL にして渡す。named action の相対の redirect は、action の URL に書いた query (`pageQuery` で載せたページの query を含む) を行き先に残す (`docs/guides/auth.md`「redirect を絶対 URL で書く理由」)
 - query を持つ URL は、path の定数を `routeUrl(<定数>, { query })` (`void/routes`) に渡して組む関数で組み、呼び出し側で `?` と `&` を連結しない (ADR-0059)
-- `tsconfig.paths.json` に `void/routes` の `paths` を写さない。unit project で `void/routes` が `.d.ts` に解決し、`routeUrl is not a function` で壊れる (ADR-0047)
+- `tsconfig.paths.json` に `void/routes` の `paths` を写さない。unit project で `void/routes` が `.d.ts` に解決し、`routeUrl is not a function` で壊れることがある (ADR-0047)
 - `router.visit` にも `routeUrl()` の文字列を渡し、行き先の object を渡さない。`Link` の `href` と `c.redirect` は文字列しか受けない (ADR-0059)
 - path の定数は URL を組む関数と別のモジュールに置き、そのモジュールは path の定数と型のほかを import しない。同じモジュールに置くと、リンクだけを描くページの client の chunk に検証のスキーマが入る (ADR-0059)
 
@@ -103,20 +103,20 @@ lint では見ないのでレビューで見る。
 
 - ページのデータは `pages/<path>.server.ts` の loader が返す props で読む。client にサーバの状態の取得やキャッシュの層 (TanStack Query など) を足さず、取り直しは action の応答、`router.refresh()`、遷移の loader の再実行に任せる (ADR-0063)
 - 遅い値も loader で await して返す。deferred props は使わない (ADR-0051)。遷移を待たせたくない値は、ページを分ける (ADR-0063)
-- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらない (ADR-0063)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらないことがある (ADR-0063)
 
 ## ページの失敗は loader の値と区画の境界で受ける
 
 lint では見ないのでレビューで見る。
 
-- ページの対象そのものが無いときは、loader で `return c.notFound()` を返す。`throw new HTTPException(404)` は本文が text だけの 404 になる (ADR-0050)
+- ページの対象そのものが無いときは、loader で `return c.notFound()` を返す。`throw new HTTPException(404)` は本文が text だけの 404 になることがある (ADR-0050)
 - ページは在り、その中の区画のデータや開く 1 件を読めない・無いときは、loader で throw せず失敗の値で返し、ページが区画に失敗を描く。throw するとページごと静的な 500 になり、検索欄のような周りも消える (ADR-0057)
 - 失敗の値を返したら、server の `logger.error` に残す。応答は 200 で届き、ほかに気付く手掛かりが無い (ADR-0057)
 - 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)
 - loader が失敗の値を返した区画の再試行は、`router.refresh()` を `Button` の `onClick` から呼ぶ。`SectionErrorBoundary` の再試行は loader を読み直さない (`docs/guides/data-loading.md`「失敗した画面から再試行する」)
 - 再試行の `router.refresh()` には `{ viewTransition: false }` を渡す。渡さないと、Void の既定で失敗の表示と読み直した画面がクロスフェードで重なる (ADR-0058)
 - `HTTPException` の `message`、`ValidationError` の文言、validator の message に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。production でもそのまま client に届く (ADR-0055)
-- server で調べたい失敗は、`HTTPException` を投げる前に `logger.error` に残す。`HTTPException` は server のログに出ない (ADR-0055)
+- server で調べたい失敗は、`HTTPException` を投げる前に `logger.error` に残す。`HTTPException` は server のログに出ないことがある (ADR-0055)
 - server のログは `void/log` の `logger.error(<固定の message>, <fields>)` で書き、`console.error` に文字列と Error を並べて渡さない。fields を項目で絞れない (`docs/guides/data-loading.md`「server のログに失敗を残す」)
 - 捕まえた例外は `{ error }` のように Error のまま fields に渡し、fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない (ADR-0055)
 
@@ -155,7 +155,7 @@ lint では見ないのでレビューで見る。
 - 瞬間 (ADR-0031) を date-fns で整形するときは `in: tz(APP_TIME_ZONE)` を渡すか値を `TZDate` にし、`@date-fns/tz` を直接の依存に足す。渡さないとシステムの TZ で計算する (`docs/guides/dates-and-time-zones.md`「画面に日時を出す」)
 - 暦の日付 (ADR-0031) の変換は `src/lib/calendar-date.ts`、表示は `src/lib/format-calendar-date-label.ts` の関数を通す。`YYYY-MM-DD` とローカルの 0 時の `Date` を往復させるので、TZ に依存しない (`docs/guides/dates-and-time-zones.md`「画面に暦の日付を出す」)
 - 食い違いを `suppressHydrationWarning` で抑えない。食い違った文字列がそのまま出る (`docs/guides/dates-and-time-zones.md`「タイムゾーンを明示して整形する理由」)
-- ブラウザの TZ や今日で描く部品 (Popover の外の Calendar など) は、部品の中で `use(browser())` を呼び、すぐ外を自前の `<Suspense>` で包む。省くと Void がページを包む Suspense が受け、初めの HTML からページごと消え、何も報告されない (`docs/guides/dates-and-time-zones.md`「ブラウザでだけ描く部品を組む」)
+- ブラウザの TZ や今日で描く部品 (Popover の外の Calendar など) は、部品の中で `use(browser())` を呼び、すぐ外を自前の `<Suspense>` で包む。省くと Void がページを包む Suspense が受け、初めの HTML からページごと消えることがあり、何も報告されない (`docs/guides/dates-and-time-zones.md`「ブラウザでだけ描く部品を組む」)
 - 呼び出し側が Suspense を置くとは限らない hook でブラウザの値を返すときは、`use(browser())` を呼ばず、`useSyncExternalStore` の `getServerSnapshot` で server の描画と hydration の間の値を返す (`docs/guides/dates-and-time-zones.md`「ブラウザでだけ描く部品を組む」)
 
 ## 環境変数は env.ts で宣言する

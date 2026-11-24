@@ -15,8 +15,8 @@ paths:
 
 - schema かルートの `auth.ts` を変えたら `vp exec void db generate` を打ち、生成された `.sql` を読んで `db/migrations/` ごと commit する。auth の table は `db/schema.ts` に書かない (`docs/guides/database.md`「schema を変える」)
 - 生成した migration を手で書き換えない。直すときは `db/migrations/` を HEAD に戻し、schema を直して生成し直す (`docs/guides/database.md`「schema を変える」)
-- dev の起動ログに `Local database already has application tables but no Void migration history` が出たら `vp exec void db reset` で作り直す。dev は ready になるが migration が当たっていない (`docs/guides/database.md`「dev の D1 を作り直す」)
-- `tsconfig.paths.json` に `void/db` の `paths` を写さない。unit project で `void/db` が `.d.ts` に解決し、`createDb is not a function` で壊れる (ADR-0047)
+- dev の起動ログに `Local database already has application tables but no Void migration history` が出たら `vp exec void db reset` で作り直す。dev は ready になるが migration が当たっていないことがある (`docs/guides/database.md`「dev の D1 を作り直す」)
+- `tsconfig.paths.json` に `void/db` の `paths` を写さない。unit project で `void/db` が `.d.ts` に解決し、`createDb is not a function` で壊れることがある (ADR-0047)
 
 ## query
 
@@ -43,5 +43,5 @@ paths:
 
 - 行の所有は query の関数の `userId` の条件で判定し、ロールなど所有以外の条件は page の loader・action と `routes/` の handler の先頭で、`requireAuth(c)` で読んだ user から判定する。global の middleware にロールの判定を載せない (ADR-0065)
 - ロールは `auth.ts` の Better Auth の `admin()` plugin で `AuthUser` に持たせ、判定は `src/features/auth/` の純粋関数に書く。`role` はコンマ区切りの文字列 (`docs/guides/auth.md`「認可を足す」)
-- loader で判定が外れたら `HTTPException(403)` を throw せず、権限が無いことを表す値を返してページが説明を描く。throw するとページ自身の props で権限が無いことを説明できず、`_error` の無いこのテンプレートでは `text/plain` の 403 になる。action と `routes/` の handler は `throw new HTTPException(403, { message })` (`docs/guides/auth.md`「認可を足す」)
+- loader で判定が外れたら `HTTPException(403)` を throw せず、権限が無いことを表す値を返してページが説明を描く。throw するとページ自身の props で権限が無いことを説明できず、`_error` の無いこのテンプレートでは例外の応答がそのまま返る。action と `routes/` の handler は `throw new HTTPException(403, { message })` (`docs/guides/auth.md`「認可を足す」)
 - 画面の出し分け (`useShared()` のロール) を判定の代わりにしない。loader・action・handler は client を通さずに呼べる (ADR-0065)
