@@ -172,7 +172,7 @@ Vite は使用中なら次の空き port へずらし (Vite docs の `server.por
 
 秘密は server 側にしか存在し得ない。Vite 公式は「`VITE_*` variables should _not_ contain sensitive information」と明記しており、client へ出る値は秘密にならない。
 
-秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す (Void 1.5.0 の docs「Environment variables」)。`.env` 以外の dotenv ファイルを Void は扱わない。
+秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す (Void 1.4.0 の docs「Environment variables」)。`.env` 以外の dotenv ファイルを Void は扱わない。
 
 2026-11-03 に読んだ Void 1.5.0 の `plugin-cloudflare-preview.ts` では、Void はルートの `.env` を読み、`vp preview` の起動のたびにそこにある名前を Worker の secret として渡していた。`vp preview` の Worker が secret を受けるのはこの経路だけだった。dev では、`env.ts` に宣言した `VITE_*` の値を Void が `.env` から読んでブラウザへ渡していた (同じ版の `plugin-env-schema.ts` の `applyClientValuesToViteEnv`)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
 

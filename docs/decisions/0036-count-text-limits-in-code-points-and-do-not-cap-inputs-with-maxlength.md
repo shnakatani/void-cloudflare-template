@@ -39,7 +39,7 @@
 
 - ZWJ で結んだ絵文字 (👨‍👩‍👧 は 5 code point) や結合文字 (か + 結合濁点は 2) は、見た目の 1 文字より多く数える。「N 文字以内」の文言とずれるのはこの場合だけである。2026-09-29 時点の記録では、GOV.UK の Character count は `text.length` (code unit) で数え、単体の絵文字も 2 と数えることを既知の問題として残していた (alphagov/govuk-frontend#1104。2026-11-19 に completed で閉じた)
 - 切り詰めは code point の境界で切るので、サロゲートペアの片割れは残らない。ZWJ で結んだ絵文字は途中で切れうる
-- 例外は、server (Better Auth) が `.length` で判定する値 (2026-11-02 時点の better-auth 1.7.14 の記録) で、client の検証も UTF-16 の code unit の `v.minLength`・`v.maxLength` で数える。単位を揃えないと境界の値で client と server の判定が割れる。対象は `src/features/auth/credentials.ts` のパスワード
+- 例外は、server が `.length` (UTF-16 の code unit) で長さを判定する値で、client の検証も UTF-16 の code unit の `v.minLength`・`v.maxLength` で数える。2026-11-02 時点 (better-auth 1.7.14) の記録では、Better Auth はパスワードの長さを `.length` で判定していた。単位を揃えないと境界の値で client と server の判定が割れる。対象は `src/features/auth/credentials.ts` のパスワード
 - もう 1 つの例外は、D1 の LIKE のパターンにする検索語で、% で包んでエスケープしたあとの UTF-8 の bytes で数える。D1 が LIKE のパターンを 50 bytes に限り (Cloudflare docs「D1 Limits」、2026-11-03 に確認)、日本語は 17 文字から超える。判定と切り詰めは `src/lib/like-pattern.ts` が持ち、切るときは code point の境界で切る。bytes の上限は「N 文字以内」と言えないので、文言は日本語と英数字の文字数を目安に出す (`docs/guides/database.md`「ユーザー入力で部分一致の検索を組む」)
 - 上限を目で見て分かるようにするなら、入力欄の近くに説明を置く (デジタル庁デザインシステムの案内)。稀にしか超えない長さなら置かなくてよい
 

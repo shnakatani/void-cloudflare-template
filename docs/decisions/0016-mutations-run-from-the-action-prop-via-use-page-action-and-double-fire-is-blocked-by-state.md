@@ -48,7 +48,7 @@ Error Boundary は画面ごと差し替わる。`action()` の throw を Action 
 ### 制約: `action()` は `preserveScroll` と `viewTransition` を受けない
 
 - 2026-11-03 時点 (Void 1.5.0) の記録では、`action()` は `_resolveOnShell: true` を既定で付け、Action の中で await しても shell の到着で決着した (ADR-0015「`action()` は shell の到着で resolve する」)。`_resolveOnShell` は `VisitOptions` の `@internal` の option で、docs に無かった
-- 同じ記録では、`action()` の options (`ActionOptions`) は `data`・`method`・`params` だけで、`preserveScroll` と `viewTransition` を渡せなかった (Void 1.5.0 の `dist/pages/client.d.mts`)。Void は `preserveScroll` の無い commit で先頭へ scroll するので (Void docs「Scroll Restoration」の New navigation)、同じページに残る action のあとに画面が先頭へ戻り、画面の下の行から移した focus が画面の外へ出る。2026-11-03 に dev で、一覧の上のダイアログからの保存を `useForm` で送ると scroll の `y` が 1934 から 0 に戻り、`preserveScroll: true` を渡す `submitAction` では 1885 から 1934 に保たれた。`viewTransition` を渡せないと、送信の後の描き直しが遷移と同じクロスフェードになる (ADR-0058)
+- 同じ記録では、`action()` の options (`ActionOptions`) は `data`・`method`・`params` だけで、`preserveScroll` と `viewTransition` を渡せなかった (Void 1.5.0 の `dist/pages/client.d.mts`)。Void は `preserveScroll` の無い commit で先頭へ scroll するので (Void docs「Scroll Restoration」の New navigation)、その版では、同じページに残る action のあとに画面が先頭へ戻り、画面の下の行から移した focus が画面の外へ出た。2026-11-03 に dev で、一覧の上のダイアログからの保存を `useForm` で送ると scroll の `y` が 1934 から 0 に戻り、`preserveScroll: true` を渡す `submitAction` では 1885 から 1934 に保たれた。`viewTransition` を渡せないと、送信の後の描き直しが遷移と同じクロスフェードになる (ADR-0058)
 - 同じ記録では、redirect はブラウザが同じ visit の中で辿るので、渡した `preserveScroll` は redirect 先の commit に効く作りだった (Void 1.5.0 の `dist/pages/client.mjs` の `loadNavigationShell`)
 
 ### 制約: `submitAction` と `interpolateRouteParams` は docs の User-Facing Imports に無い
@@ -57,7 +57,7 @@ Error Boundary は画面ごと差し替わる。`action()` の throw を Action 
 
 ### 制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない
 
-2026-11-02 時点 (Void 1.4.0) の記録では、検証の失敗の描き直しと `ActionUrl` は次のとおりだった。
+検証の失敗の描き直しと `ActionUrl` は次のとおりである。Void docs の行は docs の記述で、Void 1.4.0 の行は 2026-11-02 時点の記録である。
 
 | 出典                                                                                                           | 内容                                                                                                                                                                                                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

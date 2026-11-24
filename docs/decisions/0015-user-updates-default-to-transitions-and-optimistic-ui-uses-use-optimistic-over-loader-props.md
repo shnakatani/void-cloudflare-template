@@ -24,7 +24,7 @@ React チームは React 18 の設計時点から、大半の更新を Transitio
 
 ### page の props は Transition の中で入れ替わる
 
-2026-11-02 時点 (Void 1.4.0) の記録では、Void の React の adapter は、page の props を React の state で持ち、Transition の中で入れ替えていた。出典の列は、その版のソースと docs である。
+Void の React の adapter は、遷移を Transition として予約し、page の props をその中で入れ替える。docs を出典にした行は docs の記述で、ソースで確かめた行は 2026-11-02 時点 (Void 1.4.0) の記録である。
 
 | 事実                                                                                                | 出典                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -34,7 +34,7 @@ React チームは React 18 の設計時点から、大半の更新を Transitio
 | `action()` は応答 (shell) の到着で resolve し、新しい props は Action の終わりに commit される      | 下の「`action()` は shell の到着で resolve する」                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 `useOptimistic` は、Action の間に元の値が変わると reducer を新しい値で走らせ直す (react.dev `useOptimistic`「If `items` changes while the Action is pending, React re-runs your `reducer` with the new `items`」)。
-新しい props は Action の終わりに commit されるので、楽観値は Action の終わりに action の応答の props へ入れ替わる。
+上の表の記録では新しい props は Action の終わりに commit されていたので、楽観値は Action の終わりに action の応答の props へ入れ替わった。
 
 ### `action()` は shell の到着で resolve する
 
@@ -43,7 +43,7 @@ React チームは React 18 の設計時点から、大半の更新を Transitio
 そのため Action の中で `await action()` すると、Action は `action()` を、`action()` は commit を、commit は Action の終わりを待ち、決着しなかった。
 patch を当てない 1.4.0 で、`ActionButton` の Action の `await run()` は 12 秒待っても resolve せず、props も入れ替わらなかった (2026-11-02 に dev で確認)。
 上流は voidzero-dev/void#643 を受けて main の commit 5fd23eb で直し、React の `action()` を shell の到着で resolve する形にした (`createActionClient({ _resolveOnShell: true })`)。
-2026-11-02 時点の記録では、`action()` は、受けた値に `_resolveOnShell` を足して `submitAction` (`void/pages-client`) に渡すだけだった。`@void/react` 1.4.0 の `useForm` は、同じ値を `submitAction` に直に渡していた (`packages/react/src/runtime/use-form.ts`)。
+2026-11-02 時点の記録では、5fd23eb の `action()` は、受けた値に `_resolveOnShell` を足して `submitAction` (`void/pages-client`) に渡すだけだった。`@void/react` 1.4.0 の `useForm` は、同じ値を `submitAction` に直に渡していた (`packages/react/src/runtime/use-form.ts`)。
 `usePageAction` も、`action()` の中身を写した関数で `submitAction` に `_resolveOnShell: true` を直に渡す (ADR-0016「mutation の書き方」)。
 
 `_resolveOnShell` を付けて、2 秒待つ action を `ActionButton` の Action から送ると、次の順に決着した (2026-11-02、dev、30 ms ごとの標本、react 19.3.1。5fd23eb の変更を当てた `action()` で測った。`usePageAction` が `submitAction` に渡す値と同じ)。

@@ -35,7 +35,7 @@ Testing Library も同じ理由で、`wrapper` の中の StrictMode では React
 
 **story とブラウザテストは、アプリと同じく StrictMode の下で描く。story は `.storybook/preview.tsx` の decorator で包み、ブラウザテストは `src/test/browser/browser-setup.tsx` で `vitest-browser-react` の `configure({ reactStrictMode: true })` を呼ぶ。**
 
-- アプリは `pages/layout.tsx` が `<StrictMode>` で layout の中身を包む。Void が包まない (Context の記録) ので、外す・移すときはアプリの開発時の検査が無言で消える。layout の外の Void の `App` と `RouteResource` は対象外である
+- アプリは `pages/layout.tsx` が `<StrictMode>` で layout の中身を包む。Context の記録では、Void は入り口を `<StrictMode>` で包んでいなかった。その前提では、外す・移すとアプリの開発時の検査が無言で消える。layout の外の Void の `App` と `RouteResource` は対象外である
 - story の decorator は preview の decorators の最後に置き、preview の他の decorator を内側に入れる。2026-10-01 に読んだ Storybook 10.6.0 の `prepareStory.ts` と `decorators.ts` では、story・component・project の順に並べた decorator を前から重ねるので、後ろほど外側に来ていた。addon と framework が足す decorator は、preview の decorator のさらに外側に来るので、StrictMode の外になる (Storybook の `MIGRATION.md`「Changed decorator order between preview.js and addons/frameworks」)。StrictMode は root ではないので、story では mount 直後の effect を付け直さない (Context の 2 つ目の表)
 - 置き場所は `docs/guides/testing/configuration.md`「StrictMode の下で描く」にある
 
