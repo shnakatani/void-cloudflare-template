@@ -57,10 +57,10 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 ### Void の skill を扱う
 
-Void の `void` と `migrate-vite-cloudflare-to-void` の skill は、`void init` が張った symlink の向き先を `../../node_modules/void/skills/<名前>` に張り直して git で持つ。`void init` は、エージェントごとの skill のディレクトリ (Claude Code は `.claude/skills/`、Codex は `.agents/skills/`) に skill を張る ([Void docs「Using Void with Coding Agents」][] の Skills)。`void init` が張る向き先 (`node_modules/.pnpm/void@<版>_<peer の名前と版>…`) は Void と peer の版で変わり、変わると切れる。
+Void の `void` と `migrate-vite-cloudflare-to-void` の skill は、`void init` が張った symlink の向き先を `../../node_modules/void/skills/<名前>` に張り直して git で持つ。`void init` は、対応するエージェントの設定を見つけると、そのエージェントの skill のディレクトリ (Claude Code は `.claude/skills/`、Codex は `.agents/skills/`) に skill を張る ([Void docs「Using Void with Coding Agents」][] の Skills)。2026-11-24 に Void 1.11.0 の `void init` が張った link は、`node_modules/.pnpm/void@1.11.0_<peer の名前と版>…` の下を指していた。このパスは Void と peer の版が変わると別のパスになるので、張り直さずに git で持つと、版を上げたときに辿れなくなる。
 
 - Void を上げて skill の名前が増えたら、増えた分を同じ形 (`../../node_modules/void/skills/<名前>`) で `.agents/skills/` と `.claude/skills/` に張って commit する
-- `void init` を打つと、張り直した link について `<path> exists but is not a link to the <skill の name> skill, skipping` と warn が出る。想定どおりなので、link は触らない (2026-11-24、Void 1.11.0 の `void init --tsconfig` で確かめた)
+- `void init` を打つと、張り直した link について `<path> exists but is not a link to the <skill の name> skill, skipping` と warn が出る。想定どおりなので、link は触らない (2026-11-24 に Void 1.11.0 の `void init --tsconfig` で出た。同じ版の dist では、skill を張る処理は `--tsconfig` と `--github` の分岐の外にあり、どの `void init` でも走っていた)
 - 移行の skill は、Void を上げたときに `void init` の出力と比べる手間を減らすために残しているもので、このリポジトリでは使わない
 - symlink なので、Void を上げると中身も上がる。`skills-lock.json` には載せない。`skills-lock.json` は GitHub から写した skill (`shadcn`・`valibot`) の hash を持つもので、symlink の skill は Void の版が中身を決める
 - symlink の先は `node_modules` の中なので、`vp install` の前は辿れない。辿れないことを壊れたと取らず、`vp install` のあとに見る
@@ -271,7 +271,7 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 
 ### 依存の agent skill を pnpm に link させない理由
 
-pnpm は、承認した直接の依存が同梱する skill を link する。既定の link 先は、ワークスペースのルートに既にある `.<name>/skills` (`.claude/skills`・`.agents/skills` など) と、pnpm を動かしているエージェントのディレクトリである ([pnpm docs「Agent Skills」][])。`skills.dirs` を空のリストにすると、link を止める ([pnpm docs「skills.dirs」][])。
+pnpm は、承認した直接の依存が同梱する skill を link する。既定の link 先は、ワークスペースのルートに既にある `.<name>/skills` (`.claude/skills`・`.agents/skills` など) と、pnpm を動かしているエージェントのディレクトリである ([pnpm docs「skills.dirs」][])。`skills.dirs` を空のリストにすると、pnpm は承認を求めなくなり、自分が張った link を消す ([pnpm docs「skills.dirs」][]、[pnpm docs「Agent Skills」][])。
 
 2026-11-24 に pnpm 12.21.0 で、`skills` の設定が無いと、依存を入れる install のたびに `void` と TanStack の 3 パッケージが承認待ちに出た。`void` を承認すると、git で持つ Void の skill の symlink の向き先が `node_modules/.pnpm/void@…` に書き換わり、`.agents/skills/` と `.claude/skills/` に `.gitignore` が足された。
 
