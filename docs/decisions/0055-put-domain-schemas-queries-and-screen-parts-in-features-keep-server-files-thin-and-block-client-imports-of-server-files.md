@@ -145,7 +145,7 @@ drizzle の bind した値。
 - 2026-11-03 時点 (Void 1.5.0) の記録では、`logger` は message を `msg` の鍵に書いていた。Cloudflare の Best Practices の例の鍵は `message` で、「Query Builder」の Filter は key の例に `$metadata.message` を挙げる。Workers Logs が `msg` を一覧の message に使うかは docs に書かれていなかった (2026-11-03、deploy して確かめていない)
 - URL の query に載る値 (検索語など) は、invocation log に要求の URL ごと残り、trace を取った要求では span の `url.full` にも残る。fields から外して防げるのは、URL に載らない値 (action の body、DB の行) だけである。秘密は URL の query に載せない。URL に載る個人情報を Cloudflare の記録に残せないアプリは、`void.config.ts` の `cloudflare.observability.logs.invocation_logs` を `false` にし、`cloudflare.observability.traces.enabled` も `false` にする。片方だけを止めても、もう片方に URL が残る。Void は `cloudflare` の値を生成する Cloudflare の設定へそのまま渡す (Void の docs「Configuration」の `cloudflare`)
 - Better Auth の logger の level は既定の `"warn"` のままにする (Better Auth の docs「Options」の `logger`)。root の `auth.ts` で `logger.level` を `"info"` か `"debug"` にすると、2026-11-03 時点 (better-auth 1.7.14) の記録では、登録済みの email でのサインアップで、Better Auth が email を埋め込んだ行を出していた (`dist/api/routes/sign-up.mjs`)。drizzle の patch はこの行に効かない
-- Context の 3 つの経路の表のうち、Void の `onError` と Better Auth が出すログは、2026-11-03 の記録 (Void 1.5.0、better-auth 1.7.14) では Error をそのまま `console.error` に渡していたので、複数行になり 1 行の JSON にならなかった
+- Context の 3 つの経路の表のうち、Void の `onError` と Better Auth が出すログは、2026-11-03 の記録 (Void 1.4.0、better-auth 1.7.14) では Error をそのまま `console.error` に渡していたので、複数行になり 1 行の JSON にならなかった
 - Workers Issues を有効にするアプリでは、`logger.error` の行は error level の行として検出される。ただし上の表の 2026-11-03 時点 (Void 1.5.0) の記録では、`logger` は `console.error` に Error ではなく 1 つの JSON の文字列を渡していたので、Cloudflare が Error の引数から取る stack の項目は付かなかった。Issues の stack の表示を Workers Logs の項目より先にするなら、Decision の server のログの選び方から見直す
 - drizzle の query の失敗は、どの経路でも SQL の文 (値は `?`) と D1 の文言の cause をログに残し、`message` と `params` には bind した値が載らない。2026-11-03 時点 (workerd 1.20261023.1) の記録では、D1 が扱えない型の値 (`undefined` や object など) を bind したときだけ、D1 の文言 (`D1_TYPE_ERROR: Type '<型>' not supported for value '<値>'`) に値が載り、cause を通じてログに出ていた (cloudflare/workerd の `src/cloudflare/internal/d1-api.ts`)。上流の 1.0.0-rc.5 の既定も同じで、patch では消えない
 - drizzle-orm の `params` は常に `undefined` になる。`params` を読むコードを書かない。patch が効いていることは `src/test/drizzle-query-error.test.ts` が確かめる (`pnpm-workspace.yaml` の `patchedDependencies` のコメント)
@@ -156,7 +156,7 @@ drizzle の bind した値。
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ。本文に v1.11.0 と書いた節は、2026-11-24 に v1.11.0 で読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。本文に v1.11.0 と書いた節は、2026-11-24 に v1.11.0 で読んだ。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - Void の docs「Loaders」の Using the Data in Page Components: `node_modules/void/docs/guide/pages-routing/loaders.md`
 - Void の docs「Pages Routing」の Directory Structure: `node_modules/void/docs/guide/pages-routing/overview.md`

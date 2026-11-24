@@ -62,7 +62,7 @@ workflow のファイルはテンプレートから作った repository にそ�
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ。本文に v1.11.0 と書いた節は、2026-11-24 に v1.11.0 で読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。本文に v1.11.0 と書いた節は、2026-11-24 に v1.11.0 で読んだ。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - Void の docs「Deployment」(Deploy to Cloudflare、Deploy from GitHub、Migrations): `node_modules/void/docs/guide/deployment.md`
 - Void の docs「Cloudflare」(What happens during deploy、Deploying from CI): `node_modules/void/docs/integrations/cloudflare.md`

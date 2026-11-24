@@ -61,7 +61,7 @@
 | `router.refresh()` の決着を待ってから境界を戻す                                          | 読み直した props で描き直し、ページに戻った                                                                                                                          | **採用** |
 | 境界を戻してから `router.refresh()` を呼ぶ (`ErrorBoundary` の `onReset` で呼ぶ形を含む) | 失敗したときの props のまま描き直して同じ失敗をもう一度受け、エラー表示に戻った。読み直した props が届いても `resetKeys` (path) は変わらないので、境界は戻らなかった | 却下     |
 
-2026-11-02 時点 (`react-error-boundary` 6.1.6) の記録では、`onReset` は `resetErrorBoundary()` の中で、境界の state を戻す前に呼ばれていた (`dist/react-error-boundary.js` の `resetErrorBoundary` が `this.props.onReset?.(...)` の後に `this.setState` を呼んでいた。dist を読んで確かめた)。refresh を呼び出せても、その決着は待てない。
+2026-11-02 時点 (`react-error-boundary` 6.1.6) の記録では、`onReset` は `resetErrorBoundary()` の中で、境界の state を戻す前に呼ばれていた (`dist/react-error-boundary.js` の `resetErrorBoundary` が `this.props.onReset?.(...)` の後に `this.setState` を呼んでいた。dist を読んで確かめた)。その版では、refresh を呼び出せても、その決着は待てなかった。
 
 ### 検討した案: 全画面の再試行を走らせる場所
 
