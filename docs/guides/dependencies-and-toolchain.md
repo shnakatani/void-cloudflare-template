@@ -343,7 +343,7 @@ Intent docs は、consumer に `@tanstack/intent` を devDependency に置いて
 `typescript` パッケージは `@voidzero-dev/vite-plus-core` や Storybook、typescript-eslint の推移依存として入るので、直接の依存から外しても install からは消えない (2026-11-24 に vite-plus 1.7.0 で `pnpm why typescript`)。同じ日に、直接の依存に置かないまま型の誤りを置いて `vp check` を走らせると、`TS2322` を報告した。
 直接の依存へ戻すのは、リポジトリのコードが `typescript` を `import` するようになったときだけでよい。リポジトリのコードが使わないパッケージを、直接の依存として宣言しない。
 
-型検査の診断が出るのは lint の対象のファイルだけで、tsconfig の `include` に入る TS のファイルを lint の対象から外すと、そのファイルは型検査されない ([tsrs の README「Type-aware lint」][])。宣言ファイルも型検査されない。[tsrs の `tools/tsgolint/README.md`「Type checking in the lint run」][] は、宣言ファイルを、`tsrs --noEmit` か `tsrs --build` でだけ型検査されるファイルに挙げる。lint の rule の診断はこれと別で、2026-11-25 に vite-plus 1.7.0 の `vp lint` は `src/` の `.d.ts` に `typescript(no-explicit-any)` を出した (ADR-0047)。範囲の実測と、別に型検査を走らせる条件と打ち方は ADR-0047「型検査の実行」にある。
+型検査の診断が出るのは lint の対象のファイルだけで、tsconfig の `include` に入る TS のファイルを lint の対象から外すと、そのファイルは型検査されない ([tsrs の README「Type-aware lint」][])。`tsc` は、`tsconfig.base.json` の `skipLibCheck: true` で宣言ファイルを型検査しない ([TSConfig Reference「skipLibCheck」][])。2026-11-25 に、vite-plus 1.7.0 (tsrs 7.1.0-beta.tsrs2) の `vp check` と typescript 6.0.3 の `tsc` は、`src/` の `.d.ts` の型の誤りを通した。`skipLibCheck` を `false` にすると、`vp check --no-fmt` と `tsc` は報告した (ADR-0047)。[tsrs の `tools/tsgolint/README.md`「Type checking in the lint run」][] は宣言ファイルを oxlint が lint しないファイルに挙げるが、同じ日に `vp lint` は `src/` の `.d.ts` に文法の誤り (TS1039) と `typescript(no-explicit-any)` を出した。範囲の実測と、別に型検査を走らせる条件と打ち方は ADR-0047「型検査の実行」にある。
 型検査を lint へ合流させる設定 (`options.typeCheck`) は `scripts/checks/integrity/lint-config.test.ts` が解決後の設定の値で押さえるが、設定が真のまま tsrs が黙って動かない場合は捕まえられない。
 
 ### patch のキーをパッケージ名だけにする理由
@@ -374,6 +374,7 @@ Intent docs は、consumer に `@tanstack/intent` を devDependency に置いて
 [Vite+ docs「Lint」]: https://github.com/voidzero-dev/vite-plus/blob/v1.7.0/docs/guide/lint.md
 [tsrs の README「Type-aware lint」]: https://github.com/oxc-project/tsrs/blob/v7.1.0-beta.tsrs2/README.md#type-aware-lint
 [tsrs の `tools/tsgolint/README.md`「Type checking in the lint run」]: https://github.com/oxc-project/tsrs/blob/v7.1.0-beta.tsrs2/tools/tsgolint/README.md#type-checking-in-the-lint-run
+[TSConfig Reference「skipLibCheck」]: https://github.com/microsoft/TypeScript-Website/blob/a616e68472383636761819e235e3671fc2efb2cc/packages/tsconfig-reference/copy/en/options/skipLibCheck.md
 [pnpm docs「Optional peer dependencies」]: https://github.com/pnpm/pnpm.io/blob/29f86c5f4170e6fc0477c5ef90b4d8160f8902aa/docs/settings/peer-dependencies.md#optional-peer-dependencies
 [pnpm docs「Overriding peer dependencies」]: https://github.com/pnpm/pnpm.io/blob/29f86c5f4170e6fc0477c5ef90b4d8160f8902aa/docs/settings/dependency-resolution.md#overriding-peer-dependencies
 [pnpm docs「pnpm patch」]: https://github.com/pnpm/pnpm.io/blob/c777ca5aabd6d19ac7915b1b694840fdf968268c/versioned_docs/version-11.x/cli/patch.md
