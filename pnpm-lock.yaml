@@ -111,6 +111,9 @@ importers:
       '@tanstack/devtools-vite':
         specifier: ^0.8.7
         version: 0.8.7(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.3)(@voidzero-dev/vite-plus-core@8.3.8000(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))
+      '@tanstack/intent':
+        specifier: ^0.5.6
+        version: 0.5.6
       '@tanstack/react-devtools':
         specifier: ^0.10.15
         version: 0.10.15(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(csstype@3.2.3)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -2627,6 +2630,11 @@ packages:
 
   '@tanstack/form-core@1.33.5':
     resolution: {integrity: sha512-3dfx9MBP0aq5sXKteikG629X9oviptrQj0IFRk9YGcb+lB7Kv5x8S17oOSk1wUWgjQZ4xVJEMbKwOAODymocgA==}
+
+  '@tanstack/intent@0.5.6':
+    resolution: {integrity: sha512-9Ta/GMGPcqBIqlbrqeYyqBVKEP7XyAXy6nn90bPiE2oHB6KPgjEweUbHNXLQ6Pim01VtMMNf0dmUFMGKKHXmlw==}
+    engines: {node: '>=20.12.0'}
+    hasBin: true
 
   '@tanstack/pacer-lite@0.1.1':
     resolution: {integrity: sha512-y/xtNPNt/YeyoVxE/JCx+T7yjEzpezmbb+toK8DDD1P4m7Kzs5YR956+7OKexG3f8aXgC3rLZl7b1V+yNUSy5w==}
@@ -7024,6 +7032,8 @@ snapshots:
       '@tanstack/devtools-event-client': 0.4.4
       '@tanstack/pacer-lite': 0.1.1
       '@tanstack/store': 0.11.2
+
+  '@tanstack/intent@0.5.6': {}
 
   '@tanstack/pacer-lite@0.1.1': {}
 

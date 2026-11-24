@@ -35,6 +35,7 @@
     "@storybook/react-vite": "10.6.8",
     "@tanstack/devtools-a11y": "^0.3.0",
     "@tanstack/devtools-vite": "^0.8.7",
+    "@tanstack/intent": "^0.5.6",
     "@tanstack/react-devtools": "^0.10.15",
     "@tanstack/react-table-devtools": "^9.3.2",
     "@testing-library/dom": "^10.4.2",
@@ -71,5 +72,17 @@
   "engines": {
     "node": "^24.19.0"
   },
-  "packageManager": "pnpm@12.21.0"
+  "packageManager": "pnpm@12.21.0",
+  "intent": {
+    "skills": [
+      "@tanstack/*"
+    ],
+    "exclude": [
+      "@solidjs/web",
+      "arktype",
+      "dotenv",
+      "solid-js",
+      "void"
+    ]
+  }
 }
