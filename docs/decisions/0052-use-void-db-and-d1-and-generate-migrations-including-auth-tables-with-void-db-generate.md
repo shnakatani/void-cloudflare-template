@@ -6,14 +6,14 @@
 
 ## Context
 
-2026-11-02 時点 (Void 1.4.0) の記録では、Void は D1 と drizzle を組み込んで持ち、その仕組みは次のとおりだった (Void の docs「Database」「D1 (SQLite)」)。
+Void は D1 と drizzle を組み込んで持つ。仕組みは次のとおりである (Void の docs「Database」「D1 (SQLite)」「Database and Seeding」「`void db generate`」、v1.11.0)。
 
-| 仕組み             | 中身                                                                                                                                                                                                                                                                  |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `void/db`          | D1 の `DB` binding に schema 付きの drizzle を返す `db` と、別の binding を包む `createDb`。operator (`eq`・`and` など) も re-export するので、`drizzle-orm` を直接の依存に置かない                                                                                   |
-| `void/schema-d1`   | table を書く列の helper                                                                                                                                                                                                                                               |
-| `@schema`          | voidPlugin が張る alias。`db/schema.ts` か `db/schema/` を指す                                                                                                                                                                                                        |
-| `void db generate` | `void prepare` で auth の schema を書き直してから drizzle-kit を回し、`db/migrations/` に `.sql` と `meta/` を書く。Void が管理する auth の table と、auth の plugin の table も入る (Void の docs「`void db generate`」、Void 1.4.0 の `cli/db.ts` の `runGenerate`) |
+| 仕組み             | 中身                                                                                                                                                                                                                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `void/db`          | D1 の `DB` binding に schema 付きの drizzle を返す `db` と、別の binding を包む `createDb`。operator (`eq`・`and` など) も re-export するので、`drizzle-orm` を直接の依存に置かない                                                                                                                                        |
+| `void/schema-d1`   | table を書く列の helper                                                                                                                                                                                                                                                                                                    |
+| `@schema`          | voidPlugin が張る alias。`db/schema.ts` か `db/schema/` を指す                                                                                                                                                                                                                                                             |
+| `void db generate` | `db/migrations/` に migration を書く。Void が管理する auth の table と、auth の plugin の table も入る (Void の docs「`void db generate`」)。2026-11-02 時点 (Void 1.4.0 の `cli/db.ts` の `runGenerate`) の記録では、`void prepare` で auth の schema を書き直してから drizzle-kit を回し、`.sql` と `meta/` を書いていた |
 
 2026-11-02 時点 (Void 1.4.0) の記録では、migration を当てる経路は起動のしかたで違っていた。
 
@@ -61,8 +61,12 @@
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.4.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.4.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.4.0 と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.4.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.4.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.4.0 と同じ内容とは限らない。Context の冒頭の表は、v1.11.0 に固定した下の 4 つの URL で確かめた (2026-11-24)。
 
+- Void の docs「Database」(Schema Definition、Querying)、v1.11.0: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database.md
+- Void の docs「D1 (SQLite)」(`createDb`)、v1.11.0: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database/d1.md
+- Void の docs「Database and Seeding」(`db` が `DB` の binding を使うこと)、v1.11.0: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/api/database.md
+- Void の docs「`void db generate`」、v1.11.0: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/cli/database.md#void-db-generate
 - Void の docs「Database」(Schema Definition、CLI Commands、Hand-written migrations): `node_modules/void/docs/guide/database.md`
 - Void の docs「D1 (SQLite)」: `node_modules/void/docs/guide/database/d1.md`
 - Void の docs「Authentication」(Database and Migrations): `node_modules/void/docs/guide/auth.md`
