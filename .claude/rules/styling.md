@@ -123,11 +123,14 @@ Why: token 経由なら dark mode 対応とデザイン変更が `styles.css` �
 - ボタン内の送信中表示は `Spinner` (Skeleton にしない)。使う側は必ず `aria-hidden` を渡し、状態は `aria-disabled` で持つ (ADR-0026)
 - ボタンの children に `Spinner` を並べない。`PendingLabel` で label に重ねる (Action 層の部品と `ButtonLink` の `isPending` が使う)。並べると pending の間だけボタンが広がる (ADR-0042)
 - データなしは `Empty` で組み、何が無いか (`EmptyTitle`) と次に取れる操作 (`EmptyContent` のボタンか、`EmptyDescription` で操作の場所を案内) をそろえる (`docs/guides/lists-and-search.md`「空状態を出す」)
-- 状態による見た目の分岐は、1 箇所なら `cn()` + 三項で書く。同型の分岐が 2 箇所以上に重なったら、ui 部品自身の見た目なら手段を「部品の見た目を変える」の表で選び、`ui/` の外の見た目なら部品に切り出す。`ui/` の外で `cva` の variant にしない (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
+- 状態による見た目の分岐は、1 箇所なら `cn()` + 三項で書く。同型の分岐が 2 箇所以上に重なったら、ui 部品自身の見た目なら手段を「部品の見た目を変える」の表で選び、`ui/` の外の見た目なら部品に切り出す。切り出した部品の中では `cva` で自分の prop の見た目を分けてよい (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
+- `ui/` の外で定義した `cva` の戻り値を export して他のファイルから呼ばない。見た目を他のファイルと共有するなら部品として切り出す (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
+- `ui/` の variant 関数 (`buttonVariants` など) に class を書き足すときは `cn(buttonVariants(...), "...")` の引数に書き、`className` キーに書かない。キーの値は lint に読まれない (`docs/guides/lint/tailwind-and-shadcn.md`「`ui/` の variant 関数を外で呼ぶ」)
 
 ## 操作できる要素の組み方
 
-- ボタンの見た目のリンクは `ButtonLink` で組み、Base UI の `render` に `Link` を渡さない。無効にするときは `disabled` を渡し、無効のボタンに描き替えない。描き替えると、解けたときに focus が `<body>` へ落ちる (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
+- ボタンの見た目のリンクは `ButtonLink` で組み、`Button` の `render` でリンクを描かない。ボタンの見た目のリンクを部品の `render` に渡すときも `ButtonLink` を渡す。無効にするときは `disabled` を渡し、無効のボタンに描き替えない。描き替えると、解けたときに focus が `<body>` へ落ちる (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
+- `Link` を描く部品 (`Link`、`NavLink`、`ButtonLink`) を部品の `render` に渡すときは `prefetch="visible"` を付けない (`SidebarMenuButton` の `render` に `NavLink` を渡す形も当たる)。先読みが起きず、何も報告されない (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)
 - 段落に区切って書く長さの文字列 (本文、説明) は改行を許し、`FormTextareaField` (`form-fields.tsx`) で受け、表示では `whitespace-pre-wrap` で改行を保つ。`type="text"` の input は値から改行を取り除き、`whitespace-normal` は改行を空白にまとめる (`docs/guides/forms-and-inputs.md`「複数行の入力欄を組む」)
 - input の上に疑似要素や別の要素を重ねて hit 領域を広げない。重なった要素が pointer を受け、本体がクリックを受け取れなくなる (`docs/guides/forms-and-inputs.md`「入力欄の周りに要素を置く」)
 - checkbox 行を素の `<label>` や手書きの `role="group"` で組まない。複数選択の既定は `FieldSet` + `FieldLegend` の中の `FieldGroup data-slot="checkbox-group"` に `Field orientation="horizontal"` の行を並べる形。`FieldLegend` がまとまりの名前になり、行間は registry の間隔に寄る (`docs/guides/forms-and-inputs.md`「入力欄の周りに要素を置く」)
