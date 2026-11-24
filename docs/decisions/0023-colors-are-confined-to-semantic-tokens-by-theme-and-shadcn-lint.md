@@ -19,7 +19,7 @@
 
 1 層目だけだと違反は「無言で効かない class」になり、2 層目だけだと既定 palette の CSS 生成を止められない。
 
-oxlint は Tailwind と shadcn/ui 領域のルールをネイティブに持たないため、`jsPlugins` で `@shadcn/lint` を読み込む。
+oxlint は Tailwind と shadcn/ui 領域のルールをネイティブに持っていなかったため (2026-09-19、oxlint 1.82.0)、`jsPlugins` で `@shadcn/lint` を読み込む。
 `components.json` の UI alias と theme CSS を自動探索できるため、同じ値を `settings.shadcn` へ複製しない。
 `settings.shadcn.componentImports` はこの探索結果の書き直しではなく、`ui` alias の外側にある自作部品 (`parts/` 等) まで design system component として認識させる追加である (ADR-0011)。
 
@@ -45,7 +45,7 @@ oxlint は Tailwind と shadcn/ui 領域のルールをネイティブに持た�
 `@shadcn/lint` は上流の `recommended` を持たない。ルールは設計判断と対にして 1 つずつ名指しし、まとめて有効にしない。
 
 `jsPlugins` のエントリは `{ name, specifier }` の形で書き、`@shadcn/lint` には `{ name: "shadcn", specifier: "@shadcn/lint" }` を使う。
-抑制 directive の名前は `docs/guides/lint/custom-rules.md`「JS plugin の落とし穴」に、lint 時間の測り方と探索に失敗したときの警告は `docs/guides/lint/tailwind-and-shadcn.md`「`@shadcn/lint` の時間と警告を読む」にある。3 ルールは探索に失敗しても警告を出したうえで発火し続ける。診断の token の提案が減り、`no-raw-colors` が宣言済みの token を確かめられず、design system component を認識しなくなることもあるが、警告が出るので silent failure ではない。そのため、この解決を見張る検査は置かない。
+抑制 directive の名前は `docs/guides/lint/custom-rules.md`「JS plugin の落とし穴」に、lint 時間の測り方と探索に失敗したときの警告は `docs/guides/lint/tailwind-and-shadcn.md`「`@shadcn/lint` の時間と警告を読む」にある。2026-09-19 に `@shadcn/lint` 0.1.0 で確かめると、3 ルールは探索に失敗しても警告を出したうえで発火し続けた。同じ版で 2026-09-24 に確かめると、診断の token の提案が減り、`no-raw-colors` が宣言済みの token を確かめられず、design system component を認識しなくなることもあったが、警告は出ていたので silent failure ではなかった。そのため、この解決を見張る検査は置かない。
 
 ### 検討した選択肢
 
@@ -89,7 +89,7 @@ token だけを混ぜる `color-mix()` の通し方:
 ## 出典
 
 - oxlint の JS plugins (alpha 扱いと `{ name, specifier }` の指定形): https://oxc.rs/docs/guide/usage/linter/js-plugins.html
-- `@shadcn/lint` の setup と rule 一覧: https://github.com/shadcn-ui/lint/blob/main/SETUP.md
+- `@shadcn/lint` 0.2.5 の SETUP.md (「Install and register the plugin」の Oxlint の `jsPlugins` での登録と、rule の preset を足さないこと。2026-11-23 に原文を確認): https://github.com/shadcn-ui/lint/blob/%40shadcn/lint%400.2.5/SETUP.md
 - `@shadcn/lint` 0.2.0 の adoption.md (「Add more rules」の部品のディレクトリの override、「Exceptions」の行単位の抑制): https://github.com/shadcn-ui/lint/blob/%40shadcn/lint%400.2.0/docs/adoption.md
 - `@shadcn/lint` 0.2.0 の rules.md (「Rules」の off にする範囲、「The policy」の `allow` と `deny`): https://github.com/shadcn-ui/lint/blob/%40shadcn/lint%400.2.0/docs/rules.md
 - `@shadcn/lint` 0.2.0 の no-raw-colors.md (任意値の色を見ない): https://github.com/shadcn-ui/lint/blob/%40shadcn/lint%400.2.0/docs/rules/no-raw-colors.md
