@@ -79,8 +79,10 @@
     ],
     "exclude": [
       "@solidjs/web",
+      "arktype",
       "dotenv",
-      "solid-js"
+      "solid-js",
+      "void"
     ]
   }
 }

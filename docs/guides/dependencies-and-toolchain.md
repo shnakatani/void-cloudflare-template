@@ -7,6 +7,7 @@
 | 開発環境のツールチェーンは mise と Vite+ に寄せる                                                       | ADR-0004 |
 | 依存更新は待機 3 日で統一し、pin には出口条件を書く                                                     | ADR-0005 |
 | GitHub Actions の定義は zizmor で検査し、action は workflow の lockfile で固定する                      | ADR-0006 |
+| ドメイン型は valibot スキーマから導出する                                                               | ADR-0013 |
 | テストの import を重くする依存のバレルは使わず、個別エントリポイントから引き、lint で止める             | ADR-0032 |
 | 一覧の列幅は列ごとの size と fixed layout で固定し、ボタンの pending の Spinner は label の場所に重ねる | ADR-0042 |
 | 一覧で切り詰めた中身の全文は、先頭の列のボタンで行を開き、全列をまたぐ詳細の行に出す                    | ADR-0043 |
@@ -59,7 +60,7 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 ### 依存の agent skill を Intent に許す
 
-`package.json` の `intent.skills` が許す package の skill だけを、Intent は `list` に出し `load` で読ませる。`intent.exclude` に当たる package と skill は、許した後に外す ([Intent docs「Configuration」][])。このリポジトリは `@tanstack/*` を許し、TanStack 以外で skill を同梱する推移の依存を `intent.exclude` で外している。理由は「Intent の許可を `@tanstack/*` の scope にする理由」にある。
+`package.json` の `intent.skills` が許す package の skill だけを、Intent は `list` に出し `load` で読ませる。`intent.exclude` に当たる package と skill は、許した後に外す ([Intent docs「Configuration」][])。このリポジトリは `@tanstack/*` を許し、TanStack 以外で skill を同梱する依存を `intent.exclude` で外している。理由は「Intent の許可を `@tanstack/*` の scope にする理由」にある。
 
 - 依存を足したら `vp exec intent list` を打ち、stderr の notice を見る。`intent.skills` に無い package が skill を同梱していると notice が出る。エージェントのセッションでは数だけが出るので、名前はエージェントの外で `list --show-hidden` を打って見る ([Intent docs「intent list」][])
 - notice に出た package は、`intent.skills` に package 名で足すか、`vp exec intent exclude add <package>` で `intent.exclude` に足す。どちらにも入れないと、notice が `list` のたびに出続ける ([Intent docs「Configuration」][] の Discovery notices)
@@ -315,12 +316,14 @@ Intent の first-run の設定も、scope を明示して選ぶとこの形 (`"@
 
 許可は skill の中身の承認ではない。依存を上げると skill の中身も変わり、Intent は変わったことを知らせない ([Intent docs「Trust model」][]: "Enabling a source does not record approval of its specific instructions.")。
 
-`intent.exclude` で外した package は、TanStack 以外で skill を同梱する推移の依存である。2026-11-24 に Intent 0.5.6 の `list --json` と `vp why <package>` で確かめた。
+`intent.exclude` で外した package は、TanStack 以外で skill を同梱する依存である。2026-11-24 に Intent 0.5.6 の `list --json` と `vp why <package>` で確かめた。
 
-| package                    | 入る経路                                           | 外す理由                                                                       |
-| -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `solid-js`、`@solidjs/web` | `@tanstack/devtools-a11y` の依存として入る         | skill は Solid のアプリを書くためのもので、React のアプリでは使わない          |
-| `dotenv`                   | `shadcn` の CLI が `@dotenvx/dotenvx` を経て入れる | アプリのコードは dotenv を使わない。`.env` は Void が読む (「環境変数を足す」) |
+| package                    | 入る経路                                           | 外す理由                                                                                                     |
+| -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `solid-js`、`@solidjs/web` | `@tanstack/devtools-a11y` の依存として入る         | skill は Solid のアプリを書くためのもので、React のアプリでは使わない                                        |
+| `dotenv`                   | `shadcn` の CLI が `@dotenvx/dotenvx` を経て入れる | アプリのコードは dotenv を使わない。`.env` は Void が読む (「環境変数を足す」)                               |
+| `arktype`                  | `void` の依存の `drizzle-arktype` が入れる         | アプリの検証は valibot で書く (ADR-0013)                                                                     |
+| `void`                     | 直接の依存                                         | Void の skill は「Void の skill を扱う」の symlink で読む。許すと、同じ skill が Intent の `load` からも届く |
 
 外さずに残すと notice が `list` のたびに出る。エージェントのセッションでは notice が数だけを示す ([Intent docs「intent list」][] の Hidden sources) ので、新しく足した依存の notice と区別できない。2026-11-24 に Intent 0.5.6 で、`intent.skills` だけを置いたエージェントのセッションの notice は、ユーザーに `list --show-hidden` を打ってもらうよう促していた。外しておくと、notice が出るのは新しく判断の要る package があるときだけになる ([Intent docs「Configuration」][] の Discovery notices: "Package was explicitly excluded | No unlisted-source notice.")。
 
