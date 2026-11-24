@@ -5,7 +5,7 @@
 
 ## Context
 
-この ADR は、`Link`・`useRouter`・`useNavigation`・`useShared` のように Void のページの context を読む部品を、story とブラウザテストでどう描くかを決める。2026-11-02 時点 (Void 1.4.0) の記録では、これらの部品は `RouterContext` と `NavigationContext` の値が無いと、遷移を起こせず、現在の path も読めなかった。`useShared` は `SharedContext` の値が無いと throw していた。
+この ADR は、`Link`・`useRouter`・`useNavigation`・`useShared` のように Void のページの context を読む部品を、story とブラウザテストでどう描くかを決める。2026-11-01 時点 (Void 1.4.0) の記録では、これらの部品は `RouterContext` と `NavigationContext` の値が無いと、遷移を起こせず、現在の path も読めなかった。`useShared` は `SharedContext` の値が無いと throw していた。
 
 2026-11-01 に Void 1.4.0 の `node_modules/void/docs/` と `node_modules/@void/react/dist/index.d.mts` を読んだ結果は、次のとおりだった。
 

@@ -41,7 +41,7 @@
 - Dialog の Root は開閉をまたいで描いたまま残し、`open` を loader の props から導く。閉じる操作 (キャンセル、Escape、外側のクリック) は、条件を保った一覧の URL への遷移にする
 - ダイアログを開くリンクに `prefetch` を渡さない。先読みすると、visit は hover の時点の page data でダイアログを描き (ADR-0063)、編集のフォームが古い値で始まる。開くたびに loader を走らせて最新の値で開く
 - action は一覧の条件 (`q`) を `c.req.query()` で読み、`new URL(<一覧の URL>, c.req.url).href` へ redirect する。相対の URL は、載せたダイアログの key を行き先に混ぜ、閉じるはずのダイアログが開いたまま残る
-- ダイアログを開く query の key と、named action の名前を分ける (`?new` と `?create`)。2026-11-02 時点 (Void 1.4.0) の記録では、Void は action の URL の最初の key を action の名前として読んでいた (`packages/void/src/pages/action-key.ts`) ので、同じ名前だとページの URL へ送った POST がその action を呼ぶ (推論)
+- ダイアログを開く query の key と、named action の名前を分ける (`?new` と `?create`)。2026-11-02 時点 (Void 1.4.0) の記録では、Void は action の URL の最初の key を action の名前として読んでいた (`packages/void/src/pages/action-key.ts`) ので、同じ名前だとページの URL へ送った POST がその action を呼ぶ作りだった (推論)
 - ページの `head` は、props のダイアログの値で title を変える。直に開いたタブの名前がダイアログに合う
 - ダイアログの開閉の title は、`QueryDialog` が props の変化で読み上げる。query だけの遷移は遷移の読み上げの部品 (ADR-0049) が読まないので、ADR-0027 と同じ形 (直前に読んだ値を ref に持ち、初期表示では読まない) で読む
 - 保存の Action の間は、利用者の close (キャンセル、Escape、外側の押下、X) を止める。止める条件は、そのダイアログ自身の保存の pending だけにする。閉じる操作は一覧の URL への visit なので、保存の送信を取り消す (ADR-0017)。要求がサーバーへ届く前なら保存は起きず、入力もダイアログと一緒に消える

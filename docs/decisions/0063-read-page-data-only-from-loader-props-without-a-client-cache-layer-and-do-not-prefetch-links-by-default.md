@@ -15,12 +15,12 @@ Void の docs は、ページのデータの読み方に関わる挙動を次の
 | loader は GET の要求で走り、返した object がページの props になる。ページは `import type { Props }` で型だけを読む | Void docs「Loaders & Props」の Defining a Loader、Using the Data in Page Components |
 | client の遷移は loader を走らせ直し、文書を読み直さずにページを入れ替える                                          | Void docs「Pages Routing」の How Navigation Works                                   |
 | `router.refresh()` は今のページの props を取り直す                                                                 | Void docs「Pages Routing」                                                          |
+| action が値を返さなければ、loader を走らせ直し、新しい props でページを描き直す                                    | Void docs「Actions & Forms」の Defining an Action の表 (v1.11.0)、ADR-0015          |
 
 2026-11-03 時点 (Void 1.4.0) の記録では、ページのデータの読み方に関わる Void の振る舞いは次のとおりだった。出典の列は、その版のソースと docs である。
 
 | 事実                                                                                                                                                                                                                    | 出典                                                                                                                                                           |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| action の応答は、loader を走らせ直した props を同じ応答で返す                                                                                                                                                           | Void docs「Actions & Forms」の Defining an Action、ADR-0015                                                                                                    |
 | 遅い値は `defer()` で後から届けられる。値は inline の `<script>` で届く                                                                                                                                                 | Void docs「Loaders & Props」の Deferred Props。ADR-0051 が使わないと決めている                                                                                 |
 | `Link` の `prefetch` の既定は `false`。渡せるのは `true` (`hover`)、`hover`・`click`・`mount`・`visible` とその配列。`voidReact({ prefetch })` は `hoverDelay` と `cacheFor` だけを持ち、既定の strategy は変えられない | `@void/react` 1.4.0 の `runtime/link.tsx`、`plugin-pages.ts` の `generateClientEntry`、Void docs「Pages API」の `voidReact(options?)`                          |
 | visit は先読みの cache に entry があれば、その時点の page data をそのまま描く。entry が stale なら取り直しを裏で始めるが、その結果は描いているページに入れ替わらず、次の visit のための cache になる                    | Void 1.4.0 の `packages/void/src/pages/navigation-engine.ts` の `visit`                                                                                        |
@@ -81,6 +81,7 @@ Void の docs は、ページのデータの読み方に関わる挙動を次の
 - Void docs「Loaders & Props」: `node_modules/void/docs/guide/pages-routing/loaders.md`
 - Void docs「Pages Routing」(How Navigation Works): `node_modules/void/docs/guide/pages-routing/overview.md`
 - Void docs「Actions & Forms」: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
+- Void docs「Actions & Forms」の Defining an Action (v1.11.0。2026-11-24 に原文を確認): https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/pages-routing/actions-and-forms.md#defining-an-action
 - Void docs「Pages API」(`voidReact(options?)`、React Runtime の `Link`・`useRouter()`): `node_modules/void/docs/reference/api/pages.md`
 - Void 1.4.0 のソース: `packages/void/src/pages/navigation-engine.ts` (`visit`、`prefetch`、`CACHE_VISITED_PAGE_DATA`)、`packages/void/src/pages/prefetch.ts` (`parseCacheFor`、`PrefetchCache`)、`packages/react/src/runtime/link.tsx` (`prefetch` の既定と strategy)、`packages/react/src/plugin-pages.ts` (`generateClientEntry` の `prefetchHoverDelay`・`prefetchDefaultCacheFor`)
 - TanStack Query「Overview」(client にサーバの状態のキャッシュを持つ層であること): https://tanstack.com/query/latest/docs/framework/react/overview

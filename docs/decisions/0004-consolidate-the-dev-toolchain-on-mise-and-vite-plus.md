@@ -172,7 +172,7 @@ Vite は使用中なら次の空き port へずらし (Vite docs の `server.por
 
 秘密は server 側にしか存在し得ない。Vite 公式は「`VITE_*` variables should _not_ contain sensitive information」と明記しており、client へ出る値は秘密にならない。
 
-秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す (Void 1.4.0 の docs「Environment variables」)。`.env` 以外の dotenv ファイルを Void は扱わない。
+秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す。`.env` 以外の dotenv ファイルを Void は扱わない (Void の docs「Environment variables」の Local development と Production server values、v1.11.0)。
 
 2026-11-03 に読んだ Void 1.5.0 の `plugin-cloudflare-preview.ts` では、Void はルートの `.env` を読み、`vp preview` の起動のたびにそこにある名前を Worker の secret として渡していた。`vp preview` の Worker が secret を受けるのはこの経路だけだった。dev では、`env.ts` に宣言した `VITE_*` の値を Void が `.env` から読んでブラウザへ渡していた (同じ版の `plugin-env-schema.ts` の `applyClientValuesToViteEnv`)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
 
@@ -328,6 +328,7 @@ Vite+ の `docs/guide/local-cli.md`「Best Practices」は、`vp` を呼ぶ scri
 
 - Void の docs「Deployment」の Other runtimes (`node` で動く成果物は `target` を Node.js・Bun・Deno にしたときだけ): `node_modules/void/docs/guide/deployment.md`
 - アプリの環境変数を `env.ts` に宣言して `void/env` で読む形、ローカルと本番の値の渡し方、検証の契機: Void docs「Environment variables」(https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md)
+- 秘密の置き場 (Local development と Production server values。2026-11-24 に原文を確認): Void docs「Environment variables」、v1.11.0 (https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/env-vars.md)
 - `env.ts` に宣言した server の値を `worker.vars` に置くと production の build が弾くこと: Void docs「Configuration」の `worker` (https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/config.md)
 - `BETTER_AUTH_SECRET` を deploy が作ることと、dev が secret を要らないこと: Void docs「Authentication」の Behavior (https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md)
 - dev で `env.ts` に宣言した `VITE_*` を `.env` から読んでブラウザへ渡す処理と、`envDir: false` のときに build の `.env` の値を消す処理が走らないこと: Void 1.5.0 の `packages/void/src/plugin-env-schema.ts` の `applyClientValuesToViteEnv` と `stripLocalClientEnv` (https://github.com/voidzero-dev/void/blob/v1.5.0/packages/void/src/plugin-env-schema.ts)
