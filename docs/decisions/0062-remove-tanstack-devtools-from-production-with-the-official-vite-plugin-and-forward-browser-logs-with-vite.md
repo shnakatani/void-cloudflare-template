@@ -37,7 +37,7 @@ Console Piping の注入先: 2026-11-03 時点 (`@tanstack/devtools-vite` 0.8.6�
 
 **`@tanstack/devtools-vite` を `vite.config.ts` の最初の plugin に置き、`eventBusConfig.enabled: false` と `consolePiping.enabled: false` を渡す。ブラウザの console は `server.forwardConsole` に `{ unhandledErrors: true, logLevels: ["error", "warn", "log"] }` を渡して端末へ送り、Storybook の dev には `.storybook/main.ts` の `viteFinal` で同じ値を渡す。`<TanStackDevtools>` は環境で分けずに import し、本番からは plugin に外させる。**
 
-- 2026-11-05 時点 (`@tanstack/devtools-vite` 0.8.6、`@tanstack/devtools-bundler-core` 0.1.4) の記録では、event bus のサーバは認証の無い要求を受け、有効な npm パッケージなら何でも、その install scripts も含めて dev server の上で install させていた (TanStack/devtools#464、TanStack/devtools#545)。2026-11-03 時点 (`@tanstack/react-devtools` 0.10.13) の記録では、panel はこのサーバにつながなかった (`<TanStackDevtools>` の `eventBusConfig.connectToServerBus` の既定は false だった) ので、止めても panel の機能は減らない
+- 2026-11-05 時点 (`@tanstack/devtools-vite` 0.8.6、`@tanstack/devtools-bundler-core` 0.1.4) の記録では、event bus のサーバは認証の無い要求を受け、有効な npm パッケージなら何でも、その install scripts も含めて dev server の上で install させていた (TanStack/devtools#464、TanStack/devtools#545)。2026-11-03 時点 (`@tanstack/react-devtools` 0.10.13) の記録では、panel はこのサーバにつながなかった (`<TanStackDevtools>` の `eventBusConfig.connectToServerBus` の既定は false だった) ので、その版では、止めても panel の機能は減らなかった
 - Console Piping を止めて失うのは、ブラウザの `console.info`・`console.debug` の端末への転送だけである。server → ブラウザは上の表のとおり働いていなかった
 - `server.forwardConsole` は既定のままだと人の端末で働かないので、値を明示する。値は `tooling/server/forward-console.ts` に 1 つだけ置き、`vite.config.ts` と `.storybook/main.ts` が import する
 - `logLevels` に `info` と `debug` を入れないのは、ブラウザの console に出る Vite の client の接続と HMR の行 (`[vite] connected.`、`[vite] hot updated: <path>`) が `console.debug`、React DevTools の案内が `console.info` だったからである (2026-11-07、Vite+ 1.4.0 が同梱する Vite 8.3.5)。`log` だけを足した値では、部品のファイルを 2 回書き換えても、ブラウザから送った `[console.*]` の行は端末に足されなかった (2026-11-07)
@@ -61,7 +61,7 @@ Console Piping の注入先: 2026-11-03 時点 (`@tanstack/devtools-vite` 0.8.6�
 
 - `<TanStackDevtools>` は JSX のまま、devtools の本体のパッケージを import したファイルに書く。変数に入れたり、別の部品で包んで `lazy` で読んだりすると、2026-11-03 時点 (`@tanstack/devtools-bundler-core` 0.1.4) の記録では、plugin がその JSX を見つけられず本番に残る作りだった
 - 2026-11-03 の記録では、ブラウザの console の Enhanced Logs のリンクは開けなかった。panel の source inspector (既定の hotkey は Shift+Alt+Ctrl/Meta) は、dev の port の middleware に要求を送っていた (`@tanstack/devtools` 0.15.0)。エディタが開くかは確かめていない
-- 2026-11-07 の記録では、アプリのコードの `console.log` と `console.error` を端末へ送った行には、Enhanced Logs がブラウザ向けに足した前置き (`LOG Go to Source: http://localhost:<loopback の port>/__tsd/open-source?source=<path>:<line>:<column>`) が付いた。リンクは開けないが、path と行は読める。`console.warn` には前置きが付かなかった (2026-11-03 時点の `@tanstack/devtools-bundler-core` 0.1.4 の `enhance-logs.ts` は、`console.log` と `console.error` だけを書き換えていた)
+- 2026-11-07 の記録では、アプリのコードの `console.log` と `console.error` を端末へ送った行には、Enhanced Logs がブラウザ向けに足した前置き (`LOG Go to Source: http://localhost:<loopback の port>/__tsd/open-source?source=<path>:<line>:<column>`) が付いた。リンクは開けなかったが、path と行は読めた。`console.warn` には前置きが付かなかった (2026-11-03 時点の `@tanstack/devtools-bundler-core` 0.1.4 の `enhance-logs.ts` は、`console.log` と `console.error` だけを書き換えていた)
 - ブラウザの `console.info`・`console.debug` は端末に出ない。端末で読みたくなったら、`tooling/server/forward-console.ts` の `logLevels` に足す
 - server の console の出力は端末に出るが、ブラウザの console には出ない
 - `vp build` の出力を `tanstack-devtools` で grep すると、`@tanstack/react-form` が引く `@tanstack/devtools-event-client` のコードが当たる。この plugin の除去の対象ではなく、2026-11-03 には plugin を足す前の build にも同じ chunk があった

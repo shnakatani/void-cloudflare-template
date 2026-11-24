@@ -40,7 +40,7 @@ workflow のファイルはテンプレートから作った repository にそ�
 | `DATABASE_URL` を渡す                                               | 渡さない                                                                                     | PostgreSQL と MySQL のためのもので、このアプリは D1 を使う (ADR-0052)                                                                                                                                                                              |
 | 英語のコメント                                                      | 日本語のコメント                                                                             | ほかの workflow とそろえる                                                                                                                                                                                                                         |
 
-ファイル名、trigger、`concurrency`、`permissions`、残りの環境変数 (`CLOUDFLARE_WORKERS_SUBDOMAIN`、`CF_ACCESS_*`) は生成物のままにする。2026-11-03 時点 (Void 1.4.0) の記録では、`concurrency` の `cancel-in-progress: true` は、古い commit の deploy が新しい commit の deploy を後から上書きしないためのものだった (`cli/init.ts` の Void platform 向けの分岐のコメント "Latest push wins")。取り消しは migration を当てたあとにも起こりうる。deploy が migration を当てる前に復元点を保存することと、次の deploy が未適用の migration を当てることは、Void の docs「Deployment」の Migrations にある。同じ記録では、`cli/deploy-migrations.ts` は `void db restore` の command を当てる前にログへ出し、`void init --github` は `void-deploy.yml` があれば生成を飛ばしていた (`cli/init.ts` の `setupGithubActions`)。名前を変えると、打ち直したときに 2 本目の deploy の workflow ができうる。
+ファイル名、trigger、`concurrency`、`permissions`、残りの環境変数 (`CLOUDFLARE_WORKERS_SUBDOMAIN`、`CF_ACCESS_*`) は生成物のままにする。2026-11-03 時点 (Void 1.4.0) の記録では、`concurrency` の `cancel-in-progress: true` は、古い commit の deploy が新しい commit の deploy を後から上書きしないためのものだった (`cli/init.ts` の Void platform 向けの分岐のコメント "Latest push wins")。取り消しは migration を当てたあとにも起こりうる。deploy が migration を当てる前に復元点を保存して `void db restore` の command を出すことと、次の deploy が未適用の migration を当てることは、Void 1.11.0 の docs「Deployment」の Migrations にある。同じ 2026-11-03 の記録では、`cli/deploy-migrations.ts` は `void db restore` の command を migration を当てる前にログへ出し、`void init --github` は `void-deploy.yml` があれば生成を飛ばしていた (`cli/init.ts` の `setupGithubActions`)。名前を変えると、打ち直したときに 2 本目の deploy の workflow ができうる。
 
 ### 検討した選択肢
 
@@ -62,7 +62,7 @@ workflow のファイルはテンプレートから作った repository にそ�
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ。本文に v1.11.0 と書いた節は、2026-11-24 に v1.11.0 で読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - Void の docs「Deployment」(Deploy to Cloudflare、Deploy from GitHub、Migrations): `node_modules/void/docs/guide/deployment.md`
 - Void の docs「Cloudflare」(What happens during deploy、Deploying from CI): `node_modules/void/docs/integrations/cloudflare.md`

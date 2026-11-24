@@ -8,14 +8,19 @@
 
 ページのデータをどこから読むかで、初めの HTML に何が入るか、操作のあとに何が取り直されるか、遷移がどこで止まるかが決まる。client にサーバの状態のキャッシュの層 (TanStack Query など) を置くかも、ここで決まる。
 
+Void の docs は、ページのデータの読み方に関わる挙動を次のように書く。
+
+| 事実                                                                                                               | 出典                                                                                |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| loader は GET の要求で走り、返した object がページの props になる。ページは `import type { Props }` で型だけを読む | Void docs「Loaders & Props」の Defining a Loader、Using the Data in Page Components |
+| client の遷移は loader を走らせ直し、文書を読み直さずにページを入れ替える                                          | Void docs「Pages Routing」の How Navigation Works                                   |
+| `router.refresh()` は今のページの props を取り直す                                                                 | Void docs「Pages Routing」                                                          |
+
 2026-11-03 時点 (Void 1.4.0) の記録では、ページのデータの読み方に関わる Void の振る舞いは次のとおりだった。出典の列は、その版のソースと docs である。
 
 | 事実                                                                                                                                                                                                                    | 出典                                                                                                                                                           |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| loader は GET の要求で走り、返した object がページの props になる。ページは `import type { Props }` で型だけを読む                                                                                                      | Void docs「Loaders & Props」の Defining a Loader、Using the Data in Page Components                                                                            |
-| client の遷移は loader を走らせ直し、文書を読み直さずにページを入れ替える                                                                                                                                               | Void docs「Pages Routing」の How Navigation Works                                                                                                              |
 | action の応答は、loader を走らせ直した props を同じ応答で返す                                                                                                                                                           | Void docs「Actions & Forms」の Defining an Action、ADR-0015                                                                                                    |
-| `router.refresh()` は今のページの props を取り直す                                                                                                                                                                      | Void docs「Pages Routing」                                                                                                                                     |
 | 遅い値は `defer()` で後から届けられる。値は inline の `<script>` で届く                                                                                                                                                 | Void docs「Loaders & Props」の Deferred Props。ADR-0051 が使わないと決めている                                                                                 |
 | `Link` の `prefetch` の既定は `false`。渡せるのは `true` (`hover`)、`hover`・`click`・`mount`・`visible` とその配列。`voidReact({ prefetch })` は `hoverDelay` と `cacheFor` だけを持ち、既定の strategy は変えられない | `@void/react` 1.4.0 の `runtime/link.tsx`、`plugin-pages.ts` の `generateClientEntry`、Void docs「Pages API」の `voidReact(options?)`                          |
 | visit は先読みの cache に entry があれば、その時点の page data をそのまま描く。entry が stale なら取り直しを裏で始めるが、その結果は描いているページに入れ替わらず、次の visit のための cache になる                    | Void 1.4.0 の `packages/void/src/pages/navigation-engine.ts` の `visit`                                                                                        |
@@ -54,7 +59,7 @@
 | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | 先読みしない (`Link` の既定)                                                | visit は常に loader を走らせ、ページは要求の時点の値で描かれる。遷移の待ちは loader 1 本分。hover で DB は読まれない                                                           | **採用** |
 | `ButtonLink`・`NavLink` の既定を `hover` にし、ダイアログを開くリンクで外す | 外し忘れたリンクは hover の時点の値 (既定の `cacheFor` で 30 秒まで) でダイアログを開き、何も落ちない。編集のダイアログを最新の値で開く形 (ADR-0056) が、付け忘れ 1 つで崩れる | 却下     |
-| `voidReact({ prefetch: { cacheFor: 0 } })` で古い値を使わせない             | Context の表の記録では、`0` は single use の entry になり、期限切れで消えなかった。hover してから何分経っても、その時点の値で描く                                              | 却下     |
+| `voidReact({ prefetch: { cacheFor: 0 } })` で古い値を使わせない             | Context の 2026-11-03 の記録の表では、`0` は single use の entry になり、期限切れで消えなかった。hover してから何分経っても、その時点の値で描く作りだった                      | 却下     |
 | `visible` か `mount` で先読みする                                           | 画面に出たリンクの数だけ loader が走り、D1 を読む。描く値は hover より古くなる                                                                                                 | 却下     |
 | リンクごとに `prefetch` を明示する                                          | 行き先の値が hover の時点のものになってよいページ (読むだけで、値がすぐ変わらないページ) に限って足す。既定にはしない                                                          | 条件つき |
 

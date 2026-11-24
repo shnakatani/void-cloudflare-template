@@ -20,7 +20,7 @@
 - この版の文字列を受ける口は、在らない path を書いても型検査で落ちなかった。押したときに 404 のページになる (ADR-0050)
 - `.void/routes.d.ts` は、ページ・`routes/`・WebSocket の route の pattern を `RoutePathMap` に並べ、そのキーの和を `RoutePath` として `void/routes` から export する。`void prepare` と dev server が `pages/` から作り直す
 - `void/routes` の `routeUrl(<pattern>, { params, query, hash })` は、`RoutePath` に無い pattern と足りない param を型検査で落とし、param と query を URL に符号化した文字列を返す。2026-11-03 時点 (`void` 1.5.0) の記録では、query の値は `URLSearchParams` で足し、`null` と `undefined` は省いていた (`runtime/route-url.ts`)。Void の docs は、動的な URL を `routeUrl()` で組み、返った文字列を `Link`・`<a>`・`c.redirect()` に渡す形を示す (`node_modules/void/docs/guide/type-safety.md`「Typed URLs and Navigation」、`guide/pages-routing/overview.md`「Typed navigation」)
-- 2026-11-03 時点 (`void` 1.5.0) の記録では、`routeUrl()` の実装は、`router.visit` が行き先を文字列に直すのにも使われ、client の bundle にはもとから入っていた (`void` 1.5.0 の `dist/routes-stub.mjs` と `dist/pages/client.mjs` が同じ chunk `route-url-*.mjs` から import していた)
+- 2026-11-03 時点 (`void` 1.5.0) の記録では、`routeUrl()` の実装は、`router.visit` が行き先を文字列に直すのにも使われ、client の bundle にはもとから入っていた (`dist/routes-stub.mjs` と `dist/pages/client.mjs` が同じ chunk `route-url-*.mjs` から import していた)
 - リンクだけを描くページが、URL を組む関数のモジュールから path の定数を import すると、そのモジュールが import する検証のスキーマも、そのページの client の chunk に入る。2026-11-02 に `vp build` (Void 1.4.0) の manifest で、そのページの chunk から import で辿る chunk の合計は、定数だけのモジュールから import したとき 78,969 byte、URL を組む関数のモジュールから import したとき 92,659 byte だった
 
 ## Decision

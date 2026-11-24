@@ -16,12 +16,12 @@ replication は `void.config.ts` の `database.readReplication` で決める (Vo
 
 replication が有効なとき、このテンプレートで要求をまたぐ読みは、場面ごとに次のように振る舞う。どれも、2026-11-23 に読んだ Void 1.11.0 のソースと docs から組み立てた推論で、deploy した環境では測っていない。
 
-| 場面                                       | 要求の分かれ方                                                                                          | 起こりうること                                                    |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| action で保存して redirect する (ADR-0056) | action の POST が 3xx を返し、ブラウザが redirect を追って行き先を GET する。GET は別の要求になる       | 行き先の loader が古い replica から読み、保存した行が出ない       |
-| ログインと登録の直後                       | sign-in (登録は sign-up) の要求が session の行を primary に書く。続く保護された path への遷移は別の要求 | Void 1.11.0 の auth の DB は `first-primary` で読むので起こらない |
+| 場面                                       | 要求の分かれ方                                                                                          | 起こりうること                                                                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| action で保存して redirect する (ADR-0056) | action の POST が 3xx を返し、ブラウザが redirect を追って行き先を GET する。GET は別の要求になる       | 行き先の loader が古い replica から読み、保存した行が出ない                                                                  |
+| ログインと登録の直後                       | sign-in (登録は sign-up) の要求が session の行を primary に書く。続く保護された path への遷移は別の要求 | auth の判定は primary から読む (Void の docs「D1 (SQLite)」の Avoid stale reads with a primary-first session) ので起こらない |
 
-2026-11-23 に読んだ Void 1.11.0 のソースでは、auth の DB は、Void が生成するモジュールが `createDb(<binding>, { session: "first-primary" })` で作っていた (`packages/void/src/auth/drizzle.ts`)。アプリの `void/db` の `db` は、要求ごとに `first-unconstrained` の session を張っていた (`packages/void/src/runtime/db/session.ts` の `createD1SessionAccess`)。
+Void の docs「D1 (SQLite)」は、認証の確認は primary で読み、`void/db` の `db` の query は Void の要求ごとの D1 の session で読むと書く (Read replication と Avoid stale reads with a primary-first session)。2026-11-23 に読んだ Void 1.11.0 のソースでは、auth の DB は、Void が生成するモジュールが `createDb(<binding>, { session: "first-primary" })` で作っていた (`packages/void/src/auth/drizzle.ts`)。アプリの `void/db` の `db` は、要求ごとに `first-unconstrained` の session を張っていた (`packages/void/src/runtime/db/session.ts` の `createD1SessionAccess`)。
 
 2026-11-23 に v1.11.0 のソースとテストを読むと (動かしていない)、`readReplication` を書いている間は、Cloudflare に直接出す `void deploy` のたびに provision が走り、D1 の設定を Cloudflare の API で書き直す作りだった。provision を走らせる条件は `!existingWorker && desired.d1?.readReplication !== undefined` (`cli/deploy-cloudflare-preflight.ts`) で、`existingWorker` が値を持つのは Wrangler からの handoff の経路だけだった。auth を持つアプリは handoff の経路を通らなかった。Void のテストの "reconciles an existing D1 only when replication is explicitly configured" (`packages/void/test/unit/cloudflare-deploy.test.ts`) も、既にある D1 を値があるときだけ設定し直すことを見ていた。API の PUT が失敗すると、"The credential needs D1 Edit permission." で deploy が止まる作りだった (`cli/provision.ts`)。
 
@@ -30,7 +30,7 @@ replication が有効なとき、このテンプレートで要求をまたぐ�
 **`void.config.ts` に `database: { readReplication: false }` を書き、D1 の読みをすべて primary にする。bookmark を次の要求へ運ぶ仕組みは持たない。**
 
 - テンプレートから作ったアプリの最初の deploy で、Void が replication を `disabled` にする。新しい database は既定でも off だが、値を書いて意図を残す
-- Context の 2026-11-23 の読みでは deploy のたびに Void が D1 の設定を書き直していたので、CI の token には毎回 D1 の Edit が要る。手順は `docs/guides/deployment.md`「read replication の設定を変えて deploy する」
+- Context の 2026-11-23 の読みでは deploy のたびに Void が D1 の設定を書き直していたので、その版では、CI の token に毎回 D1 の Edit が要る。手順は `docs/guides/deployment.md`「read replication の設定を変えて deploy する」
 
 ### 検討した選択肢
 
