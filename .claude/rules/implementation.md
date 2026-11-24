@@ -109,7 +109,7 @@ lint では見ないのでレビューで見る。
 
 lint では見ないのでレビューで見る。
 
-- ページの対象そのものが無いときは、loader で `return c.notFound()` を返す。`throw new HTTPException(404)` は本文が text だけの 404 になる (ADR-0050)
+- ページの対象そのものが無いときは、loader で `return c.notFound()` を返す。`throw new HTTPException(404)` は、合う error component の無いこのテンプレートでは例外の応答 (本文が text だけの 404) がそのまま返る (`docs/guides/data-loading.md`「loader で読めなかったものを返す」)
 - ページは在り、その中の区画のデータや開く 1 件を読めない・無いときは、loader で throw せず失敗の値で返し、ページが区画に失敗を描く。throw するとページごと静的な 500 になり、検索欄のような周りも消える (ADR-0057)
 - 失敗の値を返したら、server の `logger.error` に残す。応答は 200 で届き、ほかに気付く手掛かりが無い (ADR-0057)
 - 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)
