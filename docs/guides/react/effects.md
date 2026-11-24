@@ -54,13 +54,13 @@ effect が読む値は、変わったら外の系に合わせ直す契機にな�
 
 ### 遷移を契機にする副作用の置き場所
 
-遷移を契機にする副作用 (analytics のページの表示の送信、外部のキャッシュの消去、遷移の後の DOM の操作) は、どのページへ移っても、失敗の画面が出ている間も途切れてはいけない。2026-11-02 時点 (Void 1.4.0) の記録では、その条件を満たす置き場所は root の layout の中の、全画面の error boundary の外だった。
+遷移を契機にする副作用 (analytics のページの表示の送信、外部のキャッシュの消去、遷移の後の DOM の操作) は、どのページへ移っても、失敗の画面が出ている間も途切れてはいけない。その条件を満たす置き場所は、root の layout の中の、全画面の error boundary の外である。
 
 - layout は遷移をまたいで state を保つ ([Void docs「Layouts & Shared Data」][] の Layouts: "Layouts nest with your directories and keep their component state as you navigate.")。layout の中の部品の effect は、遷移のたびに mount し直されない
 - `pages/layout.tsx` の `AppErrorBoundary` は、layout の中でページだけを包む。境界の外に置いた部品は、ページが失敗の表示に置き換わっても描かれ続ける (ADR-0050)
 - ページの component の effect は、そのページが出ている間しか走らない。別のページへ移れば unmount され、失敗の表示の間は境界より下が描かれない ([React docs「Component」][] の「Catching rendering errors with an Error Boundary」の "display some fallback UI instead of the part that crashed")
 - Void の React の runtime は、遷移の開始と完了を購読する API を持たない。export するのは `useRouter()`・`useNavigation()` などの hook だけである ([Void docs「Pages Adapters」][] の React Runtime)。遷移は、hook の値が変わった描画の effect で見る
-- 2026-11-02 時点 (Void 1.4.0) の記録では、`useRouter().path` は最初の描画から今のページの path を持っていたので、mount の effect が最初のページを扱う。SSR で描いた最初のページも、hydration の後の mount の effect で扱える
+- 最初のページは mount の effect が扱う。2026-11-02 時点 (Void 1.4.0) の記録では、`useRouter().path` は最初の描画から今のページの path を持っていたので、SSR で描いた最初のページも、hydration の後の mount の effect で扱えた
 - 先行例は `src/components/route-announcer.tsx` の `RouteAnnouncer` で、`pages/layout.tsx` の `<main>` の外に置かれ、`useRouter().path` の変化で見出しへ focus を移し、`useNavigation()` が idle に戻った描画で title を読み上げる (ADR-0049)
 
 ## how-to

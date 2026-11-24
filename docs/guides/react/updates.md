@@ -23,7 +23,7 @@
 ### page の props は Transition で入れ替わり、ダイアログの close は乗らない
 
 2026-11-02 時点 (Void 1.4.0) の記録では、Void は action の応答で loader を走らせ直し、新しい props を Transition の中で入れ替えていた。`action()` は応答の到着で resolve し、新しい props は Action の終わりに commit されていた。そのため `run` は応答の到着で resolve し、`await run()` の後の処理と `onSuccess` は、新しい props が描かれる前に走る。
-2026-11-02 時点 (`@base-ui/react` 1.9.0、React 19.3.1) の記録では、Base UI のダイアログの handle は `useSyncExternalStore` で購読されていて、React はその更新を Transition の中で起きても緊急更新として描いていた。`handle.close()` によるアンマウントは即座に起きた。
+2026-11-02 時点 (`@base-ui/react` 1.9.0、React 19.3.1) の記録では、Base UI のダイアログの handle は `useSyncExternalStore` で購読されていて、`handle.close()` によるアンマウントは即座に起きた。`useSyncExternalStore` の store の更新は、Transition の中で起きても React が緊急更新として描く ([React docs「useSyncExternalStore」][] の Caveats)。
 Transition から得られるのは、pending の管理と、pending の切り替えと props の入れ替わりを `<ViewTransition>` で装飾できること (推論) である (ADR-0015)。Transition は Action の実行順を保証しない ([React docs「useTransition」][] の Troubleshooting「My state updates in Transitions are out of order」)。
 出典は ADR-0015「page の props は Transition の中で入れ替わる」「`action()` は shell の到着で resolve する」「制約: ダイアログの close は Transition に参加しない」が持つ。
 
@@ -91,7 +91,7 @@ mutation は `src/hooks/use-page-action.ts` を通す。
 | throw する失敗            | `action()` が throw する失敗 (401・403・500・502・通信の失敗) も、`run` が toast に出して `false` を返す。文言は `curateMutationErrorMessage` (`src/lib/mutation-error.ts`) が決め、401 はログインし直しを案内し、ほかは固定の文言にする。取り消し (`AbortError`。送信中の遷移、`router.refresh()`、次の送信) は何も出さずに `false` を返す。どちらも reject しない (ADR-0016「mutation の書き方」)                                                                                                                                                                                                   |
 | 成功のあと                | `onSuccess` に書く。返した Promise の決着まで `run` は resolve せず、Transition も続く。`onSuccess` は新しい props が描かれる前に走る (ADR-0015)。`onSuccess` の throw だけは `run` が reject する                                                                                                                                                                                                                                                                                                                                                                                                    |
 | form から送る             | `usePageActionForm` が返す `submit` を `ActionForm` の `submitAction` に渡し、`run` は form の `onSubmit` で呼ぶ。2026-11-02 時点 (`@tanstack/react-form` 1.33.5) の記録では、`form.handleSubmit()` を直に渡すと、検証を持たない field に出た server のエラーが submit の検証で消えず、form が二度と送れなかった。`onSubmitAsync` などの validator の中で `run` を呼ぶと、validator の戻り値は form のエラーとして読まれるので、成功の `true` が form のエラーになり `onSubmit` が走らない                                                                                                            |
-| 送信の成否                | `run` の戻り値で判断する。2026-11-02 時点 (`@tanstack/form-core` 1.33.5) の記録では、422 でも `onSubmit` は resolve するので、form-core の `isSubmitSuccessful` は `true` になっていた                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 送信の成否                | `run` の戻り値で判断する。422 でも `run` は `false` を返して resolve するので、`onSubmit` も resolve する。2026-11-02 時点 (`@tanstack/form-core` 1.33.5) の記録では、そのとき form-core の `isSubmitSuccessful` は `true` になっていた                                                                                                                                                                                                                                                                                                                                                               |
 | `await` の後の state 更新 | 上から順に当てる。サーバーの値は set せず、action の応答で入れ替わる props に任せる。Action の結果を state に持つなら `useActionState` を使う。どちらでもなく `await` の後に set するなら、その set を `startTransition` で包む ([React docs「useTransition」][] の Caveats)。理由は「`await` の後の更新の扱いを選んだ理由」                                                                                                                                                                                                                                                                          |
 
 `usePageAction` を通さずに `action()` を呼ぶと、`ok: false` が通知の無い失敗になり、throw は境界に届くか消える。lint では見つからないので、レビューで見る。
@@ -150,9 +150,10 @@ const [optimisticItems, addOptimistic] = useOptimistic(items, (current, added: I
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。React docs「useSyncExternalStore」の Caveats は 2026-11-24 に原文と照らした。
 
 [React docs「useTransition」]: https://react.dev/reference/react/useTransition
+[React docs「useSyncExternalStore」]: https://react.dev/reference/react/useSyncExternalStore#caveats
 [React docs「useActionState」]: https://react.dev/reference/react/useActionState
 [React docs「useOptimistic」]: https://react.dev/reference/react/useOptimistic
 [typescript-eslint/typescript-eslint#11008]: https://github.com/typescript-eslint/typescript-eslint/issues/11008

@@ -84,7 +84,7 @@
 - 自前の `<Suspense>` を省かない。2026-11-03 に Void 1.4.0 の preview で実測すると、省いたときは Void がページと layout をまとめて包む `fallback: null` の Suspense が受け、初めの HTML から `<main>` も live region も消えた。応答は 200 のままで、console にも何も出なかった。同じ日の記録では、Void が `onBrowserBailout` を渡していなかったので、server のログにも出なかった (「自前の Suspense を省いたときに起きること」)
 - fallback には、ブラウザの値を使わずに描ける形 (値を除いた同じ大きさの枠など) を置く。JS を読み込むまでは fallback が見える。fallback に `role="status"` と `aria-busy` を付けない (ADR-0026)
 - 呼び出し側が Suspense を置くとは限らない hook では、`use(browser())` を呼ばず、`useSyncExternalStore` の `getServerSnapshot` で server の描画と hydration の間だけ代わりの値を返す ([React docs「useSyncExternalStore」][] の Adding support for server rendering)。hydration の後にブラウザの値で描き直す。値が変わらないなら、`subscribe` には、何もしない関数を返す関数を部品の外で定義して渡す
-- server で `throw` して Suspense に受けさせる形 ([React docs「Suspense」][] の Providing a fallback for server errors and client-only content) と、`getServerSnapshot` を省いて client で描かせる形 ([React docs「useSyncExternalStore」][] の Adding support for server rendering) は使わない。どちらも server の描画が error を投げる。2026-11-03 時点 (Void 1.4.0) の記録では、Void は shell を返す前の描画で出た error をページの失敗として扱っていたので、throw の形は Suspense の中でもページごと 500 を返し、省く形も同じになると見ている (「自前の Suspense を省いたときに起きること」)
+- server で `throw` して Suspense に受けさせる形 ([React docs「Suspense」][] の Providing a fallback for server errors and client-only content) と、`getServerSnapshot` を省いて client で描かせる形 ([React docs「useSyncExternalStore」][] の Adding support for server rendering) は使わない。どちらも server の描画が error を投げる。2026-11-03 時点 (Void 1.4.0) の記録では、Void は shell を返す前の描画で出た error をページの失敗として扱っていたので、throw の形は Suspense の中でもページごと 500 を返した。省く形も同じになると見ている (「自前の Suspense を省いたときに起きること」)
 - effect で state を切り替える 2 回の描画 ([React docs「hydrateRoot」][] の Handling different client and server content) は使わない。effect の中の setState を lint (`react/set-state-in-effect`) が止める
 - この形は inline の `<script>` を足さないので、本番の CSP (`script-src 'self'`、ADR-0051) の下で動く。2026-11-03 に `vp preview` で CSP の違反が無いことを確かめた (「自前の Suspense を省いたときに起きること」)
 
@@ -134,7 +134,7 @@ SSR する画面では、同じ値をサーバーとブラウザの両方で整�
 
 ### 自前の Suspense を省いたときに起きること
 
-2026-11-03 時点 (Void 1.4.0) の記録では、React の adapter は、Pages Routing のページ (island のページを除く) を描くとき、ページと layout を `fallback: null` の `<Suspense>` で包んでいた ([Void 1.4.0 の `pages-server.ts`][])。[React docs「browser」][] は、`use(browser())` の外に Suspense が無いと server の描画が失敗すると書く。Void のページでは外側にこの境界があったので、描画は失敗せず、この境界が受けた。境界の中はページと layout のすべてなので、初めの HTML から `<main>` も live region も消えた。Void は `renderToReadableStream` に `onBrowserBailout` を渡していなかったので、ブラウザに任せた境界は server のログにも出なかった。
+2026-11-03 時点 (Void 1.4.0) の記録では、React の adapter は、Pages Routing のページ (island のページを除く) を描くとき、ページと layout を `fallback: null` の `<Suspense>` で包んでいた ([Void 1.4.0 の `pages-server.ts`][])。[React docs「browser」][] は、`use(browser())` の外に Suspense が無いと server の描画が失敗すると書く。Void のページでは外側にこの境界があったので、描画は失敗せず、この境界が受けた。境界の中はページと layout のすべてだったので、初めの HTML から `<main>` も live region も消えた。Void は `renderToReadableStream` に `onBrowserBailout` を渡していなかったので、ブラウザに任せた境界は server のログにも出なかった。
 
 2026-11-03 に、Void 1.4.0・React 19.3.1 の `vp preview` (本番の CSP `script-src 'self'`) で、ブラウザの TZ を返す部品を置いた一時のページを開いて確かめた。ブラウザは Playwright 1.64.1 の Chromium 156 で、TZ を `Pacific/Kiritimati` にした。
 

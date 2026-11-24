@@ -40,7 +40,7 @@
 | 別の origin の frontend から呼ばせる                              | その origin を `auth.ts` の `trustedOrigins` に足す (「auth の設定を変える」)。足さないと、その frontend の書き込みはログインしていない要求になる                           |
 
 - handler の path が `PROTECTED_PATHS` の下にあれば、未ログインの `POST` などの要求は middleware が 401 で止める。一覧に無い path では handler に届くので、user を読む判定は handler の `requireAuth(c)` が持つ
-- 別の origin の frontend が資格情報つきで呼ぶと、ブラウザは simple request でない要求の前に CORS の preflight (`OPTIONS`) を送る。preflight には Hono の `cors` を答えさせる。`cors` は global の middleware (`middleware/NN.cors.ts`) か、route の handler に置く。route に置くなら、`export const OPTIONS` と、呼ばせる method (`POST` など) の handler の両方に渡す。2026-11-03 時点 (hono 4.13.16、Void 1.5.0) の記録では、`OPTIONS` の応答は `cors` が 204 で終え、本来の要求の応答には `cors` が `Access-Control-Allow-Origin` を付けていたので、片方が欠けると preflight か本来の応答の CORS check が失敗する。同じ記録では、method を export しない route は、default export がすべての method を受けていた。守る path でも middleware は `OPTIONS` を止めない (ADR-0053)
+- 別の origin の frontend が資格情報つきで呼ぶと、ブラウザは simple request でない要求の前に CORS の preflight (`OPTIONS`) を送る。preflight には Hono の `cors` を答えさせる。`cors` は global の middleware (`middleware/NN.cors.ts`) か、route の handler に置く。route に置くなら、`export const OPTIONS` と、呼ばせる method (`POST` など) の handler の両方に渡す。2026-11-03 時点 (hono 4.13.14) の記録では、`OPTIONS` の応答は `cors` が 204 で終え、本来の要求の応答には `cors` が `Access-Control-Allow-Origin` を付けていた。この記録の挙動では、片方が欠けると preflight か本来の応答の CORS check が失敗する。2026-11-03 時点 (Void 1.5.0) の記録では、method を export しない route は、default export がすべての method を受けていた。守る path でも middleware は `OPTIONS` を止めない (ADR-0053)
 - 2026-11-02 時点 (Void 1.4.0) の記録では、`Origin` も `Sec-Fetch-Site` も `Referer` も無い要求は、ブラウザの外の client として扱われ、session の cookie を持てば user が読めた。ブラウザの外の client から呼ばせない API でも、user を読む判定は外さない
 
 ### 全ページで user を読む
@@ -66,7 +66,7 @@
 | page の action       | `throw new HTTPException(403, { message })`。`usePageAction` の `run` が toast に出す (ADR-0016)                      |
 | `routes/` の handler | `throw new HTTPException(403, { message })`                                                                           |
 
-- loader で `HTTPException(403)` を throw しない。ページ自身の props で権限が無いことを説明できない。出るのは近い `_error` で、合う `_error` が無ければ例外の応答がそのまま返る ([Void docs「Not Found & Errors」][] の HTTP exceptions)。2026-11-24 時点 (Void 1.11.0) の記録では、`_error` の無いこのテンプレートでは `text/plain` の 403 になっていた (ADR-0065)
+- loader で `HTTPException(403)` を throw しない。ページ自身の props で権限が無いことを説明できない。出るのは近い `_error` で、合う `_error` が無ければ例外の応答がそのまま返る ([Void docs「Not Found & Errors」][] の HTTP exceptions)。2026-11-23 時点 (Void 1.11.0) の記録では、`_error` の無いこのテンプレートでは `text/plain` の 403 になっていた (ADR-0065)
 - global の middleware にロールの判定を載せない。path のサブツリーをまるごと 1 つのロールに閉じるときだけ、`src/features/auth/access.ts` の区分を足して redirect し、それでも loader・action・handler の先頭の判定は外さない (ADR-0065)
 - 画面の出し分けに使うなら、`SharedUser` と `middleware/01.auth.ts` の詰め替えに `role` を足す (「全ページで user を読む」)。出し分けは見せ方であって判定ではない
 - 所有は query のテストで、別の user の `userId` を渡して行が返らないことを確かめる (「テストで D1 を使う」)。経路 (loader・action・handler が判定を呼ぶこと) は、build した成果物を preview で叩いて確かめる (ADR-0054)。loader で `userId` を渡し間違えても、型検査も lint も気付かない
@@ -137,7 +137,7 @@ export default defineAuth(({ defaults }) => ({
 printf '\nBETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
 ```
 
-- secret はルートの `.env` に足す。`env.ts` には宣言しない (ADR-0004)。2026-11-03 時点 (Void 1.5.0) の記録では、`vp preview` は起動のたびに `.env` を読み、そこにある名前を Worker の secret として渡し、build は値を成果物に写していなかった (`plugin-cloudflare-preview.ts`)。`.env` を書き換えたら preview を起動し直せばよく、build し直さなくてよい。2026-11-03 に、`.env` を外して起動した preview が要求ごとに 500 を返すことを確かめた
+- secret はルートの `.env` に足す。`env.ts` には宣言しない (ADR-0004)。2026-11-03 時点 (Void 1.5.0) の記録では、`vp preview` は起動のたびに `.env` を読み、そこにある名前を Worker の secret として渡し、build は値を成果物に写していなかった (`plugin-cloudflare-preview.ts`)。この記録の挙動では、`.env` を書き換えたら preview を起動し直せばよく、build し直さなくてよい。2026-11-03 に、`.env` を外して起動した preview が要求ごとに 500 を返すことを確かめた
 - 2026-11-03 時点 (Void 1.5.0) の記録では、渡す名前は `.env` の行から決まり、shell の環境変数だけに置いた secret は preview の Worker に届かなかった
 - ルートに `.dev.vars` を置かない ([Void docs「Environment variables」][])。2026-11-02 時点 (Void 1.4.0) の記録では、置くと Void は `void/env supports one local file: .env` で起動を止めていた
 - `.env` は ignore 済み。CI は `vp run verify:security-headers` より前の step で、`openssl rand` の値を `.env` に書く (`.github/workflows/ci.yml`)
@@ -172,9 +172,9 @@ middleware と handler の `c.redirect()` は、渡した location に要求の 
 
 ### action の要求を redirect しない理由
 
-2026-11-03 に Void 1.5.0 の `vp preview` で確かめると、session が切れたまま action を送り、middleware が `/login` へ redirect したとき、Void の client は redirect を辿った先のページを action の結果として受け取った。`usePageAction` の `run` は成功として `onSuccess` を走らせ、書き込んでいないのに完了を読み上げ、ログインのページへ移って入力が消えた。2026-11-24 時点 (Void 1.11.0) の記録では、`submitAction` は、`router.visit` が redirect の行き先の GET で決着すれば `ok: true` を返していた (`packages/void/src/pages/client.ts`)。`requireAuth(c, { throwRedirect })` を action で使っても redirect なので同じになる。
+2026-11-03 に Void 1.4.0 の `vp preview` で確かめると、session が切れたまま action を送り、middleware が `/login` へ redirect したとき、Void の client は redirect を辿った先のページを action の結果として受け取った。`usePageAction` の `run` は成功として `onSuccess` を走らせ、書き込んでいないのに完了を読み上げ、ログインのページへ移って入力が消えた。2026-11-24 時点 (Void 1.11.0) の記録では、`submitAction` は、`router.visit` が redirect の行き先の GET で決着すれば `ok: true` を返していた (`packages/void/src/pages/client.ts`)。`requireAuth(c, { throwRedirect })` を action で使っても redirect なので同じになる。
 
-middleware が action の要求に 401 を返すと、Void の client は 401 を throw する ([Void docs「Actions & Forms」][] の Validation Errors、`pages/action-result.ts` の `categorizeActionError`)。2026-11-03 に Void 1.5.0 の `vp preview` で確かめると、`run` は toast でログインし直しを案内し (`src/lib/mutation-error.ts`)、ダイアログと入力は残った。cookie はタブをまたいで効くので、別のタブでログインし直すと、残った入力のまま送り直せた。
+middleware が action の要求に 401 を返すと、Void の client は 401 を throw する ([Void docs「Actions & Forms」][] の Validation Errors、`pages/action-result.ts` の `categorizeActionError`)。`run` は toast でログインし直しを案内し (`src/lib/mutation-error.ts`)、ダイアログと入力は残る。cookie はタブをまたいで効くので、別のタブでログインし直せば、残った入力のまま送り直せる (2026-11-03 に Void 1.4.0 の `vp preview` で確かめた)。
 
 ### page の loader に middleware を渡さない理由
 
@@ -190,7 +190,7 @@ voidzero-dev/void#663 を閉じた [Void の commit 2248088][] は、`router.vis
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.4.0 か v1.11.0) を固定して指す。「Edge Prerendering」「Not Found & Errors」「Environment variables」は v1.11.0 に固定し、2026-11-24 に原文と照らした。Better Auth docs は 2026-11-02 に読んだ。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.4.0、v1.5.0、v1.11.0) を固定して指す。「Loaders」「Redirects」「Rewrites」「Edge Prerendering」「Not Found & Errors」「Environment variables」は v1.11.0 に固定した。そのうち「Edge Prerendering」「Not Found & Errors」「Environment variables」は、2026-11-24 に原文と照らした。Better Auth docs は 2026-11-02 に読んだ。
 
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/auth.md
 [Void docs「Sending Email」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/email/sending.md

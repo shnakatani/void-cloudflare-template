@@ -63,7 +63,7 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 
 ### 上限より大きな body を受ける route を足す
 
-`middleware/00.body-limit.ts` の上限は、`routes/` の handler・page の action・auth の endpoint のすべてに、それぞれより先に掛かる。2026-11-03 時点 (Void 1.5.0) の記録では、`router/compile.ts` が global の middleware を `/api/auth/*` の handler より前に登録していた。
+`middleware/00.body-limit.ts` は global の middleware で、すべての要求に掛かる ([Void docs「Server Routing」の Global middleware][])。2026-11-03 時点 (Void 1.5.0) の記録では、`router/compile.ts` が global の middleware を `/api/auth/*` の handler より前に登録していたので、上限は `routes/` の handler・page の action・auth の endpoint のそれぞれより先に掛かっていた。
 
 - file の upload のように上限を超える body を受ける route を足すときは、その path を `middleware/00.body-limit.ts` で上限から外し、handler で body を stream で読む。全部を読むと、128 MB の memory を超えて Worker が落ちる ([Cloudflare Workers「Best Practices」][] の Stream request and response bodies、[Cloudflare docs「Workers Limits」][] の Memory)
 - 上限の値を上げて済ませない。上限は全 route に 1 つの値で掛かるので、上げると、body を全部読むほかの route と auth の endpoint も同じ大きさの body を受けるようになる
@@ -71,8 +71,8 @@ Cloudflare の自分のアカウントへ本番を出す手順と、`.github/wor
 ### read replication の設定を変えて deploy する
 
 - 2026-11-23 に読んだ Void 1.11.0 の `cli/deploy-cloudflare-preflight.ts` とテストでは、`void.config.ts` の `database.readReplication` を書いている間は、`void deploy` のたびに provision が走り、D1 の設定を書き直していた (動かしていない。ADR-0067)。値を変えたら、ふだんどおり `void deploy` で出す ([Void docs「D1 (SQLite)」の Read replication][])
-- CI の token には毎回 D1 の Edit が要る。2026-11-24 時点 (Void 1.11.0) の記録では、書き直しの PUT が失敗すると、deploy が "The credential needs D1 Edit permission." で止まっていた (`cli/provision.ts`)
-- deploy が通ったら、`docs/guides/database.md`「deploy 先の D1 の read replication を確かめる」の手順で `disabled` を確かめる。`disabled` でなければ、`--debug` (または `VOID_DEPLOY_DEBUG=1`) を付けて出し直し、構造化した deploy のログの `cloudflare_provisioned` の `resources` に `d1:<action>` の形の項目が出ているかを見る ([Void docs「void deploy」][] の `--debug`。項目の形は 2026-11-24 時点 (Void 1.11.0) の記録で、`cli/deploy-cloudflare-preflight.ts` が出していたもの)。出ていなければ provision が走っていないので、Wrangler からの handoff の記録 `.void/cloudflare-link.json` が残っていないかを見る
+- CI の token には毎回 D1 の Edit が要る。2026-11-23 時点 (Void 1.11.0) の記録では、書き直しの PUT が失敗すると、deploy が "The credential needs D1 Edit permission." で止まっていた (`cli/provision.ts`)
+- deploy が通ったら、`docs/guides/database.md`「deploy 先の D1 の read replication を確かめる」の手順で `disabled` を確かめる。`disabled` でなければ、`--debug` (または `VOID_DEPLOY_DEBUG=1`) を付けて出し直し、構造化した deploy のログの `cloudflare_provisioned` の `resources` に `d1:<action>` の形の項目が出ているかを見る ([Void docs「void deploy」][] の `--debug`。項目の形は 2026-11-23 時点 (Void 1.11.0) の記録で、`cli/deploy-cloudflare-preflight.ts` が出していたもの)。出ていなければ provision が走っていないので、Wrangler からの handoff の記録 `.void/cloudflare-link.json` が残っていないかを見る
 - `readReplication` を消して deploy しても、deploy 先の設定は変わらない ([Void docs「Configuration」の database.readReplication][])。切るときは `false` を書く
 
 ### deploy しない repository で workflow を止める
@@ -114,13 +114,13 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 ### 最初の deploy を手元で行う理由
 
 - [Void docs「Cloudflare」][] の What happens during deploy は、最初の deploy を 1 台から行い、lock を commit してから別の machine や CI から出すよう案内する。build や検証で失敗した deploy でも、作った資源はアカウントに残る
-- 2026-11-03 時点 (Void 1.4.0) の記録では、選んだアカウントの ID と作った資源の ID は、Void が生成する Cloudflare の設定 (ignore 済みの `.void-wrangler.jsonc`) に入り、その設定は `void.lock.json` に写されていた。deploy はこの lock から設定を作り直していた (`cloudflare-config.ts` の `persistCloudflareConfig` と `materializeCloudflareConfig`)。`void.config.ts` は `cloudflare.account_id` を持たないので、CI のまっさらな checkout にアカウントを伝えるのは lock である
+- 作った資源の ID は `void.lock.json` に保存される ([Void docs「Cloudflare」の What happens during deploy][])。2026-11-03 時点 (Void 1.4.0) の記録では、選んだアカウントの ID も、作った資源の ID とともに Void が生成する Cloudflare の設定 (ignore 済みの `.void-wrangler.jsonc`) に入り、その設定が `void.lock.json` に写されていた。deploy はこの lock から設定を作り直していた (`cloudflare-config.ts` の `persistCloudflareConfig` と `materializeCloudflareConfig`)。`void.config.ts` は `cloudflare.account_id` を持たないので、この記録では、CI のまっさらな checkout にアカウントを伝えるのは lock だった
 
 ### 向き先を clone ごとに connect で保存する理由
 
 - `void secret` と、`--platform` を付けない `void deploy` と `void db` の remote の操作は、`.void/project.json` の向き先を読む ([Void CLI reference「Secrets and Environment」][]、[Void CLI reference「Deployment」][]、[Void CLI reference「Database」][])。2026-11-03 時点 (Void 1.4.0) の記録では、`void deploy --platform cloudflare` はこのファイルを書かなかった。書くのは `void init` と `void connect` と、`--platform` を付けない対話の `void deploy` が既存の Worker へ link したときだった (`cli/project.ts` の `writeDeploymentPlatform` を呼ぶのは `init.ts`・`connect.ts`・`cloudflare-link.ts`)
 - `.void/` は commit しない。Void の docs は `.void/` を生成物とローカルの状態の置き場として ignore する ([Void docs「Project Structure」][] の `.void/`)。`.void/project.json` だけを commit する形は、Void platform の CI が project を選ぶためのもので ([Void docs「First Deployment」][])、Cloudflare へ出す workflow は `--platform cloudflare` を渡すので要らない。テンプレートの `.gitignore` も `void init` の出力どおり `.void` を ignore する
-- clone ごとに connect を打つことになる。2026-11-03 時点 (Void 1.4.0) の記録では、アカウントは commit した `void.lock.json` から読まれ、選び直しにはならなかった (`cli/cloudflare-connect.ts` が設定にあるアカウントを優先していた)
+- clone ごとに connect を打つことになるが、アカウントの選び直しにはならない。connect は既にあるアカウントの選択を保つ ([Void CLI reference「Connections and Authentication」][])。2026-11-03 時点 (Void 1.4.0) の記録では、そのアカウントは commit した `void.lock.json` から読まれていた (`cli/cloudflare-connect.ts` が設定にあるアカウントを優先していた)
 
 ### Workers Logs と Traces の率を決めた理由
 
@@ -128,7 +128,7 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 | 対象   | 率           | 理由                                                                                                                                                                                                                                                                                    |
 | ------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| logs   | `1` (すべて) | ときどき起きる失敗は、起きた要求のログが残っていないと調べられない (同じ節)。率を下げると、`logger` に残した失敗と、Void の `onError` が `console.error` に出す失敗 (2026-11-03 時点 (Void 1.5.0) の記録) も同じ率で落ちる                                                              |
+| logs   | `1` (すべて) | ときどき起きる失敗は、起きた要求のログが残っていないと調べられない (同じ節)。率を下げると、`logger` に残した失敗と、Void の `onError` が `console.error` に出す失敗 (2026-11-03 時点、Void 1.5.0 の記録) も同じ率で落ちる                                                               |
 | traces | `0.01` (1%)  | 2026-12-01 から、traces は logs と同じ取り込みの枠を使う。Free の枠は 1 日 0.5 GB で、超えるとその日の取り込みが止まる ([Cloudflare docs「Observability pricing」][])。traces の既定の率は `1` なので ([Cloudflare docs「Traces」][] の Sampling)、書かないと traces が logs の枠を食う |
 
 - `observability.enabled: true` だけでは traces は付かない。traces は `traces.enabled` で有効にする ([Cloudflare docs「Traces」][] の How to enable tracing)
@@ -168,6 +168,9 @@ Disable はファイルを消さずに trigger を止める操作で、ファイ
 
 [Void docs「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/deployment.md
 [Void docs「Cloudflare」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/integrations/cloudflare.md
+[Void docs「Cloudflare」の What happens during deploy]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/integrations/cloudflare.md#what-happens-during-deploy
+[Void CLI reference「Connections and Authentication」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/cli/auth.md#connect
+[Void docs「Server Routing」の Global middleware]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/server-routing.md#global-middleware
 [Void docs「Environment variables」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/env-vars.md
 [Void CLI reference「Deployment」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/deploy.md
 [Void CLI reference「Database」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/reference/cli/database.md

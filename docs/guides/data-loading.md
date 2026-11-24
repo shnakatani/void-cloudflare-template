@@ -46,7 +46,7 @@
 
 - `console.error` に文字列と Error を並べて渡さない。message と Error が別の引数になり、fields を項目で絞れない (ADR-0055)
 - fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。id は載せてよい (ADR-0055)
-- 2026-11-03 時点の記録では、URL の query に載る値 (検索語など) は、Workers Logs の invocation log に要求の URL ごと残り、trace を取った要求では trace の span の `url.full` にも残っていた。fields から外しても消えないので、秘密は URL の query に載せない (ADR-0055)
+- URL の query に載る値 (検索語など) は、Workers Logs の invocation log に要求の URL ごと残り ([Cloudflare docs「Workers Logs」][] の Invocation Logs)、trace を取った要求では trace の span の `url.full` にも残る ([Cloudflare docs「Spans and attributes」][] の Fetch Handler)。fields から外しても消えないので、秘密は URL の query に載せない (ADR-0055)
 - 2026-11-03 時点 (Void 1.5.0) の記録では、loader と action から投げたまま Void に任せた例外と、Better Auth の `/api/auth/*` の失敗は、Error をそのまま `console.error` に渡していたので複数行に出て、1 行の JSON にならなかった (ADR-0055)
 
 ### loader で読めなかったものを返す
@@ -110,9 +110,11 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。Cloudflare docs は 2026-11-03 に確認した。react.dev「hydrateRoot」は 2026-11-24 に原文と照らした。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。Cloudflare docs は 2026-11-03 に確認した (「Workers Logs」と「Spans and attributes」は 2026-11-24 に原文と照らした)。react.dev「hydrateRoot」は 2026-11-24 に原文と照らした。
 
 [Cloudflare docs「Workers Best Practices」]: https://developers.cloudflare.com/workers/best-practices/workers-best-practices/#enable-workers-logs-and-traces
+[Cloudflare docs「Workers Logs」]: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#invocation-logs
+[Cloudflare docs「Spans and attributes」]: https://developers.cloudflare.com/workers/observability/traces/spans-and-attributes/#fetch-handler
 [react.dev「Component」]: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
 [react.dev「hydrateRoot」]: https://react.dev/reference/react-dom/client/hydrateRoot#error-logging-in-production
 [Void docs「Loaders & Props」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/loaders.md

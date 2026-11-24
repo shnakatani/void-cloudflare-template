@@ -31,7 +31,7 @@ await render(
 | 遷移の途中の描画                    | `VoidRouterProvider` の `navigation` に `{ state: "loading", location, method }` などを渡す              |
 | `useShared()` が読む値              | `VoidRouterProvider` の `shared` に渡す。`useShared<AppShared>()` の部品なら、`AppShared` の形の値を渡す |
 
-- `VoidRouterProvider` で包まずに描かない。2026-11-02 時点 (`@void/react` 1.4.0、`void` 1.4.0) の記録では、包まないと `useRouter()` は Void の SSR 用の router を返し、`path` はいつも `/`、`visit` は呼ぶと throw した (`@void/react` の `use-router.ts` と、`void` の `pages/client.ts` の `createSsrRouter`)。`Link` は click を扱わず、素の `<a>` として文書ごと遷移した (`@void/react` の `link.tsx`)。`path` を比べる部品のテストは、確かめる path が `/` だと包み忘れても通る
+- `VoidRouterProvider` で包まずに描かない。2026-11-02 時点 (`@void/react` 1.4.0、`void` 1.4.0) の記録では、包まないと `useRouter()` は Void の SSR 用の router を返し、`path` はいつも `/`、`visit` は呼ぶと throw した (`@void/react` の `use-router.ts` と、`void` の `pages/client.ts` の `createSsrRouter`)。`Link` は click を扱わず、素の `<a>` として文書ごと遷移した (`@void/react` の `link.tsx`)。そのため `path` を比べる部品のテストは、確かめる path が `/` だと包み忘れても通りえた
 - 2026-11-02 時点 (`@void/react` 1.4.0) の記録では、`shared` を渡さないと、`useShared()` は Void のページの外と同じく throw した。`useShared()` を使わない部品には渡さない
 
 ### 偽の router が再現しないものを確かめる

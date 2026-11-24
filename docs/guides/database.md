@@ -17,7 +17,7 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 
 ### schema を変える
 
-1. `db/schema.ts` にアプリの table を書く。列の helper は `void/schema-d1`、`sql` は `void/db` から import する ([Void docs「Database」][] の Schema Definition)。auth の table は書かない。Void が migration に足す ([Void docs「Authentication」][] の Database and Migrations、ADR-0052)
+1. `db/schema.ts` にアプリの table を書く。列の helper は `void/schema-d1`、`sql` は `void/db` から import する ([Void docs「Database」][] の Schema Definition)。auth の table は書かない。Void が migration に足す ([Void docs「Authentication」の Database and Migrations][]、ADR-0052)
 2. `vp exec void db generate` を打つ。`db/migrations/` に `.sql` が 1 本と、`meta/` の snapshot と journal ができる。2026-11-02 時点 (Void 1.4.0) の記録では、`--name` は渡せなかった (`` `void db generate` does not support --name. `` で止まった)
 3. 生成された `.sql` を読む。意図しない `DROP` や、作り直しになる `ALTER` が無いかを見る
 4. `db/migrations/` を丸ごと commit する。`meta/` も deploy が schema と比べるので要る ([Void docs「Database」][] の Hand-written migrations)
@@ -29,9 +29,9 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 
 ### auth の設定を変える
 
-ルートの `auth.ts` (Better Auth の plugin、`user.additionalFields`、`rateLimit: { storage: "database" }` など) を変えたら、「schema を変える」の 2 から 4 と同じく `vp exec void db generate` を打って commit する。`void db generate` は先に auth の schema を書き直すので、auth の table と列の変更も migration に入る ([Void docs「Authentication」][] の Database and Migrations)。
+ルートの `auth.ts` (Better Auth の plugin、`user.additionalFields`、`rateLimit: { storage: "database" }` など) を変えたら、「schema を変える」の 2 から 4 と同じく `vp exec void db generate` を打って commit する。`void db generate` は auth の設定と plugin の table を migration に入れるので、auth の table と列の変更も migration に入る ([Void docs「Authentication」の Database and Migrations][])。
 
-- dev server は、起動のたびに足りない auth の table と列を作る ([Void docs「Authentication」][] の Database and Migrations)。dev で動いていても、migration を生成し忘れていると deploy 先に table が無い。`db-migrations.test.ts` がこの生成し忘れも落とす
+- dev server は、起動のたびに足りない auth の table と列を作る ([Void docs「Authentication」の Database and Migrations][])。dev で動いていても、migration を生成し忘れていると deploy 先に table が無い。`db-migrations.test.ts` がこの生成し忘れも落とす
 - 登録とログインの振る舞いが変わる設定は `docs/guides/auth.md`「auth の設定を変える」にある
 
 ### dev の D1 を作り直す
@@ -49,7 +49,7 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 - 打つたびに、dev の画面から作った行と登録したユーザーが消える (「dev の D1 を作り直す」)
 - ログインに使うユーザーは `db/seed.ts` が作る。email と password は `db/seed.ts` の `DEV_EMAIL` と `DEV_PASSWORD` にある。password の hash は seed の中で作るので、`DEV_PASSWORD` を書き換えて打ち直せば、新しい password でログインできる (「見本のユーザーの password の hash を seed の中で作る理由」)
 - `db/seed.ts` は `void/seed` の `defineSeed` で包んで default export にする ([Void docs「Database」][] の Seeding)。2026-11-02 時点 (Void 1.4.0) の記録では、渡る `db` は better-sqlite3 の drizzle だったので、書き込みは `.run()` で同期に打つ
-- 渡る `schema` は `db/schema.ts` の export である ([Void docs「Database」][] の Seeding)。auth の table を持たないので、auth の table の行は ``db.run(sql`…`)`` で入れる。列は Better Auth の email の sign-up が入れる行に合わせる。2026-11-02 時点 (better-auth 1.7.14) の記録では、その行の `account` の `providerId` は `credential`、`accountId` は user の id だった
+- 渡る `schema` は `db/schema.ts` の export である ([Void docs「Database」の Seeding][])。auth の table を持たないので、auth の table の行は ``db.run(sql`…`)`` で入れる。列は Better Auth の email の sign-up が入れる行に合わせる。2026-11-02 時点 (better-auth 1.7.14) の記録では、その行の `account` の `providerId` は `credential`、`accountId` は user の id だった
 - `db/seed.ts` と、そこから実行時に読むファイルは `@/` で import しない。2026-11-02 時点 (Void 1.4.0) の記録では、`void db seed` は jiti で読み、tsconfig の `paths` を渡していなかった (`cli/db.ts` の `importLocalModule`)。`import type` は実行時に消えるので、`@/` を使うファイルから型だけ引いてよい (2026-11-02 に実測)
 - 見本の行の id と作成日時・更新日時は固定の値で書く。既定値に任せると、打つたびに実行時刻が入り、一覧の並びが変わる
 - 見本の配列は `src/features/<domain>/` に置き、ドメインの読み出しの型を付ける。各行が読み出しのスキーマを通ることを、同じディレクトリの unit のテストで確かめる。`db/` にはテストを置けない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)
@@ -71,7 +71,7 @@ D1 は 1 つの query と 1 回の Worker の呼び出しに上限を持つ。�
 | 上限                             | 値                          | 踏みやすい書き方                                                                                                                                                                                                                                                      |
 | -------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | LIKE / GLOB のパターン           | 50 bytes                    | ユーザー入力の部分一致。日本語は 1 文字 3 bytes で、`%` で包むと 16 文字までになる (「ユーザー入力で部分一致の検索を組む」)                                                                                                                                           |
-| 1 つの query の bound parameter  | 100                         | `inArray(<列>, <配列>)` に長さを限らない配列を渡す。値の数だけ parameter になり、2026-11-03 に `createTestD1()` の D1 (miniflare 5.20261101.0-beta) で確かめると 101 個で落ちた。複数の行の `insert().values([...])` も、行の数 × 値を渡した列の数の parameter になる |
+| 1 つの query の bound parameter  | 100                         | `inArray(<列>, <配列>)` に長さを限らない配列を渡す。値の数だけ parameter になり、2026-11-03 に `createTestD1()` の D1 (miniflare 5.20261023.1-beta) で確かめると 101 個で落ちた。複数の行の `insert().values([...])` も、行の数 × 値を渡した列の数の parameter になる |
 | 1 つの SQL 文の長さ              | 100,000 bytes (100 KB)      | 長い値を parameter にせず SQL に埋める                                                                                                                                                                                                                                |
 | 1 回の Worker の呼び出しの query | Workers Paid 1000 / Free 50 | 配列の要素ごとに query を `await` する。`db.batch()` は文の数によらず 1 query と数える                                                                                                                                                                                |
 
@@ -88,7 +88,7 @@ D1 は 1 つの query と 1 回の Worker の呼び出しに上限を持つ。�
    const plan = await d1.prepare(`EXPLAIN QUERY PLAN ${sql}`).bind(...params).all();
    ```
 
-   2026-11-03 に `createTestD1()` の D1 (miniflare 5.20261101.0-beta) で確かめると、`detail` は、index で絞る query で `SEARCH <table> USING INDEX <index>`、全行を読む query で `SCAN <table>` になった。絞った行を読んでから並べ替える query では `USE TEMP B-TREE FOR ORDER BY` が出た
+   2026-11-03 に `createTestD1()` の D1 (miniflare 5.20261023.1-beta) で確かめると、`detail` は、index で絞る query で `SEARCH <table> USING INDEX <index>`、全行を読む query で `SCAN <table>` になった。絞った行を読んでから並べ替える query では `USE TEMP B-TREE FOR ORDER BY` が出た
 
 3. deploy したあと、`vp exec void db execute --remote "PRAGMA optimize"` で統計を取り直す。index を作ったあとに打つよう Cloudflare が勧める ([Cloudflare docs「SQL statements」][] の `PRAGMA optimize`)
 
@@ -98,12 +98,12 @@ D1 は 1 つの query と 1 回の Worker の呼び出しに上限を持つ。�
 ### ユーザー入力で部分一致の検索を組む
 
 - 部分一致は `src/lib/like-pattern.server.ts` の `likeContains(<列>, <入力>)` で組み、パターンと `ESCAPE` 句を手で書かない。エスケープと `ESCAPE` 句は対で要り、片方を忘れてもエラーにならず結果だけが変わる。エスケープを忘れると入力の `%` と `_` がワイルドカードとして効き、`ESCAPE` 句を忘れるとエスケープに足した `\` が文字として残る (「部分一致の検索を D1 で確かめる理由」)
-- 2026-11-02 時点 (Void 1.4.0) の記録では、`void/db` の `like` にも SQLite にも、入力をエスケープする関数は無かった。LIKE のパターンでは `%` が 0 文字以上の並びに、`_` が任意の 1 文字に当たり、文字そのものとして当てるには `ESCAPE` 句で決めた文字を前に置く ([SQLite docs「SQL Language Expressions」][] の The LIKE, GLOB, REGEXP, MATCH, and extract operators)
+- SQLite に、入力をエスケープする関数は無い。2026-11-02 時点 (Void 1.4.0) の記録では、`void/db` の `like` にも無かった。LIKE のパターンでは `%` が 0 文字以上の並びに、`_` が任意の 1 文字に当たり、文字そのものとして当てるには `ESCAPE` 句で決めた文字を前に置く ([SQLite docs「SQL Language Expressions」][] の The LIKE, GLOB, REGEXP, MATCH, and extract operators)
 - 検索語は、入力の検証で `fitsContainsPattern` (`src/lib/like-pattern.ts`) に通してから `likeContains` に渡す。パターンは `%` で包んでエスケープしたあとの UTF-8 で 50 bytes までで、超えると D1 が query ごと落とす (「D1 の上限に収める」)。`likeContains` は超える値を受けると、D1 へ送らずに throw する
 - 上限は文字数で決まらない。`%` で包んだ残りの 48 bytes に、英数字は 48 文字、日本語 (1 文字 3 bytes) は 16 文字、`%`・`_`・`\` (エスケープで 2 bytes) は 24 文字、サロゲートペアの文字 (4 bytes) は 12 文字が入る。入力欄で伝えるときは「N 文字以内」と書けないので、文字数を目安として出す
 - 超えた値を拒まずに受けるなら、`truncateToContainsPattern` で上限に収まる長さまで code point の境界で切る (ADR-0036)。切った語で探すと打った語と結果が食い違うので、利用者が打つ入力欄では拒んで伝える
 - 大文字小文字を同一視するのは ASCII の英字だけである ([SQLite docs「SQL Language Expressions」][]: "SQLite only understands upper/lower case for ASCII characters by default.")。ASCII でない文字の大文字小文字をまとめて当てたいなら、`likeContains` では足りない
-- 検索の query を足したら、`%`・`_`・`\` を含む検索語、ASCII の大文字小文字、日本語、上限ちょうどと 1 文字超える検索語を、`createTestD1()` の D1 で確かめる (「テストで D1 を使う」)。2026-11-03 時点 (miniflare 5.20261101.0-beta) の記録では、D1 は LIKE のパターンの上限を行に当てるときに判定し、行の無い table では超えても落ちなかった
+- 検索の query を足したら、`%`・`_`・`\` を含む検索語、ASCII の大文字小文字、日本語、上限ちょうどと 1 文字超える検索語を、`createTestD1()` の D1 で確かめる (「テストで D1 を使う」)。2026-11-03 時点 (miniflare 5.20261023.1-beta) の記録では、D1 は LIKE のパターンの上限を行に当てるときに判定し、行の無い table では超えても落ちなかった
 
 ### テストで D1 を使う
 
@@ -160,7 +160,7 @@ D1 の結果の `meta.served_by_primary` は、その query を処理した inst
 3. 確かめ終えたら、足した行を消して deploy し直す
 
 - 足した query は loader の query と同じ session で動き、その query を処理した instance を返す。`db` は要求の中の query で 1 つの session を共有し (ADR-0067)、後の query はそれより古くない instance で読む ([Cloudflare docs「Global read replication」][] の Sessions API provides sequential consistency)
-- 2026-11-24 時点 (Void 1.11.0) の記録では、session の cookie を送る要求で、loader より先に Void の auth の middleware が `first-primary` の別の session で session の行を読んでいた (ADR-0067)。その読みを処理した instance は、足した query では分からない
+- session の cookie を送る要求では、Void の auth の判定が session の行を primary から読む ([Void docs「D1 (SQLite)」の Read replication][] の Avoid stale reads with a primary-first session)。2026-11-23 時点 (Void 1.11.0) の記録では、この読みは loader より先に、auth の middleware が `first-primary` の別の session で行っていた (ADR-0067)。その読みを処理した instance は、足した query では分からなかった
 - ローカルの dev では、`served_by_primary` と `served_by_region` は `undefined` になる ([Cloudflare docs「Global read replication」][])。deploy した環境でしか確かめられない
 - コードを足さずに傾向だけを見るなら、Cloudflare の dashboard の D1 の metrics で、要求を処理した region の内訳を見る ([Cloudflare docs「Global read replication」][] の Observability)
 
@@ -182,7 +182,7 @@ D1 の LIKE のパターンの上限も、D1 に送らないと確かめられ�
 
 ### 部分一致を LIKE で組む理由
 
-D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs と `createTestD1()` の D1 (miniflare 5.20261023.1-beta) で比べると、次のとおりだった。
+D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs と `createTestD1()` の D1 (miniflare 5.20261023.1-beta) で比べた。
 
 | 案                                       | 評価                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 採否                                         |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -200,7 +200,7 @@ D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs �
 
 見本のユーザーには、Void の auth の照合を通る password の hash が要る。2026-11-04 時点 (Void 1.5.0) の記録では、`void db seed` は `db/seed.ts` を CLI の Node の process で jiti で読み、better-sqlite3 で開いたローカルの D1 を渡して await していた (`cli/db.ts` の `runSeedModule`)。seed の中で `node:crypto` を呼べる。
 
-seed の中で scrypt で作る形を選んだ。2026-11-04 に読んだ Void 1.5.0 と better-auth 1.7.14 のソースと docs では、作り方の候補は次のとおりだった。
+作り方の候補は次のとおりで、seed の中で scrypt で作る形を選んだ。各案の評価は、2026-11-04 に Void 1.5.0 と better-auth 1.7.14 のソースと docs を読んだものである。
 
 | 候補                                                                                                           | 採否     | 理由                                                                                                                                                                                                                                                                                                                                                                                |
 | -------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -232,7 +232,9 @@ seed の中で scrypt で作る形を選んだ。2026-11-04 に読んだ Void 1.
 本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.5.0 か v1.11.0) を固定して指す。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に、Better Auth docs は 2026-11-04 に原文と照らした。Void のテストも v1.5.0 に固定した版を指す。
 
 [Void docs「Database」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database.md
+[Void docs「Database」の Seeding]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database.md#seeding
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md
+[Void docs「Authentication」の Database and Migrations]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/auth.md#database-and-migrations
 [Void docs「void db reset」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md
 [SQLite docs「SQL Language Expressions」]: https://www.sqlite.org/lang_expr.html#like
 [SQLite docs「Query Planning」]: https://www.sqlite.org/queryplanner.html
