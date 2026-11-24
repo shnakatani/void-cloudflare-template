@@ -15,8 +15,8 @@ paths:
 
 - schema かルートの `auth.ts` を変えたら `vp exec void db generate` を打ち、生成された `.sql` を読んで `db/migrations/` ごと commit する。auth の table は `db/schema.ts` に書かない (`docs/guides/database.md`「schema を変える」)
 - 生成した migration を手で書き換えない。直すときは `db/migrations/` を HEAD に戻し、schema を直して生成し直す (`docs/guides/database.md`「schema を変える」)
-- dev の起動ログに `Local database already has application tables but no Void migration history` が出たら `vp exec void db reset` で作り直す。dev は ready になるが migration が当たっていないことがある (`docs/guides/database.md`「dev の D1 を作り直す」)
-- `tsconfig.paths.json` に `void/db` の `paths` を写さない。unit project で `void/db` が `.d.ts` に解決し、`createDb is not a function` で壊れることがある (ADR-0047)
+- dev の起動ログに `Local database already has application tables but no Void migration history` が出たら `vp exec void db reset` で作り直す。dev は ready になるが migration が当たっていない (`docs/guides/database.md`「dev の D1 を作り直す」)
+- `tsconfig.paths.json` に `void/db` の `paths` を写さない。unit project で `void/db` が `.d.ts` に解決し、`createDb is not a function` で壊れる (ADR-0047)
 
 ## query
 
