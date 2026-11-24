@@ -26,7 +26,7 @@
 
 ### client に届く文言を書く
 
-2026-11-03 時点 (Void 1.4.0) の記録では、production の Void は loader と action の未知の例外の文言を client へ運ばず、client に届くのは開発者が選んで書く次の 3 つの文言だけだった (ADR-0055)。
+2026-11-02 時点 (Void 1.4.0) の記録では、production の Void は loader と action の未知の例外の文言を client へ運ばず、client に届くのは開発者が選んで書く次の 3 つの文言だけだった (ADR-0055)。
 
 | 文言                                                  | 届き方                                                        |
 | ----------------------------------------------------- | ------------------------------------------------------------- |
@@ -36,7 +36,7 @@
 
 - 3 つの文言に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。パスや id は載せてよい (ADR-0055)
 - server で調べたい失敗は、`HTTPException` を投げる前に「server のログに失敗を残す」の形で残す。2026-11-02 時点 (Void 1.4.0) の記録では、`HTTPException` は server のログに出なかった (ADR-0055)
-- 未知の例外は包み直さない。2026-11-03 時点 (Void 1.4.0) の記録では、文言は Void が落とし、stack ごと server のログに残っていた (ADR-0055)
+- 未知の例外は包み直さない。2026-11-02 時点 (Void 1.4.0) の記録では、文言は Void が落とし、stack ごと server のログに残っていた (ADR-0055)
 
 ### server のログに失敗を残す
 
@@ -47,7 +47,7 @@
 - `console.error` に文字列と Error を並べて渡さない。message と Error が別の引数になり、fields を項目で絞れない (ADR-0055)
 - fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。id は載せてよい (ADR-0055)
 - URL の query に載る値 (検索語など) は、Workers Logs の invocation log に要求の URL ごと残り ([Cloudflare docs「Workers Logs」][] の Invocation Logs)、trace を取った要求では trace の span の `url.full` にも残る ([Cloudflare docs「Spans and attributes」][] の Fetch Handler)。fields から外しても消えないので、秘密は URL の query に載せない (ADR-0055)
-- 2026-11-03 時点 (Void 1.5.0) の記録では、loader と action から投げたまま Void に任せた例外と、Better Auth の `/api/auth/*` の失敗は、Error をそのまま `console.error` に渡していたので複数行に出て、1 行の JSON にならなかった (ADR-0055)
+- 2026-11-03 時点 (Void 1.4.0) の記録では、loader と action から投げたまま Void に任せた例外と、Better Auth の `/api/auth/*` の失敗は、Error をそのまま `console.error` に渡していたので複数行に出て、1 行の JSON にならなかった (ADR-0055)
 
 ### loader で読めなかったものを返す
 

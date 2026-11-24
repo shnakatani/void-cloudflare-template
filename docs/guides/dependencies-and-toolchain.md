@@ -51,7 +51,7 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 ### Void の skill を扱う
 
-`.agents/skills/void`・`.agents/skills/migrate-vite-cloudflare-to-void` と、`.claude/skills/` の同じ名前は、`node_modules/void/skills/` への symlink である。2026-11-03 時点 (Void 1.4.0) の記録では、`void init` が張っていた (`cli/init.ts` の `linkSkillsForSpecificAgents`、`cli/skills.ts`)。
+`.agents/skills/void`・`.agents/skills/migrate-vite-cloudflare-to-void` と、`.claude/skills/` の同じ名前は、`node_modules/void/skills/` への symlink である。`void init` は、対応するエージェントの設定を見つけると skill を張る ([Void docs「Using Void with Coding Agents」][] の Skills)。
 
 - 2 つとも `void init` の出力のまま残す。移行の skill は、Void を上げたときに `void init` の出力と比べる手間を減らすために残しているもので、このリポジトリでは使わない
 - symlink なので、Void を上げると中身も上がる。`skills-lock.json` には載せない。`skills-lock.json` は GitHub から写した skill (`shadcn`・`valibot`) の hash を持つもので、symlink の skill は Void の版が中身を決める
@@ -327,3 +327,4 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 [dependabot-core「github_actions の Dockerfile」]: https://github.com/dependabot/dependabot-core/blob/cbabeb7b1671021a093ac3990c9e0ac17dc20fdd/github_actions/Dockerfile
 [GitHub Docs「Immutable releases」]: https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases
 [gh-actions-lock「troubleshooting」]: https://github.com/github/gh-actions-lock/blob/d68b1a345a0aa02cf870cd0e0d78418d492d280d/docs/troubleshooting.md
+[Void docs「Using Void with Coding Agents」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/integrations/agents.md#skills

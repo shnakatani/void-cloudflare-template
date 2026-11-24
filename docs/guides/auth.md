@@ -40,7 +40,7 @@
 | 別の origin の frontend から呼ばせる                              | その origin を `auth.ts` の `trustedOrigins` に足す (「auth の設定を変える」)。足さないと、その frontend の書き込みはログインしていない要求になる                           |
 
 - handler の path が `PROTECTED_PATHS` の下にあれば、未ログインの `POST` などの要求は middleware が 401 で止める。一覧に無い path では handler に届くので、user を読む判定は handler の `requireAuth(c)` が持つ
-- 別の origin の frontend が資格情報つきで呼ぶと、ブラウザは simple request でない要求の前に CORS の preflight (`OPTIONS`) を送る。preflight には Hono の `cors` を答えさせる。`cors` は global の middleware (`middleware/NN.cors.ts`) か、route の handler に置く。route に置くなら、`export const OPTIONS` と、呼ばせる method (`POST` など) の handler の両方に渡す。2026-11-03 時点 (hono 4.13.14) の記録では、`OPTIONS` の応答は `cors` が 204 で終え、本来の要求の応答には `cors` が `Access-Control-Allow-Origin` を付けていた。この記録の挙動では、片方が欠けると preflight か本来の応答の CORS check が失敗する。2026-11-03 時点 (Void 1.5.0) の記録では、method を export しない route は、default export がすべての method を受けていた。守る path でも middleware は `OPTIONS` を止めない (ADR-0053)
+- 別の origin の frontend が資格情報つきで呼ぶと、ブラウザは simple request でない要求の前に CORS の preflight (`OPTIONS`) を送る。preflight には Hono の `cors` を答えさせる。`cors` は global の middleware (`middleware/NN.cors.ts`) か、route の handler に置く。route に置くなら、`export const OPTIONS` と、呼ばせる method (`POST` など) の handler の両方に渡す。2026-11-03 時点 (hono 4.13.14) の記録では、`OPTIONS` の応答は `cors` が 204 で終え、本来の要求の応答には `cors` が `Access-Control-Allow-Origin` を付けていた。この記録の挙動では、片方が欠けると preflight か本来の応答の CORS check が失敗する。2026-11-03 時点 (Void 1.4.0) の記録では、method を export しない route は、default export がすべての method を受けていた。守る path でも middleware は `OPTIONS` を止めない (ADR-0053)
 - 2026-11-02 時点 (Void 1.4.0) の記録では、`Origin` も `Sec-Fetch-Site` も `Referer` も無い要求は、ブラウザの外の client として扱われ、session の cookie を持てば user が読めた。ブラウザの外の client から呼ばせない API でも、user を読む判定は外さない
 
 ### 全ページで user を読む
