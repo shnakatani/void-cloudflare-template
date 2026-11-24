@@ -82,7 +82,7 @@ token だけを混ぜる `color-mix()` の通し方:
 - `@shadcn/lint` 0.2.5 は `eslint` と `@typescript-eslint/parser` を optional peer に持つ。component のファイルを読む parser には optionalDependencies の `oxc-parser` を先に使い、`@typescript-eslint/parser` は読めなかったときの代わりなので、直接の依存に足さない (2026-11-24 に 0.2.5 の `package.json` と `packages/lint/src/project/parser.ts` で確認)
 - `oxc-parser` と `@typescript-eslint/parser` のどちらも読めないと、`@shadcn/lint` は component のファイルを読めず、variant と wrapper が分からなくなる。ルールは動き続け、`Neither oxc-parser nor @typescript-eslint/parser is installed` の警告を 1 度出す (0.2.5 の `dist/index.js` で確認。oxlint の出力では未確認)
 - ESLint は `eslint-plugin-testing-library` が自身の peer で必須にしているので入る (`@typescript-eslint/utils` も同じ)。`@shadcn/lint` の optional peer もその版に解決される (`docs/guides/lint/configuration.md`「testing-library を story に限る理由」)
-- pnpm は optional peer を、範囲に合う版がすでに入っているときだけ入れる (pnpm 11.x docs「Optional peer dependencies」)。2026-11-24 に pnpm 11.28.0 で、lock の写しから `eslint-plugin-testing-library` を外すと、ESLint は `@shadcn/lint` の optional peer として lock に残った。外したときの確かめ方は `docs/guides/dependencies-and-toolchain.md`「依存を足す・外す」にある
+- pnpm は optional peer を、範囲に合う版がすでに入っているときだけ入れる (pnpm docs「Optional peer dependencies」)。2026-11-24 に pnpm 12.21.0 で、lock の写しから `eslint-plugin-testing-library` を外すと、ESLint は `@shadcn/lint` の optional peer として lock に残った。外したときの確かめ方は `docs/guides/dependencies-and-toolchain.md`「依存を足す・外す」にある
 - 依存グラフの `typescript` は 6 系である。`@typescript-eslint/utils` とその推移依存の `typescript` peer (`>=4.8.4 <6.1.0`) が上限を押さえる (2026-11-24 に lock で確認。utils の最新の 8.74.0 も同じ範囲で、`typescript` の latest は 7.0.2)。型検査は tsrs が担い `typescript` を直接の依存に持たないため、`vp check` の結果は変わらない。6 系の固定は、typescript-eslint が `typescript` 7 を peer に含めるまで解けない
 - `no-restyle` は認識した design system component だけを見る (ADR-0011)。ui 部品にあるものを素の要素で作り直すと規則が効かない。機械では止まらない
 
@@ -99,6 +99,6 @@ token だけを混ぜる `color-mix()` の通し方:
 - `@shadcn/lint` 0.2.5 の require-static-classes.md (「Custom class helpers」の登録の条件): https://github.com/shadcn-ui/lint/blob/%40shadcn/lint%400.2.5/docs/rules/require-static-classes.md
 - cva docs「Variants」(variant の名前と class の対応): https://cva.style/docs/getting-started/variants
 - cva docs「Extending Components」(`class` と `className` のキーで class を足す): https://cva.style/docs/getting-started/extending-components
-- pnpm 11.x の optional peer の解決 (「Optional peer dependencies」。2026-11-24 に原文を確認): https://github.com/pnpm/pnpm.io/blob/6f91a0c24f9ffc8946b5b4294f46b9a49e18a7e9/versioned_docs/version-11.x/settings/peer-dependencies.md#optional-peer-dependencies
+- pnpm の optional peer の解決 (「Optional peer dependencies」。2026-11-24 に原文を確認): https://github.com/pnpm/pnpm.io/blob/29f86c5f4170e6fc0477c5ef90b4d8160f8902aa/docs/settings/peer-dependencies.md#optional-peer-dependencies
 - Tailwind CSS の既定 palette を差し替える手順 (`--color-*: initial`): https://tailwindcss.com/docs/colors
 - eslint-plugin-better-tailwindcss: https://github.com/schoero/eslint-plugin-better-tailwindcss
