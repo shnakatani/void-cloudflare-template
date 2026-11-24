@@ -6,7 +6,7 @@
 
 ## Context
 
-Void 1.4.0 は D1 と drizzle を組み込んで持つ (Void の docs「Database」「D1 (SQLite)」)。
+2026-11-02 時点 (Void 1.4.0) の記録では、Void は D1 と drizzle を組み込んで持ち、その仕組みは次のとおりだった (Void の docs「Database」「D1 (SQLite)」)。
 
 | 仕組み             | 中身                                                                                                                                                                                                                                                                  |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -15,7 +15,7 @@ Void 1.4.0 は D1 と drizzle を組み込んで持つ (Void の docs「Database
 | `@schema`          | voidPlugin が張る alias。`db/schema.ts` か `db/schema/` を指す                                                                                                                                                                                                        |
 | `void db generate` | `void prepare` で auth の schema を書き直してから drizzle-kit を回し、`db/migrations/` に `.sql` と `meta/` を書く。Void が管理する auth の table と、auth の plugin の table も入る (Void の docs「`void db generate`」、Void 1.4.0 の `cli/db.ts` の `runGenerate`) |
 
-migration を当てる経路は起動のしかたで違う。
+2026-11-02 時点 (Void 1.4.0) の記録では、migration を当てる経路は起動のしかたで違っていた。
 
 | 起動                         | migration                                                                                                                                                                                                                                                       |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -23,7 +23,7 @@ migration を当てる経路は起動のしかたで違う。
 | `vp preview`                 | 当てない。D1 は dev と同じ `.void/v3/d1` を読む (2026-11-02 に観測)                                                                                                                                                                                             |
 | Cloudflare への直接の deploy | commit した migration を当てる。auth の table も migration に入れて commit する (Void の docs「Authentication」の Database and Migrations)。deploy は schema と `db/migrations/meta/` の snapshot を比べる (Void の docs「Database」の Hand-written migrations) |
 
-Void は、schema と migration のずれ (drift) を CI で止める command を持たない。docs の表は `void db status` を "Check schema drift and pending migrations" と書くが、Void 1.4.0 の `cli/db.ts` の `runStatus` は journal の整合 (`assertJournalCoherence`) と適用状況だけを見る。drift を比べるのは deploy の経路 (`cli/deploy-drift.ts`・`cli/deploy-migrations.ts`) だけである。
+2026-11-02 時点 (Void 1.4.0) の記録では、Void は schema と migration のずれ (drift) を CI で止める command を持っていなかった。docs の表は `void db status` を "Check schema drift and pending migrations" と書いていたが、`cli/db.ts` の `runStatus` は journal の整合 (`assertJournalCoherence`) と適用状況だけを見ていた。drift を比べるのは deploy の経路 (`cli/deploy-drift.ts`・`cli/deploy-migrations.ts`) だけだった。
 
 2026-11-02 に Void 1.4.0 で次を観測した。
 
@@ -48,14 +48,14 @@ Void は、schema と migration のずれ (drift) を CI で止める command �
 | migration を作らず `void db push` で当てる                                                          | docs が試作用とする command で、deploy に当てる migration が残らない                                                                                 | 却下     |
 | auth の table を migration に入れず、dev の自動作成に任せる                                         | dev では動くが、Cloudflare への直接の deploy では auth の table が作られない (Void の docs「Authentication」)                                        | 却下     |
 | migration を手で書く                                                                                | deploy が比べる `meta/` の snapshot を手で揃えることになる (Void の docs「Database」の Hand-written migrations)。schema とのずれを止める仕組みも無い | 却下     |
-| drift の検査を `void db status` に任せる                                                            | Void 1.4.0 の `void db status` は drift を見ない (Context)                                                                                           | 却下     |
+| drift の検査を `void db status` に任せる                                                            | Void 1.4.0 の `void db status` は drift を見ていなかった (Context)                                                                                   | 却下     |
 | `meta/` も format する                                                                              | 生成のたびに format し直す手順が要る。生成物を手で整える操作が入ると、drizzle-kit の出力と commit したものの差が見分けにくくなる                     | 却下     |
 
 ## Consequences
 
 - `db` の型は schema を持たない。`void/db` の `paths` を写さないので、型は package の `DrizzleD1Database` (schema なし) になる (ADR-0047)。Vitest の中の `db` も schema と `database.casing` を持たない (ADR-0054)。query は列名を明示し、`db.query.*` と `database.casing` に頼らない。casing を設定しても、テストの `db` には効かない
 - schema かルートの `auth.ts` (auth の plugin を含む) を変えたら、`vp exec void db generate` を打って生成された `.sql` を読み、`db/migrations/` ごと commit する。手順は `docs/guides/database.md`「schema を変える」
-- migration を入れる前に dev を起動して auth の table ができた D1 では、dev の起動ログに `Local database already has application tables but no Void migration history` が出る。dev は ready になるが migration の適用はその error で止まるので、`vp exec void db reset` で作り直す (2026-11-02、Void 1.4.0)
+- 2026-11-02 の Void 1.4.0 では、migration を入れる前に dev を起動して auth の table ができた D1 で、dev の起動ログに `Local database already has application tables but no Void migration history` が出た。dev は ready になったが、migration の適用はその error で止まった。この error が出たら `vp exec void db reset` で作り直す
 - `db-migrations.test.ts` は `void db generate` を spawn するので、integrity のテストの中で時間がかかる。テストに長い timeout を持たせている
 - migration のファイル名は drizzle-kit のランダムな名前で、名前から中身は読めない
 
