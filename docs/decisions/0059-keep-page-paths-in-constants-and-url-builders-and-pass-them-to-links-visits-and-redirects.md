@@ -8,7 +8,7 @@
 
 この ADR は、遷移の行き先の path の誤り (綴りの誤り、ページのファイルを動かしたあとの古い path) をどこで止めるかを決める。
 
-Void 1.5.0 で、遷移の行き先を受ける口の型は次のとおりである (2026-11-03 に確かめた)。
+2026-11-03 に Void 1.5.0 で確かめると、遷移の行き先を受ける口の型は次のとおりだった。
 
 | 行き先を受ける口                                | 型                                                                                             | 出典                                                       |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
@@ -17,10 +17,10 @@ Void 1.5.0 で、遷移の行き先を受ける口の型は次のとおりであ
 | middleware と loader の `c.redirect`            | Hono の `string \| URL`                                                                        | Hono の `Context`                                          |
 | page の action の URL (`action()`・`useForm()`) | `ActionUrl`。action を持つページの path と action 名の組だけを許し、綴りを誤ると型検査で落ちる | `.void/routes.d.ts` の `PageActionMap` と `ActionUrl`      |
 
-- 文字列を受ける口は、在らない path を書いても型検査で落ちない。押したときに 404 のページになる (ADR-0050)
+- この版の文字列を受ける口は、在らない path を書いても型検査で落ちなかった。押したときに 404 のページになる (ADR-0050)
 - `.void/routes.d.ts` は、ページ・`routes/`・WebSocket の route の pattern を `RoutePathMap` に並べ、そのキーの和を `RoutePath` として `void/routes` から export する。`void prepare` と dev server が `pages/` から作り直す
-- `void/routes` の `routeUrl(<pattern>, { params, query, hash })` は、`RoutePath` に無い pattern と足りない param を型検査で落とし、param と query を URL に符号化した文字列を返す。query の値は `URLSearchParams` で足し、`null` と `undefined` は省く (`void` 1.5.0 の `runtime/route-url.ts`)。Void の docs は、動的な URL を `routeUrl()` で組み、返った文字列を `Link`・`<a>`・`c.redirect()` に渡す形を示す (`node_modules/void/docs/guide/type-safety.md`「Typed URLs and Navigation」、`guide/pages-routing/overview.md`「Typed navigation」)
-- `routeUrl()` の実装は、`router.visit` が行き先を文字列に直すのにも使われ、client の bundle にはもとから入る (`void` 1.5.0 の `dist/routes-stub.mjs` と `dist/pages/client.mjs` が同じ chunk `route-url-*.mjs` から import する)
+- `void/routes` の `routeUrl(<pattern>, { params, query, hash })` は、`RoutePath` に無い pattern と足りない param を型検査で落とし、param と query を URL に符号化した文字列を返す。2026-11-03 時点 (`void` 1.5.0) の記録では、query の値は `URLSearchParams` で足し、`null` と `undefined` は省いていた (`runtime/route-url.ts`)。Void の docs は、動的な URL を `routeUrl()` で組み、返った文字列を `Link`・`<a>`・`c.redirect()` に渡す形を示す (`node_modules/void/docs/guide/type-safety.md`「Typed URLs and Navigation」、`guide/pages-routing/overview.md`「Typed navigation」)
+- 2026-11-03 時点 (`void` 1.5.0) の記録では、`routeUrl()` の実装は、`router.visit` が行き先を文字列に直すのにも使われ、client の bundle にはもとから入っていた (`void` 1.5.0 の `dist/routes-stub.mjs` と `dist/pages/client.mjs` が同じ chunk `route-url-*.mjs` から import していた)
 - リンクだけを描くページが、URL を組む関数のモジュールから path の定数を import すると、そのモジュールが import する検証のスキーマも、そのページの client の chunk に入る。2026-11-02 に `vp build` (Void 1.4.0) の manifest で、そのページの chunk から import で辿る chunk の合計は、定数だけのモジュールから import したとき 78,969 byte、URL を組む関数のモジュールから import したとき 92,659 byte だった
 
 ## Decision
@@ -35,19 +35,19 @@ Void 1.5.0 で、遷移の行き先を受ける口の型は次のとおりであ
 
 ### 検討した選択肢
 
-| 案                                                                                    | 評価                                                                                                                                                                                                  | 採否     |
-| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 定数を `satisfies RoutePath` で当て、query と param を持つ URL は `routeUrl()` で組む | 在らない path を定数の 1 か所の型検査で落とす。URL の符号化を Void の docs が示す関数に任せる。`routeUrl()` は client の bundle にもとから入る (Context)。値を持たない query は `?<名前>=` の形になる | **採用** |
-| 定数を `satisfies RoutePath` で当て、query は手で連結する                             | 在らない path は同じく落ちる。符号化を自前で持ち続け、Void の docs が示す組み方から外れる                                                                                                             | 却下     |
-| 定数を置かず、呼び出しごとに `routeUrl("<pattern>")` を書く                           | 呼び出しごとに型検査が効く。守る path の一覧と、読み込み中の行き先の `pathname` との比較には文字列の定数が要り、同じ path の字面が定数と呼び出しに分かれる                                            | 却下     |
-| `router.visit` に行き先の object (`RouteDestination`) を渡す                          | `router.visit` では型検査が効く。`Link` の `href` と `c.redirect` は文字列しか受けないので、同じ行き先を口によって 2 つの形で組むことになる                                                           | 却下     |
-| 定数を型に当てずに持つ                                                                | 綴りの誤りは定数の 1 か所にしか起きないが、定数の値と `pages/` の対応は何も見ない。押すまで 404 に気付けない                                                                                          | 却下     |
-| path の定数を、URL を組む関数と同じモジュールに置く                                   | 置き場所が 1 つで済む。リンクだけを描くページの client の chunk に、URL を組む関数が import する検証のスキーマが入る (Context の実測)                                                                 | 却下     |
-| 文字列を直に書き、在らない path は 404 で気付く                                       | 押すまで誤りが見えない。同じ path を書いた箇所のどれか 1 つだけが古くなる                                                                                                                             | 却下     |
+| 案                                                                                    | 評価                                                                                                                                                                                                        | 採否     |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 定数を `satisfies RoutePath` で当て、query と param を持つ URL は `routeUrl()` で組む | 在らない path を定数の 1 か所の型検査で落とす。URL の符号化を Void の docs が示す関数に任せる。`routeUrl()` は client の bundle にもとから入っていた (Context)。値を持たない query は `?<名前>=` の形になる | **採用** |
+| 定数を `satisfies RoutePath` で当て、query は手で連結する                             | 在らない path は同じく落ちる。符号化を自前で持ち続け、Void の docs が示す組み方から外れる                                                                                                                   | 却下     |
+| 定数を置かず、呼び出しごとに `routeUrl("<pattern>")` を書く                           | 呼び出しごとに型検査が効く。守る path の一覧と、読み込み中の行き先の `pathname` との比較には文字列の定数が要り、同じ path の字面が定数と呼び出しに分かれる                                                  | 却下     |
+| `router.visit` に行き先の object (`RouteDestination`) を渡す                          | `router.visit` では型検査が効く。`Link` の `href` と `c.redirect` は文字列しか受けないので、同じ行き先を口によって 2 つの形で組むことになる                                                                 | 却下     |
+| 定数を型に当てずに持つ                                                                | 綴りの誤りは定数の 1 か所にしか起きないが、定数の値と `pages/` の対応は何も見ない。押すまで 404 に気付けない                                                                                                | 却下     |
+| path の定数を、URL を組む関数と同じモジュールに置く                                   | 置き場所が 1 つで済む。リンクだけを描くページの client の chunk に、URL を組む関数が import する検証のスキーマが入る (Context の実測)                                                                       | 却下     |
+| 文字列を直に書き、在らない path は 404 で気付く                                       | 押すまで誤りが見えない。同じ path を書いた箇所のどれか 1 つだけが古くなる                                                                                                                                   | 却下     |
 
 ## Consequences
 
-- 定数の型検査は `.void/routes.d.ts` が新しいときだけ効く。`vp install` の `postinstall` (`void prepare`) と dev server が作り直す。ページを動かしたあとに dev server も `void prepare` も走らせずに `vp check` を打つと、古い route の型で通る (2026-11-03、Void 1.5.0。`pages/` にページを 1 枚足して `vp check` を打っても `.void/routes.d.ts` にその path は増えず、`vp exec void prepare` のあとに増えた)
+- 定数の型検査は `.void/routes.d.ts` が新しいときだけ効く。`vp install` の `postinstall` (`void prepare`) と dev server が作り直す。ページを動かしたあとに dev server も `void prepare` も走らせずに `vp check` を打つと、古い route の型で通った (2026-11-03、Void 1.5.0。`pages/` にページを 1 枚足して `vp check` を打っても `.void/routes.d.ts` にその path は増えず、`vp exec void prepare` のあとに増えた)
 - 値を持たない query の名前は、URL に `?<名前>=` で載る。loader は値の有無ではなく名前の有無で読む
 - `Link` の `href` に文字列を直に書いても型検査は落ちない。定数と `routeUrl()` を通すことはレビューで見る
 - page の action の URL は `ActionUrl` が型で検査するので、この決定の対象にしない

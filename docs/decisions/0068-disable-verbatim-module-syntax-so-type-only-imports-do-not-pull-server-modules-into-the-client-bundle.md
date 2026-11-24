@@ -7,7 +7,7 @@
 ## Context
 
 pages mode のページ (`pages/<path>.tsx`) は client と Worker の SSR の両方で動き、`.server.ts` の型を `import type { Props }` で読む (Void の docs「Loaders & Props」の Using the Data in Page Components)。
-Void は client のコードが `.server.ts` を import するのを止めず、止めるのは ADR-0055 の lint である。lint は `allowTypeImports` で型の import を通す。
+2026-11-07 時点 (Void 1.5.0) の記録では、Void は client のコードが `.server.ts` を import するのを止めなかった。止めるのは ADR-0055 の lint である。lint は `allowTypeImports` で型の import を通す。
 
 ### 漏れる仕組み
 
@@ -15,7 +15,7 @@ TypeScript の tsconfig reference「Verbatim Module Syntax」は、この option
 Vite docs「Features」の TypeScript Compiler Options は、この option を "Other Compiler Options Affecting the Build Result" に挙げる。
 残った import の先のモジュールは client の bundle に入り、トップレベルの処理 (`process.env` の読み出しなど) が client で走る。
 
-Void はこの option について案内を持たない。
+2026-11-07 時点 (Void 1.5.0) の記録では、Void はこの option について案内を持っていなかった (下の表)。
 
 | 確かめたもの                                                                                          | 内容 (2026-11-07、Void 1.5.0)                                                                                                                                                                                                        |
 | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -37,9 +37,9 @@ probe のモジュールはトップレベルで目印の文字列を `console.i
 | 名前に `.server` の付かないモジュールの値を `typeof v` にだけ使う | 範囲の外         | 入らない              | 入らない                  | **入る**              | 入らない               |
 
 - 「Compiler なし」は `vite.config.ts` の `reactPluginOptions` を `{ compiler: false }` にした build である。probe なしの Worker の出力 (`bundle`) も、`true` と `false` で中身の hash が同じだった
-- React Compiler を当てると、`true` でも漏れない。`@vitejs/plugin-react` の `vite:react-compiler` は `enforce: "pre"` で、`include` (既定は `/\.[tj]sx?$/`) に当たるファイルを `oxc-transform-react` の `transform` に通す。`oxc-transform-react` の `TransformOptions` に TypeScript の option は無く、tsconfig を読まずに TypeScript の構文を外す (`index.d.ts`)。そのため `vite:oxc` が tsconfig を読む前に、型にだけ使う import が消える
+- React Compiler を当てると、`true` でも漏れなかった。同じ記録では、`@vitejs/plugin-react` 6.2.1 の `vite:react-compiler` は `enforce: "pre"` で、`include` (既定は `/\.[tj]sx?$/`) に当たるファイルを `oxc-transform-react` の `transform` に通していた。`oxc-transform-react` 0.156.0 の `TransformOptions` に TypeScript の option は無く、tsconfig を読まずに TypeScript の構文を外していた (`index.d.ts`)。そのため `vite:oxc` が tsconfig を読む前に、型にだけ使う import が消えていた
 - この働きは plugin の実装による。Compiler を外したとき、または plugin が TypeScript を外さなくなったときに、表の太字の経路が開く
-- ADR-0055 の lint は `import { type T }` を型の import として通す。`true` のまま Compiler を外した build では、この書き方が lint にも型検査にも止められずに `.server` の module を client に入れる
+- ADR-0055 の lint は `import { type T }` を型の import として通す。`true` のまま Compiler を外した build では、この書き方が lint にも型検査にも止められずに `.server` の module を client に入れた (上の表)
 
 `vp check` の型検査 (vite-plus 1.7.0 の tsrs 7.1.0-beta.tsrs2) が、型を `type` 無しで import・再 export する書き方を止めるかを測った (2026-11-24)。
 
@@ -54,18 +54,18 @@ probe のモジュールはトップレベルで目印の文字列を `console.i
 
 - `false` を省かずに書く。既定値に任せると、設定が無いことから決定を読み取れず、ほかの雛形から `true` が写されても気付けない
 - `isolatedModules` は、`verbatimModuleSyntax` を外すと一緒に外れる。`false` だけにすると、型の再 export を `export type` 無しで書いても `vp check` が止めない (上の表)。Vite docs「Features」の TypeScript Compiler Options は `isolatedModules` を "Should be set to `true`." と書く
-- lint を足さない理由は 2 つある。(1) `false` のもとでは、build の表の書き方はどれも client に入らない。単一のファイルの変換では型か値かを見分けられない型の再 export は、`isolatedModules` の TS1205 が止める。(2) `typescript/consistent-type-imports` と `typescript/no-import-type-side-effects` は、typescript-eslint の recommended にも strict にも入っていない (ADR-0007。ルールの定義の `meta.docs` に `recommended` が無い)
+- lint を足さない理由は 2 つある。(1) `false` のもとでは、build の表の書き方はどれも client に入らなかった。単一のファイルの変換では型か値かを見分けられない型の再 export は、`isolatedModules` の TS1205 が止める。(2) `typescript/consistent-type-imports` と `typescript/no-import-type-side-effects` は、2026-11-07 に読んだ typescript-eslint (`72ad812d3c`) では recommended にも strict にも入っていなかった (ADR-0007。ルールの定義の `meta.docs` に `recommended` が無かった)
 - Vite docs「Features」の Transpile Only は "Use the Type-Only Imports and Export syntax to avoid potential problems like type-only imports being incorrectly bundled" と書く。この問題は build の表の `false` の列では起きなかったので、書き方を lint で強いない
 
 ### 検討した選択肢
 
-| 案                                                                                                     | 評価                                                                                                                                                                                                                                                                                | 採否     |
-| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `false` と `isolatedModules: true`                                                                     | `false` は `void init` の雛形と同じ値になり、`isolatedModules` は Vite docs に従う。client の出力は `true` と hash まで同じで、`vp run verify` も通る (2026-11-07)。型にだけ使う import が漏れる経路が、plugin の実装によらず無くなる                                               | **採用** |
-| `false` だけ                                                                                           | `isolatedModules` が外れ、TS1205 などの単一のファイルの変換で壊れる書き方を `vp check` が止めなくなる                                                                                                                                                                               | 却下     |
-| `true` のまま                                                                                          | 今の client の出力は `false` と同じだが、それは React Compiler の plugin が先に TypeScript を外すからである。Compiler を外すと、ADR-0055 の lint が通す `import { type T }` から `.server` の module が漏れ、名前に `.server` の付かないモジュールは lint の範囲の外で漏れる (実測) | 却下     |
-| `true` のまま、ADR-0055 の lint で `import { type T }` も止める                                        | `.server` への 1 つの経路は塞がるが、名前に `.server` の付かないモジュールへの 2 つの経路は残る。oxlint の `no-restricted-imports` が `import type` と `import { type T }` を分けて止められるかは確かめていない                                                                     | 却下     |
-| `true` のまま、`typescript/consistent-type-imports` と `typescript/no-import-type-side-effects` を足す | `import { type T }` は `import type { T }` に直る。ADR-0007 の基準に無いルールを 2 つ足す。`typeof v` の経路をこの 2 つが止めるかは確かめていない                                                                                                                                   | 却下     |
+| 案                                                                                                     | 評価                                                                                                                                                                                                                                                                                                   | 採否     |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| `false` と `isolatedModules: true`                                                                     | `false` は `void init` の雛形と同じ値になり、`isolatedModules` は Vite docs に従う。2026-11-07 には client の出力が `true` と hash まで同じで、`vp run verify` も通った。型にだけ使う import が漏れる経路が、plugin の実装によらず無くなる                                                             | **採用** |
+| `false` だけ                                                                                           | `isolatedModules` が外れ、TS1205 などの単一のファイルの変換で壊れる書き方を `vp check` が止めなくなる                                                                                                                                                                                                  | 却下     |
+| `true` のまま                                                                                          | 2026-11-07 の client の出力は `false` と同じだったが、それは React Compiler の plugin が先に TypeScript を外していたからである。Compiler を外すと、ADR-0055 の lint が通す `import { type T }` から `.server` の module が漏れ、名前に `.server` の付かないモジュールは lint の範囲の外で漏れた (実測) | 却下     |
+| `true` のまま、ADR-0055 の lint で `import { type T }` も止める                                        | `.server` への 1 つの経路は塞がるが、名前に `.server` の付かないモジュールへの 2 つの経路は残る。oxlint の `no-restricted-imports` が `import type` と `import { type T }` を分けて止められるかは確かめていない                                                                                        | 却下     |
+| `true` のまま、`typescript/consistent-type-imports` と `typescript/no-import-type-side-effects` を足す | `import { type T }` は `import type { T }` に直る。ADR-0007 の基準に無いルールを 2 つ足す。`typeof v` の経路をこの 2 つが止めるかは確かめていない                                                                                                                                                      | 却下     |
 
 ## Consequences
 

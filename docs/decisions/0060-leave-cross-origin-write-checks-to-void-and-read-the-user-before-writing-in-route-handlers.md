@@ -8,7 +8,7 @@
 
 この ADR は、別の origin から送られた書き込みの要求 (CSRF) をどこで止めるかを決める。
 
-Void 1.4.0 は、この要求を 2 か所で扱う。2026-11-02 に `vp preview` で、一時的に置いたページの action と、`routes/` に一時的に置いた POST の handler (`getUser()` の email を返す) を `curl` で叩いた。`routes/` の行は、ログインした session の cookie を付けて叩いた。page の action の判定は cookie を読まないので、page の action の行は cookie を付けずに叩き、別の origin の行だけ cookie を付けても叩いて同じ 403 を見た。page の action の「届く」は、判定を通って action が走ったことを指す。
+2026-11-02 時点 (Void 1.4.0) の記録では、Void はこの要求を 2 か所で扱っていた。2026-11-02 に `vp preview` で、一時的に置いたページの action と、`routes/` に一時的に置いた POST の handler (`getUser()` の email を返す) を `curl` で叩いた。`routes/` の行は、ログインした session の cookie を付けて叩いた。page の action の判定は cookie を読まないので、page の action の行は cookie を付けずに叩き、別の origin の行だけ cookie を付けても叩いて同じ 403 を見た。page の action の「届く」は、判定を通って action が走ったことを指す。
 
 | 要求                                               | page の action                                     | `routes/` の handler の `getUser()` |
 | -------------------------------------------------- | -------------------------------------------------- | ----------------------------------- |
@@ -17,8 +17,8 @@ Void 1.4.0 は、この要求を 2 か所で扱う。2026-11-02 に `vp preview`
 | `Origin` が無く `Sec-Fetch-Site: cross-site`       | 403                                                | user                                |
 | `Origin`・`Sec-Fetch-Site`・`Referer` のどれも無い | 届く                                               | user                                |
 
-- page の action は、`Origin` が要求の origin と違うと 403 で止まる。`Origin` が無ければ、`Sec-Fetch-Site` が `same-origin` でも `none` でもないか、`Referer` の origin が要求の origin と違うと 403 で止まる。どれも無い要求は、ブラウザでない client として通す (Void の docs「Actions & Forms」の Authentication and origin checks、Void 1.4.0 の `pages/protocol.ts` の `isSameOriginAction`)
-- それ以外の要求 (`routes/` の handler を含む) は止めない。`POST`・`PUT`・`PATCH`・`DELETE` の要求の `Origin` が要求の origin とも `trustedOrigins` とも違うと、session の cookie を捨て、user の無い要求として handler へ渡す (Void の docs「Authentication」の Behavior、Void 1.4.0 の `runtime/better-auth-shared.ts` の `sessionHeaders`)。`GET` は cookie を捨てない
+- page の action は、`Origin` が要求の origin と違うと 403 で止まる (Void の docs「Actions & Forms」の Authentication and origin checks)。2026-11-02 時点 (Void 1.4.0) の記録では、`Origin` が無ければ、`Sec-Fetch-Site` が `same-origin` でも `none` でもないか、`Referer` の origin が要求の origin と違うと 403 で止まり、どれも無い要求は、ブラウザでない client として通していた (`pages/protocol.ts` の `isSameOriginAction`)
+- それ以外の要求 (`routes/` の handler を含む) は止めない。`POST`・`PUT`・`PATCH`・`DELETE` の要求は、`Origin` が要求の origin とも `trustedOrigins` とも違うと、ログインした session を使わない (Void の docs「Authentication」の Behavior)。2026-11-02 時点 (Void 1.4.0) の記録では、そのとき session の cookie を捨て、user の無い要求として handler へ渡していて、`GET` では cookie を捨てていなかった (`runtime/better-auth-shared.ts` の `sessionHeaders`)
 - ブラウザは別の origin への要求に `Origin` を付ける (MDN「Origin」: "user agents add the `Origin` request header to: cross origin requests.")。`Origin` の無い行は、ブラウザの外から送った要求である
 - session の cookie (`better-auth.session_token`) は `SameSite=Lax` で発行された。別の site からの `POST` には、ブラウザが cookie をそもそも付けない。同じ site の別の origin (兄弟の subdomain) からの `POST` には付くので、上の 2 か所が止める
 
