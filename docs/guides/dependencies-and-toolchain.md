@@ -300,7 +300,7 @@ TanStack の skill は、`AGENTS.md`「Skill Loading」の Intent の手順で�
 
 `intent.skills` を置かないと、Intent は見つけた skill をすべて出し、stderr に deprecation の notice を出す。Intent docs は、将来の版で許可の一覧を必須にするとしている ([Intent docs「Trust model」][]: "The gate is opt-in today. ... A future version will require an explicit allowlist.")。
 
-Intent は skill を同梱する package を推移の依存まで見つけるが、許可は依存へ伝わらない ([Intent docs「Trust model」][]: "Trust does not propagate to dependencies. A dependency that ships skills needs its own matching entry.")。ADR-0042・ADR-0043 と `docs/guides/lists-and-search.md`「一覧テーブルを組む」が出典にする skill は、推移の依存の `@tanstack/table-core` のものである。許可の単位は、[Intent docs「Configuration」][] の Source entries と Special forms が挙げる npm の書き方から選んだ。
+Intent は skill を同梱する package を推移の依存まで見つけるが、許可は依存へ伝わらない ([Intent docs「Trust model」][]: "Trust does not propagate to dependencies. A dependency that ships skills needs its own matching entry.")。ADR-0042・ADR-0043 と `docs/guides/lists-and-search.md`「一覧テーブルを組む」が出典にする skill には、推移の依存の `@tanstack/table-core` のもの (`#core`、`#table-features`) がある。許可の単位は、[Intent docs「Configuration」][] の Source entries と Special forms が挙げる npm の書き方から選んだ。
 
 | 単位             | 書き方                                              | 採否 | 理由                                                                                                                                                                                      |
 | ---------------- | --------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -320,12 +320,12 @@ Intent の first-run の設定も、scope を明示して選ぶとこの形 (`"@
 
 `intent.exclude` で外した package は、TanStack 以外で skill を同梱する依存である。2026-11-24 に Intent 0.5.6 の `list --json` と `vp why <package>` で確かめた。
 
-| package                    | 入る経路                                           | 外す理由                                                                                                     |
-| -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `solid-js`、`@solidjs/web` | `@tanstack/devtools-a11y` の依存として入る         | skill は Solid のアプリを書くためのもので、React のアプリでは使わない                                        |
-| `dotenv`                   | `shadcn` の CLI が `@dotenvx/dotenvx` を経て入れる | アプリのコードは dotenv を使わない。`.env` は Void が読む (「環境変数を足す」)                               |
-| `arktype`                  | `void` の依存の `drizzle-arktype` が入れる         | アプリの検証は valibot で書く (ADR-0013)                                                                     |
-| `void`                     | 直接の依存                                         | Void の skill は「Void の skill を扱う」の symlink で読む。許すと、同じ skill が Intent の `load` からも届く |
+| package                    | 入る経路                                             | 外す理由                                                                                                     |
+| -------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `solid-js`、`@solidjs/web` | `@tanstack/devtools-a11y` の依存として入る           | skill は Solid のアプリを書くためのもので、React のアプリでは使わない                                        |
+| `dotenv`                   | `shadcn` の CLI が `@dotenvx/dotenvx` を経て入れる   | アプリのコードは dotenv を使わない。`.env` は Void が読む (「環境変数を足す」)                               |
+| `arktype`                  | `void` の依存の `drizzle-arktype` の peer として入る | アプリの検証は valibot で書く (ADR-0013)                                                                     |
+| `void`                     | 直接の依存                                           | Void の skill は「Void の skill を扱う」の symlink で読む。許すと、同じ skill が Intent の `load` からも届く |
 
 外さずに残すと notice が `list` のたびに出る。エージェントのセッションでは notice が数だけを示す ([Intent docs「intent list」][] の Hidden sources) ので、新しく足した依存の notice と区別できない。2026-11-24 に Intent 0.5.6 で、`intent.skills` だけを置いたエージェントのセッションの notice は、ユーザーに `list --show-hidden` を打ってもらうよう促していた。外しておくと、notice が出るのは新しく判断の要る package があるときだけになる ([Intent docs「Configuration」][] の Discovery notices: "Package was explicitly excluded | No unlisted-source notice.")。
 
@@ -333,9 +333,9 @@ Intent の first-run の設定も、scope を明示して選ぶとこの形 (`"@
 
 Intent docs は、consumer に `@tanstack/intent` を devDependency に置いて lockfile を commit するよう勧める ([Intent docs「Quick Start for Consumers」][]: "Add `@tanstack/intent` as a development dependency and commit your lockfile before generating guidance"、[Intent docs「intent install」][]: "Keep `@tanstack/intent` in devDependencies and commit the lockfile for CI.")。
 
-- `vp dlx` は package を依存に足さずに走らせる ([Vite+ docs「Running Binaries」][] の `vp dlx`: "Use `vp dlx` for one-off package execution without adding the package to your project dependencies")。依存に足さないので、lockfile は走らせた版を持たない。2026-11-23 に vite-plus 1.7.0 で、pnpm 11.28.0 と 12.21.0 のどちらでも、`minimumReleaseAge` が同じ 4320 分の、このテンプレートの元にしたテンプレートで `vp dlx knip@latest --version` は 6.46.1 (2026-11-18 公開) を返し、`minimumReleaseAge` の待機の中の 6.47.0 (2026-11-20 公開) と 6.48.0 (2026-11-22 公開) を選ばなかった
+- `vp dlx` は package を依存に足さずに走らせる ([Vite+ docs「Running Binaries」][] の `vp dlx`: "Use `vp dlx` for one-off package execution without adding the package to your project dependencies")。依存に足さないので、lockfile は走らせた版を持たない
 - 2026-11-24 に Intent 0.5.6 の install が書いたブロックは、入っている Intent を使わせ、無ければダウンロードせずに報告させる文だった ("Use the repository’s installed Intent. If it is unavailable, report the missing dependency instead of downloading a replacement.")
-- 2026-11-23 に読んだ Intent 0.5.6 の `command-runner.ts` と `package-manager.ts` では、生成するコマンドの runner を `package.json` の `packageManager` から選び、pnpm なら `pnpm exec intent` に固定していた。`vp` の形にする option は無かった ([Intent「command-runner.ts」][] の `runnerByPackageManager`、[Intent「package-manager.ts」][])。[Intent docs「intent install」][] の Default output は、生成するコマンドを "the detected package manager's runner with `@tanstack/intent@latest`" と書くが、同じ日に、docs は 0.5.6 の tag と 2026-11-22 の main で同じ文のままで、0.5.6 の install はソースのとおり `pnpm exec intent` を書いた
+- 2026-11-23 に読んだ Intent 0.5.6 の `command-runner.ts` と `package-manager.ts` では、生成するコマンドの runner を `package.json` の `packageManager` から選び、pnpm なら `pnpm exec intent` に固定していた。`vp` の形にする option は無かった ([Intent「command-runner.ts」][] の `runnerByPackageManager`、[Intent「package-manager.ts」][])。[Intent docs「intent install」][] の Default output は、生成するコマンドを "the detected package manager's runner with `@tanstack/intent@latest`" と書き、同じ日に、docs は 0.5.6 の tag と 2026-11-22 の main で同じ文のままだった。2026-11-24 にこのリポジトリで打った 0.5.6 の install は、docs の文ではなくソースのとおり `pnpm exec intent` を書いた
 
 ### `typescript` を直接の依存に置かない理由
 
