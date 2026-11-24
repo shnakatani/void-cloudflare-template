@@ -143,7 +143,7 @@ Base UI の popup (Dialog、AlertDialog、Drawer、Popover、Menu、Select、Com
 
 ### `sr-only` の文字が落ちる検査
 
-`sr-only` の文字は 1px の箱を持つので、[Playwright docs「Auto-waiting」][] の Visible の定義 (non-empty bounding box) を満たす。Tailwind 4.3.5 の `sr-only` の span へ `.click()` を送ると、落ちたのは Visible ではなく、置き場所で決まる次の検査だった (2026-11-24、Playwright 1.65.0 の Chromium 158.0.8127.18 と `@vitest/browser` 5.1.0 で実測)。
+`sr-only` の文字は 1px の箱を持つので、[Playwright docs「Auto-waiting」][] の Visible の定義 (non-empty bounding box) を満たす。Tailwind 4.3.5 の `sr-only` の span へ `.click()` を送ると、落ちたのは Visible ではなく、置き場所で決まる次の検査だった (2026-11-24 に、このテンプレートの元にした公開のテンプレート (tanstack-start-template) で、Playwright 1.65.0 の Chromium 158.0.8127.18 と `@vitest/browser` 5.1.0 を使って測った。このリポジトリの Playwright・`@vitest/browser`・Tailwind の版は同じである)。
 
 | 置き場所                                                              | 結果                                         | Call log の文                            |
 | --------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -160,7 +160,7 @@ Base UI の popup (Dialog、AlertDialog、Drawer、Popover、Menu、Select、Com
 
 ### modal の外の要素が落ちる検査
 
-modal の popup を開いている間、popup の外の要素への `.click()` は、hit target の確認 (Receives Events) で落ちた (2026-11-24、Playwright 1.65.0 と `@base-ui/react` 1.9.0 で、テンプレートの Dialog と AlertDialog を開いて実測)。
+modal の popup を開いている間、popup の外の要素への `.click()` は、hit target の確認 (Receives Events) で落ちた (2026-11-24 に、このテンプレートの元にした公開のテンプレート (tanstack-start-template) で、Playwright 1.65.0 と `@base-ui/react` 1.9.0 を使い、Dialog と AlertDialog を開いて測った。このリポジトリの版と、`src/components/ui/dialog.tsx`・`alert-dialog.tsx` のソースは同じである)。
 
 - hit target になったのは、`src/components/ui/dialog.tsx` と `alert-dialog.tsx` の Viewport (Base UI の `Dialog.Viewport` と `AlertDialog.Viewport`) である。`popupViewportLayout` で画面全体を覆う。Dialog の Call log は `<div … data-slot="dialog-viewport" …>…</div> from <div … data-slot="dialog-portal">…</div> subtree intercepts pointer events` で、AlertDialog では `data-slot` が `alert-dialog-viewport` と `alert-dialog-portal` だった
 - Not Inert の検査では落ちていない。Dialog では、外の要素の祖先は `aria-hidden` と `data-base-ui-inert` を持ち、`inert` 属性は持たなかった
@@ -223,7 +223,7 @@ Base UI の `FloatingFocusManager` (Dialog、Drawer、Popover、Menu、Select、
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vitest は 5.0.1 (「Automatic Advancing」だけは 5.1.0)、Playwright docs「Auto-waiting」は 1.65.0 に固定した版を指す。 Playwright のソースは、`server/dom.ts` を 1.63.0、`injectedScript.ts` を 1.65.0 に固定した版で指す。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Vitest は 5.0.1 (「Automatic Advancing」だけは 5.1.0)、Playwright docs「Auto-waiting」は 1.65.0 に固定した版を指す。Playwright のソースは、`server/dom.ts` を 1.63.0、`injectedScript.ts` を 1.65.0 に固定した版で指す。
 
 本文は引かないが、調べたときに読んだもの:
 

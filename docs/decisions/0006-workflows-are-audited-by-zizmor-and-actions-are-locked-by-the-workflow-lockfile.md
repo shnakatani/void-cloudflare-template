@@ -113,6 +113,8 @@ GitHub の Actions での挙動は、このテンプレートの元にした公�
 | lockfile がそろった状態 (3 回)                                                                                                     | zizmor の job は 9〜33 秒、verify の job は 7〜10 秒で成功した。同じ回の CI の job は 158〜162 秒で、slim の 2 つの job はどの回もそれより先に終わった                     |
 | `ci.yml` の checkout から `persist-credentials: false` を外し、lockfile から `ci.yml` の `voidzero-dev/setup-vp` の entry を外した | verify の job は `Not pinned voidzero-dev/setup-vp@v1.22.0` で exit 1 になり、zizmor の job は `artipacked` の指摘で落ちた。CI の workflow は `startup_failure` で止まった |
 
+2026-11-24 に、このリポジトリの PR の CI でも、zizmor の job (13 秒) と verify の job (9 秒) は `ubuntu-slim` で成功した。同じ回の CI の job は 171 秒だった (jobs API の `started_at` と `completed_at` で数えた)。
+
 ## Consequences
 
 - `uses:` を足す・変えるときは、workflow を書き換えたあと `gh actions-lock` を打ち、workflow と `actions.lock` を同じ commit に入れる。手順は `docs/guides/dependencies-and-toolchain.md`「workflow に action を足す」にある
