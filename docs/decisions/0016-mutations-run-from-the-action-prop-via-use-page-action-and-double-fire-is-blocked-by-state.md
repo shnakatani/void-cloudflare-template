@@ -6,7 +6,7 @@
 
 ## Context
 
-mutation は、page の action (`.server.ts` の `action` / `actions`) を呼んでサーバーへ書き込む操作を指す。Void の client は `action()` (`@void/react`) で page の action を呼ぶ。`action()` は `createActionClient({ _resolveOnShell: true })` が返す関数で、`submitAction(router, interpolateRouteParams(url, params), { method, data, _resolveOnShell: true })` を呼ぶだけである。決着も失敗の分かれ方も `submitAction` (`void/pages-client`) が決める (Void 1.5.0 の `dist/pages/client.mjs` の `createActionClient` と `submitAction`、`@void/react` 1.5.0 の `dist/action-*.mjs`)。
+mutation は、page の action (`.server.ts` の `action` / `actions`) を呼んでサーバーへ書き込む操作を指す。Void の client は `action()` (`@void/react`) で page の action を呼ぶ。2026-11-03 時点 (Void 1.5.0、`@void/react` 1.5.0) の記録では、`action()` は `createActionClient({ _resolveOnShell: true })` が返す関数で、`submitAction(router, interpolateRouteParams(url, params), { method, data, _resolveOnShell: true })` を呼ぶだけだった。決着も失敗の分かれ方も `submitAction` (`void/pages-client`) が決めていた (Void の `dist/pages/client.mjs` の `createActionClient` と `submitAction`、`@void/react` の `dist/action-*.mjs`)。
 
 ### 制約: `action()` の失敗は 2 つの経路に分かれる
 
@@ -47,15 +47,17 @@ Error Boundary は画面ごと差し替わる。`action()` の throw を Action 
 
 ### 制約: `action()` は `preserveScroll` と `viewTransition` を受けない
 
-- Void 1.5.0 の `action()` は、`_resolveOnShell: true` を既定で付け、Action の中で await しても shell の到着で決着する (ADR-0015「`action()` は shell の到着で resolve する」)。`_resolveOnShell` は `VisitOptions` の `@internal` の option で、docs に無い
-- `action()` の options (`ActionOptions`) は `data`・`method`・`params` だけで、`preserveScroll` と `viewTransition` を渡せない (Void 1.5.0 の `dist/pages/client.d.mts`)。Void は `preserveScroll` の無い commit で先頭へ scroll するので (Void docs「Scroll Restoration」の New navigation)、同じページに残る action のあとに画面が先頭へ戻り、画面の下の行から移した focus が画面の外へ出る。2026-11-03 に dev で、一覧の上のダイアログからの保存を `useForm` で送ると scroll の `y` が 1934 から 0 に戻り、`preserveScroll: true` を渡す `submitAction` では 1885 から 1934 に保たれた。`viewTransition` を渡せないと、送信の後の描き直しが遷移と同じクロスフェードになる (ADR-0058)
-- redirect はブラウザが同じ visit の中で辿るので、渡した `preserveScroll` は redirect 先の commit に効く (Void 1.5.0 の `dist/pages/client.mjs` の `loadNavigationShell`)
+- 2026-11-03 時点 (Void 1.5.0) の記録では、`action()` は `_resolveOnShell: true` を既定で付け、Action の中で await しても shell の到着で決着した (ADR-0015「`action()` は shell の到着で resolve する」)。`_resolveOnShell` は `VisitOptions` の `@internal` の option で、docs に無かった
+- 同じ記録では、`action()` の options (`ActionOptions`) は `data`・`method`・`params` だけで、`preserveScroll` と `viewTransition` を渡せなかった (Void 1.5.0 の `dist/pages/client.d.mts`)。Void は `preserveScroll` の無い commit で先頭へ scroll するので (Void docs「Scroll Restoration」の New navigation)、同じページに残る action のあとに画面が先頭へ戻り、画面の下の行から移した focus が画面の外へ出る。2026-11-03 に dev で、一覧の上のダイアログからの保存を `useForm` で送ると scroll の `y` が 1934 から 0 に戻り、`preserveScroll: true` を渡す `submitAction` では 1885 から 1934 に保たれた。`viewTransition` を渡せないと、送信の後の描き直しが遷移と同じクロスフェードになる (ADR-0058)
+- 同じ記録では、redirect はブラウザが同じ visit の中で辿るので、渡した `preserveScroll` は redirect 先の commit に効く作りだった (Void 1.5.0 の `dist/pages/client.mjs` の `loadNavigationShell`)
 
 ### 制約: `submitAction` と `interpolateRouteParams` は docs の User-Facing Imports に無い
 
-`void/pages-client` は `node_modules/void/docs/reference/api.md`「User-Facing Imports」の表に無く、`submitAction`・`interpolateRouteParams`・`getValidationErrors`・`isAbortError`・`VoidActionError` の class は、`@void/react` の adapter が使う内部用として `void/pages-client` の型 (`dist/pages/client.d.mts`) に出ているだけである (2026-11-03、Void 1.5.0)。`@void/react` は `action`・`useForm`・`useRouter` などを export し、`VoidActionError` は export せず、`useForm` などの型に現れるだけである。
+`void/pages-client` は `node_modules/void/docs/reference/api.md`「User-Facing Imports」の表に無く、`submitAction`・`interpolateRouteParams`・`getValidationErrors`・`isAbortError`・`VoidActionError` の class は、`@void/react` の adapter が使う内部用として `void/pages-client` の型 (`dist/pages/client.d.mts`) に出ているだけだった (2026-11-03、Void 1.5.0)。`@void/react` は `action`・`useForm`・`useRouter` などを export し、`VoidActionError` は export せず、`useForm` などの型に現れるだけだった。
 
 ### 制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない
+
+2026-11-02 時点 (Void 1.4.0) の記録では、検証の失敗の描き直しと `ActionUrl` は次のとおりだった。
 
 | 出典                                                                                                           | 内容                                                                                                                                                                                                                                                       |
 | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -111,13 +113,13 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 
 送るのは `action()` の中身の写しに `preserveScroll` と `viewTransition: false` を足した 1 つの関数 (`sendPageAction`) で、`void/pages-client` から import するのはこの関数が使う `submitAction` と `interpolateRouteParams` だけにする。`_resolveOnShell: true` は `action()` の既定を写す。`action()` の結果の分かれ方 (`ok: false` と throw、`AbortError`) はそのまま受け、取り消しの判定と 422 の body の読み (field 名と文言の record であることを確かめる) と `VoidActionError` の見分け (Void 自身の `isCallSiteActionError` と同じく `name` と `status` の形) は `src/lib/action-error.ts` に持つ。撤去の条件は 2 つで、先に成り立った方で替える。`router.visit` が `resolveOn: "data"` を受ける版に上げたら、Void の docs「React navigation completion」の形の `router.visit` に `method`・`data`・`preserveScroll`・`viewTransition: false`・`resolveOn: "data"` を渡して送る。Void の `ActionOptions` が `preserveScroll` と `viewTransition` を受けるようになったら、`action()` に替える。どちらも `void/pages-client` の runtime の import を消す。替え方と、上げるたびに写しを Void に揃える手順は `sendPageAction` の docstring が持つ。
 
-| `action()` の結果                                 | `run`                                                                                                             | 理由                                                                                                                                                                              |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 成功                                              | `onSuccess` を await して `true`                                                                                  |                                                                                                                                                                                   |
-| `ok: false`                                       | 422 のフィールドのエラーは `onValidationError` へ、それ以外は固定の文言の toast へ。`false`                       | 呼び出し側が結果を読み忘れても無通知にならない                                                                                                                                    |
-| 取り消し (`AbortError`)                           | 何も出さずに `false`                                                                                              | 後から始めた遷移や送信が前の送信を置き換えた結果で、利用者の操作の失敗ではない。Void の `useForm` も握る (`@void/react` 1.5.0 の `dist/index.mjs` の `useForm` の `isAbortError`) |
-| それ以外の throw (401・403・500・502・通信の失敗) | 生の error を `console.warn` に残し、toast に出して `false`。401 はログインし直しを案内する文言、ほかは固定の文言 | toast は Action の持ち主が unmount した後も出る (2026-11-02 に dev で確認)。境界に任せると、閉じたダイアログや消した行の失敗が消える                                              |
-| `onSuccess` の throw                              | `console.error` に残して reject する                                                                              | 書き込みは成功しているので、「操作に失敗しました」の toast は誤りになる。Action の持ち主が unmount していれば、console にだけ残る                                                 |
+| `action()` の結果                                 | `run`                                                                                                             | 理由                                                                                                                                                                                                  |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 成功                                              | `onSuccess` を await して `true`                                                                                  |                                                                                                                                                                                                       |
+| `ok: false`                                       | 422 のフィールドのエラーは `onValidationError` へ、それ以外は固定の文言の toast へ。`false`                       | 呼び出し側が結果を読み忘れても無通知にならない                                                                                                                                                        |
+| 取り消し (`AbortError`)                           | 何も出さずに `false`                                                                                              | 後から始めた遷移や送信が前の送信を置き換えた結果で、利用者の操作の失敗ではない。2026-11-03 時点 (`@void/react` 1.5.0) の記録では、Void の `useForm` も握っていた (`dist/index.mjs` の `isAbortError`) |
+| それ以外の throw (401・403・500・502・通信の失敗) | 生の error を `console.warn` に残し、toast に出して `false`。401 はログインし直しを案内する文言、ほかは固定の文言 | toast は Action の持ち主が unmount した後も出る (2026-11-02 に dev で確認)。境界に任せると、閉じたダイアログや消した行の失敗が消える                                                                  |
+| `onSuccess` の throw                              | `console.error` に残して reject する                                                                              | 書き込みは成功しているので、「操作に失敗しました」の toast は誤りになる。Action の持ち主が unmount していれば、console にだけ残る                                                                     |
 
 ページの URL が query (ダイアログを開く key、絞り込みの条件) を持つときは、`pageQuery` に `?` を除いた query を渡し、`run` が action の URL の後ろに載せて送る。検証の失敗でも、ページは同じ query の URL で描き直される (「制約: 検証の失敗は action の URL のページとして描き直され、`ActionUrl` は query を持てない」)。
 
@@ -126,12 +128,12 @@ mutation は `src/hooks/use-page-action.ts` の `usePageAction` を通し、TanS
 
 ページの query の運び方は次から選んだ。
 
-| 案                                                      | 評価                                                                                                                                                                                 | 採否     |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| `pageQuery` で action の URL に載せる                   | Void の docs の Named Actions の形。検証の失敗でも成功の redirect でも、ページの query が残る。`ActionUrl` が許さないので、hook の 1 か所で型を抑える                                | **採用** |
-| 条件を body で送り、action が redirect の URL を組む    | 成功の redirect では条件が残る。検証の失敗の描き直しは action の URL のページなので、query が落ちてダイアログが閉じ、エラーも出ない (2026-11-02 に dev で確認)                       | 却下     |
-| action が自分で検証し、`c.json({ errors }, 422)` を返す | GET でない ok でない応答は commit されず throw される (ソースで確認)。`withValidator` を外すので、生成される body の型が `Record<string, unknown>` になり、client の型の検査が消える | 却下     |
-| hook が router の今の URL から query を自動で載せる     | 汎用の hook が、呼び出し元のページの URL のどの key を描き直しに残すかを推し量ることになる                                                                                           | 却下     |
+| 案                                                      | 評価                                                                                                                                                                                                                              | 採否     |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `pageQuery` で action の URL に載せる                   | Void の docs の Named Actions の形。検証の失敗でも成功の redirect でも、ページの query が残る。`ActionUrl` が許さないので、hook の 1 か所で型を抑える                                                                             | **採用** |
+| 条件を body で送り、action が redirect の URL を組む    | 成功の redirect では条件が残る。検証の失敗の描き直しは action の URL のページなので、query が落ちてダイアログが閉じ、エラーも出ない (2026-11-02 に dev で確認)                                                                    | 却下     |
+| action が自分で検証し、`c.json({ errors }, 422)` を返す | 2026-11-02 時点 (Void 1.4.0) の記録では、GET でない ok でない応答は commit されず throw されていた (ソースで確認)。`withValidator` を外すので、生成される body の型が `Record<string, unknown>` になり、client の型の検査が消える | 却下     |
+| hook が router の今の URL から query を自動で載せる     | 汎用の hook が、呼び出し元のページの URL のどの key を描き直しに残すかを推し量ることになる                                                                                                                                        | 却下     |
 
 ### 検討した選択肢
 

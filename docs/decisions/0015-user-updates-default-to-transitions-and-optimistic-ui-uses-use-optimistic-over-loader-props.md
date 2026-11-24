@@ -24,7 +24,7 @@ React チームは React 18 の設計時点から、大半の更新を Transitio
 
 ### page の props は Transition の中で入れ替わる
 
-Void の React の adapter は、page の props を React の state で持ち、Transition の中で入れ替える。
+2026-11-02 時点 (Void 1.4.0) の記録では、Void の React の adapter は、page の props を React の state で持ち、Transition の中で入れ替えていた。出典の列は、その版のソースと docs である。
 
 | 事実                                                                                                | 出典                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -38,12 +38,12 @@ Void の React の adapter は、page の props を React の state で持ち、
 
 ### `action()` は shell の到着で resolve する
 
-`@void/react` 1.4.0 の `action()` は、新しい props の commit の後に resolve する (`pages-client.ts` の `finishNavigation`。v1.4.0 のソースで確認)。
-一方、新しい props を描く Void の Transition は、走っている Action が終わるまで commit されない (下の観測)。
-そのため Action の中で `await action()` すると、Action は `action()` を、`action()` は commit を、commit は Action の終わりを待ち、決着しない。
+2026-11-02 時点 (`@void/react` 1.4.0) の記録では、`action()` は新しい props の commit の後に resolve していた (`pages-client.ts` の `finishNavigation`。ソースで確認)。
+一方、新しい props を描く Void の Transition は、走っている Action が終わるまで commit されなかった (下の観測)。
+そのため Action の中で `await action()` すると、Action は `action()` を、`action()` は commit を、commit は Action の終わりを待ち、決着しなかった。
 patch を当てない 1.4.0 で、`ActionButton` の Action の `await run()` は 12 秒待っても resolve せず、props も入れ替わらなかった (2026-11-02 に dev で確認)。
 上流は voidzero-dev/void#643 を受けて main の commit 5fd23eb で直し、React の `action()` を shell の到着で resolve する形にした (`createActionClient({ _resolveOnShell: true })`)。
-`action()` は、受けた値に `_resolveOnShell` を足して `submitAction` (`void/pages-client`) に渡すだけである。`@void/react` 1.4.0 の `useForm` は、同じ値を `submitAction` に直に渡している (`packages/react/src/runtime/use-form.ts`)。
+2026-11-02 時点の記録では、`action()` は、受けた値に `_resolveOnShell` を足して `submitAction` (`void/pages-client`) に渡すだけだった。`@void/react` 1.4.0 の `useForm` は、同じ値を `submitAction` に直に渡していた (`packages/react/src/runtime/use-form.ts`)。
 `usePageAction` も、`action()` の中身を写した関数で `submitAction` に `_resolveOnShell: true` を直に渡す (ADR-0016「mutation の書き方」)。
 
 `_resolveOnShell` を付けて、2 秒待つ action を `ActionButton` の Action から送ると、次の順に決着した (2026-11-02、dev、30 ms ごとの標本、react 19.3.1。5fd23eb の変更を当てた `action()` で測った。`usePageAction` が `submitAction` に渡す値と同じ)。
@@ -53,7 +53,7 @@ patch を当てない 1.4.0 で、`ActionButton` の Action の `await run()` �
 | 2040 ms               | `run` が `true` を返す                           |
 | 2059 ms の標本        | 新しい props が描かれ、ボタンの pending が解ける |
 
-- `run` の `true` は、新しい props の commit の前に返る。`await run()` の後の処理と `onSuccess` は、新しい props が描かれる前に走る
+- `run` の `true` は、新しい props の commit の前に返った。`await run()` の後の処理と `onSuccess` は、新しい props が描かれる前に走った
 - 新しい props の Transition が Action の終わりを待つのは、React が走っている Transition を束ねる挙動 (`useTransition` リファレンスの Caveats「If there are multiple ongoing Transitions, React currently batches them together」) と合う (推論)
 
 ### 制約: ダイアログの close は Transition に参加しない
@@ -113,7 +113,7 @@ page の props の入れ替わりは Transition の中なので対象になり�
 
 - mutation の pending の源が Transition の `isPending` に一本化される。項目の busy は `useOptimistic` の値から描く
 - Transition 化で得るのは pending の自動管理、部品契約の統一、pending の切り替えと props の入れ替わりを `<ViewTransition>` で装飾できること (推論) の 3 つ。Action の実行順は Transition が保証しない (`useTransition` リファレンスの Troubleshooting「My state updates in Transitions are out of order」)。順序を保つのは `useActionState` と `<form>` の action である (同)
-- props が Transition の外で入れ替わる設定 (`navigationFallback`) は、1.4.0 では渡す口が無い。口ができて使うときは、楽観値と新しい props が別の描画になりうるので、この ADR を決め直す
+- props が Transition の外で入れ替わる設定 (`navigationFallback`) は、2026-11-03 時点の 1.4.0 では渡す口が無かった。口ができて使うときは、楽観値と新しい props が別の描画になりうるので、この ADR を決め直す
 - Action の中で `await run()` が決着するのは、`usePageAction` が渡す `_resolveOnShell` に依っている。`VisitOptions` の `@internal` の option なので、Void を上げたら、`ActionButton` の Action で `run` を await し、pending が解けて props が入れ替わることを dev で確かめる。名前が型から消えれば `vp check` が落ちるが、`src/hooks/use-page-action.test.tsx` は `submitAction` を mock するので、名前を保って意味が変わったときは `vp run verify` が捕まえない
 - 再評価条件: Void か React を上げて、`action()` が resolve する時点や、props を入れ替える Transition が Action の終わりを待つかが変わったら、楽観表示の reducer の前提と ADR-0017 の完了点を確かめ直す
 

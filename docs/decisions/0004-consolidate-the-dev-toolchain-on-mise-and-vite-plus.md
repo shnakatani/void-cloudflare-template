@@ -110,13 +110,13 @@ CI は mise を要さず、同じタスクを同じ順に、1 つずつ別の st
 | Void の auth が読む secret               | `env.ts` に宣言しない。ローカルの preview は `.env`、本番は deploy が作る         | `BETTER_AUTH_SECRET`  |
 | 開発の道具 (タスク、スクリプト) が読む値 | `.mise.toml` の `[env]`                                                           | 現時点で該当なし      |
 
-アプリが読む環境変数は Void の形に従い、ルートの `env.ts` に `defineEnv` で宣言して `void/env` の `env` で読む (Void docs「Environment variables」: "Declare your environment variables in `env.ts`, then read them through `env` from `void/env`. Use `.env` for local values and `void secret put` for production server values.")。
+アプリが読む環境変数は Void の形に従い、ルートの `env.ts` に `defineEnv` で宣言して `void/env` の `env` で読む (Void 1.5.0 の docs「Environment variables」)。
 宣言すると、Void が型 (`.void/env.d.ts`) を作り、`void env check` と `void secret put` と `void deploy` と Worker の起動のときに値を検証する (Void docs「Environment variables」の Validation and redaction と Production server values)。
 `env.ts` に宣言した server の値は Worker の secret にし、`void.config.ts` の `worker.vars` に置かない。production の build が弾く (Void docs「Configuration」の `worker`: "reject any `worker.vars` name declared as a server key in `env.ts`")。
 
-`BETTER_AUTH_SECRET` は `env.ts` に宣言しない。Void の auth が読み、deploy が無ければ作る (Void docs「Authentication」の Behavior: "Void creates `BETTER_AUTH_SECRET` on deploy if it is missing and reuses it on later deploys.")。dev は secret を要らない (同: "Local development needs no secret setup.")。Void の deploy は auth があると、この名前を `secrets.required` に自分で足し、本番に無い名前の検査からも外す (Void 1.5.0 の `cli/deploy-artifact-validation.ts`、2026-11-03)。docs は宣言を求めていない。
+`BETTER_AUTH_SECRET` は `env.ts` に宣言しない。Void の auth が読み、deploy が無ければ作る (Void docs「Authentication」の Behavior: "Void creates `BETTER_AUTH_SECRET` on deploy if it is missing and reuses it on later deploys.")。dev は secret を要らない (同: "Local development needs no secret setup.")。2026-11-03 に読んだ Void 1.5.0 の `cli/deploy-artifact-validation.ts` では、deploy は auth があると、この名前を `secrets.required` に自分で足し、本番に無い名前の検査からも外していた。同じ版の docs も宣言を求めていなかった。
 
-必須で宣言すると、dev でも `.env` に値が無ければ `void env check` が落ちる。`string().optional()` で宣言すると、2026-11-03 に Void 1.5.0 で `void env check` は通った。それでも宣言しないのは、アプリのコードが読まない値を `env.ts` に持つ理由が無いからである。宣言する利点は `void secret put BETTER_AUTH_SECRET` が使えることだけで、宣言しないとそのコマンドは `secret: BETTER_AUTH_SECRET is not declared in env.ts.` で止まる。このテンプレートは secret を deploy が作る前提で、手で入れ替える手順を持たない。入れ替える運用にするなら、`.optional()` で宣言する。
+2026-11-03 時点 (Void 1.5.0) の記録では、必須で宣言すると、dev でも `.env` に値が無ければ `void env check` が落ちた。`string().optional()` で宣言すると、同じ日に `void env check` は通った。それでも宣言しないのは、アプリのコードが読まない値を `env.ts` に持つ理由が無いからである。宣言する利点は `void secret put BETTER_AUTH_SECRET` が使えることだけで、同じ記録では、宣言しないとそのコマンドは `secret: BETTER_AUTH_SECRET is not declared in env.ts.` で止まった。このテンプレートは secret を deploy が作る前提で、手で入れ替える手順を持たない。入れ替える運用にするなら、`.optional()` で宣言する。
 
 | 案                                                                        | 評価                                                                                                                       | 採否     |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -172,11 +172,11 @@ Vite は使用中なら次の空き port へずらし (Vite docs の `server.por
 
 秘密は server 側にしか存在し得ない。Vite 公式は「`VITE_*` variables should _not_ contain sensitive information」と明記しており、client へ出る値は秘密にならない。
 
-秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す (Void docs「Environment variables」: "Use `.env` for local values and `void secret put` for production server values")。`.env` 以外の dotenv ファイルを Void は扱わない。
+秘密の置き場は Void の形に従う。ローカルの値はルートの `.env` に置き (Git に入れない)、本番の server 側の値は `void secret put` で渡す (Void 1.5.0 の docs「Environment variables」)。`.env` 以外の dotenv ファイルを Void は扱わない。
 
-Void はルートの `.env` を読み、`vp preview` の起動のたびにそこにある名前を Worker の secret として渡す。`vp preview` の Worker が secret を受けるのはこの経路だけである (Void 1.5.0 の `plugin-cloudflare-preview.ts`、2026-11-03)。dev では、`env.ts` に宣言した `VITE_*` の値を Void が `.env` から読んでブラウザへ渡す (Void 1.5.0 の `plugin-env-schema.ts` の `applyClientValuesToViteEnv`)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
+2026-11-03 に読んだ Void 1.5.0 の `plugin-cloudflare-preview.ts` では、Void はルートの `.env` を読み、`vp preview` の起動のたびにそこにある名前を Worker の secret として渡していた。`vp preview` の Worker が secret を受けるのはこの経路だけだった。dev では、`env.ts` に宣言した `VITE_*` の値を Void が `.env` から読んでブラウザへ渡していた (同じ版の `plugin-env-schema.ts` の `applyClientValuesToViteEnv`)。Vite も `.env` を読むと、同じファイルの読み手が 2 つになる。`envDir: false` で Vite の読み込みを切り、`.env` の読み手を Void の 1 つにする。`.env` を置いた人が「Vite が勝手に読む」前提でコードを書くことも防げる。
 
-2026-11-03 に Void 1.5.0 の dev で、`env.ts` に `VITE_PROBE` だけを宣言し、`.env` に `VITE_PROBE` と宣言しない `VITE_UNDECLARED` を置くと、ブラウザの `import.meta.env` には `VITE_PROBE` だけが入った。`envDir: false` のときは Vite が `.env` を読まず、build の `.env` のブラウザの値を消す処理が走らない (同 `stripLocalClientEnv` の早期 return)。
+2026-11-03 に Void 1.5.0 の dev で、`env.ts` に `VITE_PROBE` だけを宣言し、`.env` に `VITE_PROBE` と宣言しない `VITE_UNDECLARED` を置くと、ブラウザの `import.meta.env` には `VITE_PROBE` だけが入った。`envDir: false` のときは Vite が `.env` を読まず、build の `.env` のブラウザの値を消す処理が走らなかった (同 `stripLocalClientEnv` の早期 return)。
 
 `envDir: false` は `vite.config.ts` に 1 つだけ書く。
 テストの project は `vite.config.ts` の設定を継承するので (ADR-0037)、ビルドとテストで値が割れない。

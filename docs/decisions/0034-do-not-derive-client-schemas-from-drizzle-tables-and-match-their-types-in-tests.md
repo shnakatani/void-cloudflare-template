@@ -17,7 +17,7 @@ Void の docs は、request の validator をテーブル定義から作る形�
 スキーマをテーブル定義から作って client でも使うと、テーブル定義と drizzle の本体がクライアントの bundle に入る。2026-11-03 に、7 列 (整数の id、文字列 3 列、日付の文字列、`timestamp_ms` の日時 2 列) のテーブル 1 つを持つこのテンプレートで `vp build` を回し、クライアントの出力 (`.cloudflare/output/v0/workers/default/assets/assets/*.js` の合計と、増えた chunk の gzip 後の値。gzip 後は Vite の表示) を比べた (Void 1.5.0、drizzle-orm 0.45.4、`void/drizzle-valibot` が再 export する drizzle-valibot 0.4.2、valibot 1.5.0)。
 
 - B と C は、テーブル定義の写しを `src/features/<domain>/` に一時的に置き、入力スキーマの `v.metadata` から参照した
-- 写しは SQL の既定値と CHECK 制約を除いた。client では `void/db` が stub になり、`sql` を持たない
+- 写しは SQL の既定値と CHECK 制約を除いた。この build では、client の `void/db` は stub になり、`sql` を持たなかった
 - C はさらに、同じ `v.metadata` で `void/drizzle-valibot` の `createInsertSchema` を呼んだ
 
 | 状態                                          | js の合計 | スキーマを import するページの chunk (gzip 後) | form の部品が共有する chunk (`use-app-form`、gzip 後) | A との差 (gzip)                |
@@ -42,7 +42,7 @@ B で増えたのは、スキーマを import するページの chunk だけだ
 
 - 型テストはテーブルごとに `expectTypeOf<typeof <テーブル>.$inferSelect>().toEqualTypeOf<<読み出しのスキーマの型>>()` の 1 行にする。TypeScript の型の上で、項目の有無、null を許すか、型のどれがずれても落ちる
 - 書き込みの型 (`$inferInsert`) は突き合わせない。insert の呼び出し箇所の型検査が止める (Context)
-- 型テストは、読み出しのスキーマを持つドメインのディレクトリに `src/features/<domain>/<domain>.test-d.ts` として置く。テーブル定義のある `db/` には置かない。Void は `db/schema/` の `.ts` を `_` で始まる名前も含めてすべて schema として読むので、`db/` にはディレクトリ単位でテストを置かない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。落とすのは `vp check` の type-aware lint である
+- 型テストは、読み出しのスキーマを持つドメインのディレクトリに `src/features/<domain>/<domain>.test-d.ts` として置く。テーブル定義のある `db/` には置かない。2026-11-02 時点 (Void 1.4.0) の記録では、Void は `db/schema/` の `.ts` を `_` で始まる名前も含めてすべて schema として読んでいたので、`db/` にはディレクトリ単位でテストを置かない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)。落とすのは `vp check` の type-aware lint である
 - 項目ごとの制約 (長さ、trim、メッセージ、呼称) は valibot のスキーマだけが持つ。DB の CHECK 制約と、同じ TypeScript の型になる保存の形の違い (`integer` の `timestamp` と `timestamp_ms` はどちらも `Date`) は、推論される型に現れないので、この突き合わせの対象外である
 
 ADR-0013 は、手書きの型とスキーマを型テストで突き合わせる案を却下し、型をスキーマから導出して出処を 1 つにした。テーブル定義とスキーマについては、出処を 1 つにする手段 (テーブル定義からスキーマを作る) がバンドルの理由で取れないので、突き合わせる形を採る。
