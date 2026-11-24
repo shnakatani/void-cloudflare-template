@@ -62,7 +62,7 @@ Void の `void` と `migrate-vite-cloudflare-to-void` の skill は、`void init
 - Void を上げて skill の名前が増えたら、増えた分を同じ形 (`../../node_modules/void/skills/<名前>`) で `.agents/skills/` と `.claude/skills/` に張って commit する
 - `void init` を打つと、張り直した link について `<path> exists but is not a link to the <skill の name> skill, skipping` と warn が出る。想定どおりなので、link は触らない (2026-11-24、Void 1.11.0 の `void init --tsconfig` で確かめた)
 - 移行の skill は、Void を上げたときに `void init` の出力と比べる手間を減らすために残しているもので、このリポジトリでは使わない
-- `skills-lock.json` には載せない。`skills-lock.json` は GitHub から写した skill (`shadcn`・`valibot`) の hash を持つもので、symlink の skill は Void の版が中身を決める
+- symlink なので、Void を上げると中身も上がる。`skills-lock.json` には載せない。`skills-lock.json` は GitHub から写した skill (`shadcn`・`valibot`) の hash を持つもので、symlink の skill は Void の版が中身を決める
 - symlink の先は `node_modules` の中なので、`vp install` の前は辿れない。辿れないことを壊れたと取らず、`vp install` のあとに見る
 
 ### 環境変数を足す
