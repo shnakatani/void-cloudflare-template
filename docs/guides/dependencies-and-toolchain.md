@@ -55,7 +55,7 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 - `pnpm-workspace.yaml` の `skills.dirs` を空のリストにして、依存が同梱する agent skill を pnpm に link させない ([pnpm docs「skills.dirs」][]: "An empty list turns agent skills off. pnpm stops offering them for approval and removes the ones it linked.")。Void の skill は「Void の skill を扱う」の symlink で、TanStack の skill は `AGENTS.md` の Intent で読む。理由は「依存の agent skill を pnpm に link させない理由」にある
 - `.agents/skills/` の shadcn と valibot は GitHub から入れた skill で、`skills-lock.json` が出所を記録する。pnpm の link とは別の仕組みで、`skills.dirs` の影響を受けない
-- pnpm に link させるなら、`skills` の設定を消して `pnpm approve` を打つ。承認は `pnpm-workspace.yaml` の `permissions` に記録される ([pnpm docs「Agent Skills」][])
+- pnpm に link させるなら、`skills` の設定を消して `pnpm approve` を打つ。承認は `pnpm-workspace.yaml` の `permissions` に記録される ([pnpm docs「Agent Skills」][])。`void` を承認するなら、先に「Void の skill を扱う」の symlink を git から外す。pnpm はこの symlink を自分の link として扱い、向き先を書き換える (「依存の agent skill を pnpm に link させない理由」)
 
 ### Void の skill を扱う
 
@@ -279,6 +279,15 @@ pnpm の link と Intent は、TanStack の同じ skill を別の経路で載せ
 | 届く依存 | 直接の依存だけ ("pnpm looks for skills in the direct dependencies of every project")                              | 推移の依存まで ("Discovery finds every installed package that has one, including transitive dependencies") |
 
 ADR-0018 が出典にする `@tanstack/table-core` の skill は推移の依存で、pnpm の link では届かない。Intent が届く範囲を持つので、TanStack の skill に pnpm の link は要らない。
+
+Void の skill は、`void init` が張る形の symlink を git で持って載せている (「Void の skill を扱う」)。pnpm docs は、virtual store の同じパッケージの同じ skill を指す link を pnpm 自身の link として扱う ([pnpm docs「Agent Skills」][]: "pnpm treats a link to the same skill of the same package in the virtual store as its own, even if that copy is no longer in the lockfile")。2026-11-24 に pnpm 12.21.0 と void 1.11.0 で `void` を承認して `vp install` すると、pnpm は git で持つ symlink の向き先を `node_modules/.pnpm/void@<版>_<peer の hash>/node_modules/void/skills/<名前>` に書き換え、`.agents/skills/` と `.claude/skills/` に `.gitignore` を足した。続けて `skills.dirs: []` にして `vp install` すると、pnpm はその symlink を消した。
+
+| 案                                                             | 評価                                                                                                                                                                                                                                                                                               | 採否     |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `skills.dirs: []` を置く                                       | pnpm docs が機能を切る形として書く設定 ([pnpm docs「skills.dirs」][])。2026-11-24 に pnpm 12.21.0 で、`node_modules` の無い状態から `vp install`・`vp add -D is-number@7.0.0`・`vp remove is-number` を打っても、git で持つ symlink は変わらず、承認待ちも出なかった                               | **採用** |
+| `permissions` で依存ごとに `skills: false` を書く              | 同じ実測で、symlink は変わらず、承認待ちも出なかった。代わりに、skill を同梱する直接の依存を足すたびに承認待ちに出て、行を足すことになる                                                                                                                                                           | 却下     |
+| `void` だけを承認し、symlink を git から外して pnpm に張らせる | Void が skill を増やしても pnpm が張る ([pnpm docs「Agent Skills」][]: "`skills: true` links every skill the package ships, in every later version")。代わりに、「Void の skill を扱う」の、`void init` の出力のまま残す形を変えることになる                                                       | 却下     |
+| `skills` を設定しない                                          | 承認するまで pnpm は何も link しない。代わりに、2026-11-24 に pnpm 12.21.0 で、依存を入れる `vp install` と `vp add`・`vp remove` のたびに承認待ちが出た (変更の無い `vp install` では出なかった)。承認すると、Void の skill は上の書き換えが起き、TanStack の skill は Intent と 2 つの経路で届く | 却下     |
 
 ### `typescript` を直接の依存に置かない理由
 
