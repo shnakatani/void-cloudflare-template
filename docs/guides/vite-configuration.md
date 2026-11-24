@@ -29,7 +29,7 @@ Vite+ が読む設定は、ツールごとの設定ファイルに分けず `vit
 2. block 全体は `vite.config.ts` で import して渡す (`test: testConfig`、`lint: lintConfig`)。override の一部を切り出したときは、override を組み立てる側 (`tooling/lint/config.ts`) で import し、`overrides` の要素へ spread で組み込む ([Vite+ docs「Monorepo」][] の「Composing Configuration Files」の例)
 3. 設定の中の文字列のパスは、切り出したモジュールの位置から書かない。Vitest の `include`、`globalSetup`、`setupFiles` は root から解決され ([Vitest docs「include」][]、[Vitest docs「globalSetup」][]、[Vitest docs「setupFiles」][])、Oxlint の `jsPlugins` の specifier、`overrides` の `files` / `excludeFiles`、`ignorePatterns` は、`vite.config.ts` (Oxlint から見た config ファイル) のあるディレクトリから解決される ([Oxlint docs「JS Plugins」][]、[oxlint 1.85.0 の configuration_schema.json][] の `GlobSet` と `ignorePatterns` の説明。2026-10-01 に確認)
 4. `vite.config.ts` が import するモジュールに、読み込むだけで起きる副作用 (警告の出力、環境変数の書き換え) を持たせない (「読み込むだけで起きる副作用を持たせない理由」)。`setupFiles` と `globalSetup` に文字列のパスで登録するファイルは Vitest がテストの実行で読むもので、`vite.config.ts` からは読まれないので対象外になる。条件つきの警告は、その block を使う経路でだけ呼ばれる関数の中で出す。`tooling/test/config.ts` の `storybookProjects` が返す project の関数が、Storybook 経由の縮退を知らせる警告をこの形で出す
-5. `vp check` と、その block を使うコマンド (`vp test list --filesOnly`、`vp lint --print-config`) の出力が切り出す前と変わらないことを確かめる。`vp lint --print-config` の `jsPlugins` の並びは、内容が同じでもチェックアウトした場所で変わる (2026-10-01 に oxlint 1.85.0 で観測)。`vp lint --print-config | jq '.jsPlugins |= sort_by(.name)'` の出力どうしを比べる
+5. `vp check` と、その block を使うコマンド (`vp test list --filesOnly`、`vp lint --print-config`) の出力が切り出す前と変わらないことを確かめる。2026-10-01 に oxlint 1.85.0 で、`vp lint --print-config` の `jsPlugins` の並びは、内容が同じでもチェックアウトした場所で変わった。`vp lint --print-config | jq '.jsPlugins |= sort_by(.name)'` の出力どうしを比べる
 
 ### 重い依存を遅らせて読み込む
 
@@ -43,16 +43,16 @@ Vite+ が読む設定は、ツールごとの設定ファイルに分けず `vit
 ### タスクを足す
 
 1. `vite.config.ts` の `run.tasks` に足す。worktree ごとの port で起動するサーバーなら、タスクは port を読まずに使用中の port で止まるフラグ (Vite は `--strictPort`) を付け、`.mise.toml` に同名のタスクを足して `interactive = true` を置き、`exec vp run <task> --port ${<NAME>_PORT:?…}` で渡す。daemon は `task =` でそのタスクを指す (ADR-0004)
-2. mise の `[env]` の値を読むなら、値が届いていなければ止まる形にする。mise の値は、呼んだシェルが mise の環境を読んでいるときだけタスクに届く (ADR-0004)。command の中で読むなら `${NAME:?mise の環境が要る。…}` のように書く。Vite Task は command を `/bin/sh` で解釈し、未設定なら `/bin/sh: NAME: …` を出して止まる (2026-10-14 に vite-plus 1.1.0 で確かめた)。値をコマンドの引数に使わないなら、`NAME=${NAME:?…} <コマンド>` と代入の形で書く。`${NAME:?…}` だけを置くと、値がコマンドの位置引数 (`vp dev` なら root) になる。mise の `[env]` に置くのは開発の道具が読む値だけにし、アプリが読む値は `env.ts` に宣言する (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
+2. mise の `[env]` の値を読むなら、値が届いていなければ止まる形にする。mise の値は、呼んだシェルが mise の環境を読んでいるときだけタスクに届く (ADR-0004)。command の中で読むなら `${NAME:?mise の環境が要る。…}` のように書く。2026-10-14 に vite-plus 1.1.0 で、Vite Task は command を `/bin/sh` で解釈し、未設定なら `/bin/sh: NAME: …` を出して止まった。値をコマンドの引数に使わないなら、`NAME=${NAME:?…} <コマンド>` と代入の形で書く。`${NAME:?…}` だけを置くと、値がコマンドの位置引数 (`vp dev` なら root) になる。mise の `[env]` に置くのは開発の道具が読む値だけにし、アプリが読む値は `env.ts` に宣言する (`docs/guides/dependencies-and-toolchain.md`「環境変数を足す」)
 3. タスクに `cache` を書かない。`run.cache: false` がすべてのタスクのキャッシュを切っている。gate を `vp run --cache` で打たない。`--cache` は全体の設定を外し、2 回目をリプレイで済ませる (ADR-0004)
 4. command の中で TypeScript と JavaScript のスクリプトを走らせるときは `vpx <file>` を打ち、`node` と `vp node` を打たない。タスクの中の `vp node` は `error: Command 'node' not found` で落ち、`node` は tsconfig の `paths` を読まない (「タスクの中で `vpx` を打つ理由」)
-5. 引数は `vp run <task> <引数>` で渡し、`--` を挟まない。`--` もそのままコマンドに渡る ([Vite+ docs「Run」][] の Additional Arguments: "Arguments after the task name are passed through to the task command")。2026-10-14 に vite-plus 1.1.0 で `vp run contrast -- --theme dark …` を打つと、`scripts/contrast/report.ts` が `知らない引数: --` で落ちた
+5. 引数は `vp run <task> <引数>` で渡し、`--` を挟まない。`--` もそのままコマンドに渡る (タスク名の後ろの引数を渡すことは [Vite+ docs「Run」][] の Additional Arguments)。2026-10-14 に vite-plus 1.1.0 で `vp run contrast -- --theme dark …` を打つと、`scripts/contrast/report.ts` が `知らない引数: --` で落ちた
 6. マージ前の検証の手順なら、`verifySteps` に `verify:<名前>` で足し、`.github/workflows/ci.yml` にも同じ位置に `vp run verify:<名前>` の step を足す。足し忘れても CI は落ちない (ADR-0004)
 7. README のコマンド一覧に行を足す。`verify:<名前>` は `vp run verify` から走るので足さない
 
 ### Web Worker で JSX を書く
 
-`tooling/plugins/react.ts` の `reactPluginOptions` は、`@vitejs/plugin-react` の `exclude` で、名前が `.worker.tsx` で終わるファイルを外している。この options はアプリの `voidReact({ react })` に渡る。外したファイルには、dev の Fast Refresh の登録も React Compiler も当たらない ([plugin-react 6.2.1 の `createReactCompilerPlugin`][] の `transform.filter`)。worker で動く JSX/TSX は次のとおりに書く。
+`tooling/plugins/react.ts` の `reactPluginOptions` は、`@vitejs/plugin-react` の `exclude` で、名前が `.worker.tsx` で終わるファイルを外している。この options はアプリの `voidReact({ react })` に渡る。2026-11-07 に読んだ [plugin-react 6.2.1 の `createReactCompilerPlugin`][] の `transform.filter` では、外したファイルには dev の Fast Refresh の登録も React Compiler も当たらなかった。worker で動く JSX/TSX は次のとおりに書く。
 
 1. worker の入口のファイルを `<名前>.worker.tsx` にし、`new Worker(new URL("./<名前>.worker.tsx", import.meta.url), { type: "module" })` で起こす。[Vite docs「Web Workers」][] はこの形を推奨する。`?worker` の import で起こしても、同じ設定で動く
 2. worker の入口が import する JSX/TSX のファイルも、`.worker.tsx` で終わる名前にする。部品を定義するファイルが名前から外れると Fast Refresh の登録を受け、worker が下の表のエラーで落ちる。JSX を含まない `.ts` は登録を受けない
@@ -90,7 +90,7 @@ Vite+ が読む設定は、ツールごとの設定ファイルに分けず `vit
 
 `vite.config.ts` は、Vite を動かすコマンドだけでなく、`lint` や `fmt` の block を読むだけのコマンドとエディタ連携も読む。先頭で import した依存は、そのたびに評価される ([Vite+ docs「Troubleshooting」][]: "When `vite.config.ts` imports plugins at the top level, they are evaluated for every command, including `vp lint`, `vp fmt`, editor integrations, and long-lived background processes.")。
 
-ローカルのモジュールを `import()` しても遅れない。Vite は config を 1 つのファイルへ bundle する (`@voidzero-dev/vite-plus-core` 1.0.0 の `bundleConfigFile` は `codeSplitting: false`。2026-09-30 に確認)。そのため、`import()` したモジュールが import する外部の依存も、読み込み時に評価される。
+ローカルのモジュールを `import()` しても遅れない。2026-09-30 に読んだ `@voidzero-dev/vite-plus-core` 1.0.0 の `bundleConfigFile` は `codeSplitting: false` で、Vite は config を 1 つのファイルへ bundle していた。そのため、`import()` したモジュールが import する外部の依存も、読み込み時に評価される。
 
 2026-09-30 に、テストの設定を切り出したときの形ごとに `/usr/bin/time -p vp lint src/lib/app-name.ts` を 4 回、`/usr/bin/time -p vp fmt --check src/lib/app-name.ts` を 3 回走らせ、初回を除いた `real` の範囲 (vite-plus 1.0.0、vitest 5.0.1、`@storybook/addon-vitest` 10.6.0、Node 24.21.0。plugin はどの形でも `lazyPlugins` の同期の関数で呼び、全部先頭で import した):
 
@@ -111,16 +111,16 @@ Vite+ は、重い plugin を `lazyPlugins` に渡す async の関数の中で `
 ### タスクの中で `vpx` を打つ理由
 
 - [Vite+ docs「Environment」][] は `vp node` を "It runs Node.js as is, so TypeScript files get Node.js type stripping only; `vpx <file>` runs them on the same runtime with full TypeScript support." と書く。Node.js の type stripping は tsconfig の `paths` を読まず、拡張子の無い import は `ERR_MODULE_NOT_FOUND` で落ちる ([Node.js docs「Modules: TypeScript」][] は `paths` を "intentionally unsupported" とし、import の拡張子を "mandatory" とする)
-- `vp node` は `vp env exec node` の短縮形で、`vp env` は global の CLI に属し、project-local の `vite-plus` には無い ([Vite+ docs「Environment」][] の冒頭と Examples)。`vp run` は `node_modules/.bin` を `PATH` の先頭に置くので、タスクの中の `vp` は project-local の CLI に解決され、`vp node` は `error: Command 'node' not found` で落ちる (2026-10-30、vite-plus 1.4.0)
+- `vp node` は `vp env exec node` の短縮形で、`vp env` は global の CLI に属し、project-local の `vite-plus` には無い ([Vite+ docs「Environment」][] の冒頭と Examples)。`vp run` は `node_modules/.bin` を `PATH` の先頭に置くので、タスクの中の `vp` は project-local の CLI に解決され、`vp node` は `error: Command 'node' not found` で落ちた (2026-10-30、vite-plus 1.4.0)
 - タスクの中の `vpx` も project-local の `vite-plus` の bin に解決され、global の CLI の版に頼らない。[Vite+ docs「Running Binaries」][] の In `package.json` Scripts は "It runs them on the Node.js that started it, which inside `vp run` and package manager scripts is the project's version." と書く
 - `vpx` が足す起動の時間は小さい。2026-10-30 に vite-plus 1.4.0 と Node.js 24.20.0 で、`scripts/contrast/report.ts` を `node` と project-local の `vpx` で 5 回ずつ交互に走らせ、2 回目以降の差は 0.05 秒以下だった (初回の `vpx` だけが 0.2 秒ほど長い)
 
 ### worker を `exclude` で外す理由
 
-- `exclude` は、[plugin-react 6.2.1 の README][] と [plugin-react 6.2.1 の `Options`][] が、worker で動く JSX/TSX を外す option として案内する ("You may use it to exclude JSX/TSX files that runs in a worker or are not React files.")。外したファイルは React Compiler も通らない
-- `refreshInclude` と `refreshExclude` は、worker の JSX を React Compiler に通したまま Fast Refresh からだけ外すために、6.2.0 で足された ([vitejs/vite-plugin-react#1485 のコメント][] の "they want it to compile but not fast refresh"、[vitejs/vite-plugin-react#1516][]、[vitejs/vite-plugin-react#1543][])。6.2.1 で使うと次の 2 つの落とし穴があるので、採らない
-- `compiler: true` の経路では、どちらかを 1 つでも渡すと、Fast Refresh を入れるかがその 2 つの filter だけで決まる ([plugin-react 6.2.1 の `createReactCompilerPlugin`][])。渡さないときに効く条件 (JSX のファイルか、JSX の runtime を import するファイル) が外れるので、`refreshExclude` だけを渡すと JSX を含まない `.ts` も登録を受ける。worker と共有する `.ts` に `$RefreshReg$` が入る [vitejs/vite-plugin-react#1478][] の形が戻る
-- その filter は Vite の `createFilter` (`@rollup/pluginutils` の re-export。[Vite 8.3.5 の `createFilter`][]) で作られ、query の付いた id のまま照合する。`$` で終わる正規表現は worker の入口 (`?worker_file`) の id に当たらない。同じ経路の `exclude` と、Fast Refresh の runtime を足す wrapper の filter は、`@rolldown/pluginutils` の `makeIdFiltersToMatchWithQuery` で query の付いた id にも当たるよう変換してから照合する ([plugin-react 6.2.1 の `createReactCompilerPlugin`][]、[plugin-react 6.2.1 の `viteReact`][])。`$` で終わる `refreshExclude` を渡した worker の入口は、登録だけを受けて runtime を受けなかった
+- `exclude` は、[plugin-react 6.2.1 の README][] と [plugin-react 6.2.1 の `Options`][] が、worker で動く JSX/TSX を外す option として案内する ("You may use it to exclude JSX/TSX files that runs in a worker or are not React files.")。2026-11-07 に読んだ [plugin-react 6.2.1 の `createReactCompilerPlugin`][] では、外したファイルは React Compiler も通らなかった
+- `refreshInclude` と `refreshExclude` は、worker の JSX を React Compiler に通したまま Fast Refresh からだけ外すために、6.2.0 で足された ([vitejs/vite-plugin-react#1485 のコメント][] の "they want it to compile but not fast refresh"、[vitejs/vite-plugin-react#1516][]、[vitejs/vite-plugin-react#1543][])。2026-11-07 に 6.2.1 で使うと次の 2 つの落とし穴があったので、採らない
+- 2026-11-07 に読んだ [plugin-react 6.2.1 の `createReactCompilerPlugin`][] では、`compiler: true` の経路で、どちらかを 1 つでも渡すと、Fast Refresh を入れるかがその 2 つの filter だけで決まっていた。渡さないときに効く条件 (JSX のファイルか、JSX の runtime を import するファイル) が外れるので、`refreshExclude` だけを渡すと JSX を含まない `.ts` も登録を受けた。worker と共有する `.ts` に `$RefreshReg$` が入る [vitejs/vite-plugin-react#1478][] の形が戻った
+- 2026-11-07 に読んだ Vite 8.3.5 と plugin-react 6.2.1 では、その filter は Vite の `createFilter` (`@rollup/pluginutils` の re-export。[Vite 8.3.5 の `createFilter`][]) で作られ、query の付いた id のまま照合していた。`$` で終わる正規表現は worker の入口 (`?worker_file`) の id に当たらなかった。同じ経路の `exclude` と、Fast Refresh の runtime を足す wrapper の filter は、`@rolldown/pluginutils` の `makeIdFiltersToMatchWithQuery` で query の付いた id にも当たるよう変換してから照合していた ([plugin-react 6.2.1 の `createReactCompilerPlugin`][]、[plugin-react 6.2.1 の `viteReact`][])。`$` で終わる `refreshExclude` を渡した worker の入口は、登録だけを受けて runtime を受けなかった
 - `refreshInclude` と `refreshExclude` なら Compiler を残して Fast Refresh から外せるが、当たるかが id の query に左右される。下の表の最後の行で worker が動いたのは、`refreshExclude` が worker の入口を外したからではなく、`refreshInclude` が当たらなかったからである。README の案内する `exclude` を選ぶ
 - `reactPluginOptions` に先に入れておくのは、worker を足すときに設定を触らず名前だけで済ませるためである。外し忘れたときのエラーは `/@react-refresh` を指すだけで、`exclude` に辿り着けない。`.worker.tsx` のファイルが無い間は何にも当たらず、下の表のとおり、ほかの部品の Fast Refresh は変わらない
 

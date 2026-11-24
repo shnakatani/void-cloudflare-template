@@ -56,7 +56,7 @@ silent failure の源として扱っている書き方を検出するルール�
 `restrict-template-expressions` は基準のオプションから `allowNumber` だけを true に戻して名指しする。
 oxlint の既定はルール自身の既定 (`allow*` の 5 つが true) で、名指ししないと基準から外れる。
 基準の `allowNumber: false` は浮動小数の表示 (`${0.1 + 0.2}`) を狙ったもので、整数の埋め込みにも鳴る (typescript-eslint/typescript-eslint#9311)。利用者に見せる浮動小数の表示は、このルールに頼らず `toFixed()` などで書く。テストの診断文のように値そのものを見せたいものは丸めない。
-`allowBoolean` は基準どおり false にする。`` `btn ${active && "active"}` `` は `active` が false のとき `"false"` を埋め込み、型が `false | "active"` なので `allowBoolean: true` では通る (2026-09-27 に oxlint 1.82.0 で実測)。typescript-eslint 本体の `eslint.config.mjs` はこのルールの `allow*` を 5 つとも true に戻しているが (2026-09-27 に確認)、`allowBoolean` の誤りを止めるため採らない。
+`allowBoolean` は基準どおり false にする。`` `btn ${active && "active"}` `` は `active` が false のとき `"false"` を埋め込み、型が `false | "active"` なので `allowBoolean: true` では通った (2026-09-27 に oxlint 1.82.0 で実測)。2026-09-27 に確認した typescript-eslint 本体の `eslint.config.mjs` は、このルールの `allow*` を 5 つとも true に戻していたが、`allowBoolean` の誤りを止めるため採らない。
 なお `correctness` に入るルールも `rules` へ名指しすればオプションを上書きできる。名指ししないルールだけがカテゴリ既定で動く。
 
 `correctness` にある type-aware ルールと `strict-type-checked` は包含関係ではなく、部分的に重なる別の集合である。基準を strict に置いても oxlint 独自の `correctness` 選択は失わない。
@@ -117,7 +117,7 @@ recommended に無くても、規約や他の決定を機械で守るために�
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `typescript/consistent-type-assertions` | `assertionStyle: "never"` の指定が要る                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `no-restricted-imports`                 | `*.test-helpers.ts` と `src/test/` をアプリのコードから import させない (ADR-0008)。テストの import を重くする依存のバレルを止める (ADR-0032)。server だけで動く module の値の import を止める (ADR-0055)                                                                                                                                                                                                                                                            |
-| `react/no-unstable-nested-components`   | 描画中の部品の定義 (props に直接渡す形を含む) を止める。React Compiler を通すと症状が消え、Compiler を通す project のテストでは見つからない (`docs/guides/testing/configuration.md`「テストでも React Compiler を通す理由」)。`react/static-components` は props に直接渡す形を止めない (oxlint 1.85.0、2026-10-08)                                                                                                                                                  |
+| `react/no-unstable-nested-components`   | 描画中の部品の定義 (props に直接渡す形を含む) を止める。React Compiler を通すと症状が消え、Compiler を通す project のテストでは見つからない (`docs/guides/testing/configuration.md`「テストでも React Compiler を通す理由」)。`react/static-components` は props に直接渡す形を止めなかった (oxlint 1.85.0、2026-10-08)                                                                                                                                              |
 | `react/invariant`                       | Compiler が部品ごと最適化を諦めたことを gate で止める (ADR-0014)。上流は Compiler 自身の不整合として既定 off にするが、oxlint は書き換えで消える形もこの名前で報告する。2026-11-02 に、hook に渡す関数が後で宣言する関数を経由してその hook の戻り値を読む部品を、oxlint 1.89.0 は `react/invariant` で報告し、`correctness` の `react/immutability` では報告しなかった。babel-plugin-react-compiler 1.0.0 は同じ部品を Immutability (宣言の前に読む) として報告する |
 
 テスト専用コードの import を止める範囲と手段の比較は ADR-0008 が持つ。
@@ -147,8 +147,8 @@ recommended に無くても、規約や他の決定を機械で守るために�
 ## 出典
 
 - typescript-eslint の共有設定: https://typescript-eslint.io/users/configs/
-- テストディレクトリでの off と `strict-type-checked` 上でのオプション上書きを含む上流本体の設定: https://github.com/typescript-eslint/typescript-eslint/blob/main/eslint.config.mjs
-- oxc 自身の lint 設定 (`categories` は correctness と perf だけ、個別ルールは `rules` に列挙): https://github.com/oxc-project/oxc/blob/main/oxlintrc.json
+- テストディレクトリでの off と `strict-type-checked` 上でのオプション上書きを含む上流本体の設定: https://github.com/typescript-eslint/typescript-eslint/blob/4586535ab24d7d5e9b3ba87e4adb8636f9314aca/eslint.config.mjs
+- oxc 自身の lint 設定 (`categories` は correctness と perf だけ、個別ルールは `rules` に列挙): https://github.com/oxc-project/oxc/blob/b41bb35bcab466c3b799ff86b0735a1c9a4c7805/oxlintrc.json
 - oxlint の recommended preset 追跡 issue: https://github.com/oxc-project/oxc/issues/20758
 - React Compiler 診断の per-category ルール分割 (22 ルールとカテゴリの一覧): https://oxc.rs/blog/2026-08-18-react-compiler-support
 - eslint-plugin-react-hooks のルール一覧と preset: https://react.dev/reference/eslint-plugin-react-hooks

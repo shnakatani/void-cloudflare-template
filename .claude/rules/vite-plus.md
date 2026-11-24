@@ -29,9 +29,9 @@ paths:
 - mise の `[env]` には開発の道具が読む値だけを置き、アプリが読む値は `env.ts` に宣言する (`docs/guides/vite-configuration.md`「タスクを足す」)
 - mise の `[env]` の値を読むタスクは、値が届いていなければ止まる形にする。command の中では `${NAME:?…}` で読む (`docs/guides/vite-configuration.md`「タスクを足す」)
 - `vite.config.ts` の `run.cache: false` を外さず、gate を `vp run --cache` で打たない。キャッシュが効くと gate がリプレイで済まされ、親の環境変数が子へ届かない (ADR-0004)
-- `run.tasks` の command で TypeScript と JavaScript のスクリプトを走らせるときは `vpx <file>` を打ち、`node` と `vp node` を打たない。タスクの中の `vp node` は `Command 'node' not found` で落ち、`node` は tsconfig の `paths` を読まない (`docs/guides/vite-configuration.md`「タスクを足す」)
+- `run.tasks` の command で TypeScript と JavaScript のスクリプトを走らせるときは `vpx <file>` を打ち、`node` と `vp node` を打たない。タスクの中の `vp node` は `Command 'node' not found` で落ちることがあり、`node` は tsconfig の `paths` を読まない (`docs/guides/vite-configuration.md`「タスクを足す」)
 - verify の手順は `vite.config.ts` の `verifySteps` にタスクとして足し、`.github/workflows/ci.yml` にも同じ位置に `vp run <タスク>` の step を足す。コマンドは workflow に写さない。step を足し忘れても CI は落ちず、その手順が CI で走らないだけになる (ADR-0004)
-- built-in と同名の script は、`pnpm run build` で走らせる入口の `build` だけを置き、開発者の入口 (`check` / `test` / `dev`) は足さない。開発者は global の `vp` を入れるので公式が script を勧める利点が当てはまらず、同名の script があると `vp <name>` のたびに stderr に note が出る (ADR-0004)
+- built-in と同名の script は、`pnpm run build` で走らせる入口の `build` だけを置き、開発者の入口 (`check` / `test` / `dev`) は足さない。開発者は global の `vp` を入れるので公式が script を勧める利点が当てはまらず、同名の script があると `vp <name>` のたびに stderr に note が出ることがある (ADR-0004)
 - ビルド成果物を起動する検査は、`verifySteps` で `verify:build` の後に置く (`docs/guides/testing/check-scripts.md`「検査スクリプトを足す」)
 
 ## 型検査
@@ -55,7 +55,7 @@ paths:
 - `lazyPlugins` には同期の関数を渡し、plugin は先頭で import する。今の plugin を `import()` へ移しても、`vp lint` / `vp fmt` はほとんど縮まない (`docs/guides/vite-configuration.md`「plugin を先頭で import する理由」)
 - project が使う重い依存 (playwright の provider、`@storybook/addon-vitest` の plugin) は、project を作る関数の中で動的 import する。先頭で import すると `vp lint` / `vp fmt` のたびに評価される (`docs/guides/vite-configuration.md`「重い依存を遅らせる理由」)
 - root の `plugins` と同じパッケージ (`chromiumProjectBase` の `tailwindcss`) は、project でも先頭で import する。root が先頭で import している間は、遅らせても同じ module が読まれる (`docs/guides/vite-configuration.md`「plugin を先頭で import する理由」)
-- 動的 import で遅らせるのは外部のパッケージそのものにする。`tooling/` のモジュールを動的 import しても、Vite が config を 1 ファイルへ bundle するので遅れない (`docs/guides/vite-configuration.md`「重い依存を遅らせる理由」)
+- 動的 import で遅らせるのは外部のパッケージそのものにする。`tooling/` のモジュールを動的 import しても、Vite が config を 1 ファイルへ bundle すると遅れない (`docs/guides/vite-configuration.md`「重い依存を遅らせる理由」)
 
 ## React Compiler (`vite.config.ts` の `plugins`、`tooling/plugins/react.ts`)
 
@@ -65,10 +65,10 @@ paths:
 - テストの分岐は React の plugin を返さず、ブラウザで走る project が `chromiumProjectBase` から足す。root に置くと、継承した plugin を Compiler を通さない project で外せない (`docs/guides/testing/configuration.md`「テストでだけ plugin を変える」)
 - Compiler を通さない project には `src/components/ui/` のテストと story だけを集める (`docs/guides/testing/configuration.md`「React Compiler を通さない project を足す」)
 - `browser-no-compiler` の project を外さない。Compiler は上流の部品が描画中に部品を定義する欠陥を隠すので、`calendar.test.tsx` の再描画のガードは Compiler を通さない project でしか落ちない (`docs/guides/testing/configuration.md`「テストでも React Compiler を通す理由」)
-- bail out のログは `vp build` では `[plugin vite:react-compiler]` だけで `error` / `warn` を含まない。ビルドログは `react-compiler` で grep する (`docs/guides/react/memoization.md`「React Compiler の診断を読む」)
+- bail out のログは `vp build` では `[plugin vite:react-compiler]` だけで、`error` / `warn` を含まないことがある。ビルドログは `react-compiler` で grep する (`docs/guides/react/memoization.md`「React Compiler の診断を読む」)
 - babel を経路に置かない。壊れたときも版を下げて凌ぐ (ADR-0014)
 - `reactPluginOptions` の `exclude` から `/\.worker\.tsx$/` と `/\/node_modules\//` を外さない (`docs/guides/vite-configuration.md`「Web Worker で JSX を書く」)
-- worker の JSX/TSX は `exclude` で外し、`refreshInclude` / `refreshExclude` で外さない。`$` で終わる正規表現の `refreshExclude` は worker の入口に当たらない (`docs/guides/vite-configuration.md`「Web Worker で JSX を書く」)
+- worker の JSX/TSX は `exclude` で外し、`refreshInclude` / `refreshExclude` で外さない。`$` で終わる正規表現の `refreshExclude` は worker の入口に当たらないことがある (`docs/guides/vite-configuration.md`「Web Worker で JSX を書く」)
 
 ## 依存の patch (`pnpm-workspace.yaml` の `patchedDependencies`)
 

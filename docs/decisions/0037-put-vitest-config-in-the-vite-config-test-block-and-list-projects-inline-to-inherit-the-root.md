@@ -18,7 +18,7 @@ Vitest の設定は、`vitest.config.ts` に分けても `vite.config.ts` の `t
 **Vitest の設定は `vite.config.ts` の `test` に置き、中身は `tooling/test/` から import して組み立てる。project はどれも inline に並べて root の設定を継承させ、テストで外す plugin は `vite.config.ts` の `plugins` の `process.env.VITEST` の分岐で外す。**
 
 - 組み立て方は Vite+ が示す形に従う (Vite+ docs「Monorepo」 の「Composing Configuration Files」)
-- Vitest 5 では、inline の project だけが root の設定を継承する (Vitest docs「Test Projects」: "Projects referenced as config files or directories do not inherit any options from the root config.")。関数で渡した project も inline として扱われる。docs に関数の例は無く、`DEBUG=vitest:projects vp test list --filesOnly` の出力で確かめた (2026-09-30、vitest 5.0.1)
+- Vitest 5 では、inline の project だけが root の設定を継承する (Vitest docs「Test Projects」: "Projects referenced as config files or directories do not inherit any options from the root config.")。2026-09-30 に vitest 5.0.1 で、関数で渡した project も inline として扱われた。docs に関数の例は無く、`DEBUG=vitest:projects vp test list --filesOnly` の出力で確かめた
 - 置き場所、project の足し方、分岐の書き方は `docs/guides/testing/configuration.md`、切り出したファイルの組み込み方と重い依存を遅らせる理由は `docs/guides/vite-configuration.md` にある
 
 | 案                                                                               | 評価                                                                                                                                                                                                                                                                                                                                                                                          | 採否     |
