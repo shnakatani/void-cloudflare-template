@@ -65,11 +65,11 @@ oxlint 1.79 で `react/react-compiler` と `reportAllBailouts` は廃止され�
 こちらが指すのは Compiler が対応する予定のない構文 (`this` / `with` / インライン `class` 宣言) で、書き換えれば消えるためコード側の欠陥として扱える。
 
 `react/invariant` も `"error"` で名指しする。Oxlint docs「react/invariant」はこのルールを Compiler 自身の不整合の報告とし、上流も既定 off にしている。
-それでも名指しするのは、oxlint が書き換えで消える形をこの名前で報告し、その部品が Compiler の対象から丸ごと外れるためである。
+それでも名指しするのは、2026-11-02 の記録では、oxlint が書き換えで消える形をこの名前で報告し、その部品が Compiler の対象から丸ごと外れたためである。
 
 - 2026-11-02 に、hook に渡す関数が後で宣言する関数を経由してその hook の戻り値を読む部品を、oxlint 1.89.0 と oxc-transform-react 0.152.0 は Invariant (`PruneHoistedContexts`) で報告した。`correctness` の `react/immutability` は報告せず、`vp check` は通った
-- 同じ部品を babel-plugin-react-compiler 1.0.0 は Immutability (宣言の前に読む) として報告する。上流の recommended に入る分類である
-- 循環を切ると消え、部品は Compiler の対象に戻る。ビルドログ (`reportDiagnostics`) には出ていたが、gate は落ちなかった
+- 同じ部品を babel-plugin-react-compiler 1.0.0 は Immutability (宣言の前に読む) として報告した。上流の recommended に入る分類である
+- 循環を切ると消え、部品は Compiler の対象に戻った。ビルドログ (`reportDiagnostics`) には出ていたが、gate は落ちなかった
 
 `react/todo` と違い、Invariant は書き換えで消えるものを含むので、gate に載せて直す側に倒す。直し方は `docs/guides/react/memoization.md`「React Compiler の診断を読む」にある。
 
@@ -84,7 +84,7 @@ oxlint 1.79 で `react/react-compiler` と `reportAllBailouts` は廃止され�
 | Compiler の適用を babel で行う               | `@babel/core` が 8 系で最適化を silent に落とすため major の停止が要り、ビルドも延びる                                                             | 却下     |
 | bail out をビルドログへ出す                  | 見えるのは処理を試みて失敗した箇所だけで、対象外の関数はイベントすら出ない。それでも維持コストがゼロなので採る                                     | **採用** |
 | bail out の一覧を検査で固定する              | 落ちてもコードは直さず期待値を更新するだけになる (Compiler がカバーしない箇所を欠陥として扱わない決定)。検査自体も `vite.config.ts` の配線を見ない | 却下     |
-| `react/invariant` を `"error"` で名指しする  | 書き換えで消える形が `correctness` を抜けて gate に載らない (2026-11-02 実測)。代償は、Compiler 自身の不整合でも gate が落ちること                 | **採用** |
+| `react/invariant` を `"error"` で名指しする  | 2026-11-02 の実測では、書き換えで消える形が `correctness` を抜けて gate に載らなかった。代償は、Compiler 自身の不整合でも gate が落ちること        | **採用** |
 | `react/invariant` を上流に揃えて off に保つ  | Invariant で出る形は、ビルドログを読むまで気づけない。部品が丸ごと最適化から外れる                                                                 | 却下     |
 
 ## Consequences

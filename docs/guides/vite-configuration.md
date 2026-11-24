@@ -21,7 +21,7 @@ Vite+ が読む設定は、ツールごとの設定ファイルに分けず `vit
 | `fmt`、`staged`、`resolve`、`server`、`envDir`、`plugins` | `vite.config.ts`                                                                                                                                                                                                                                                                |
 | `run`                                                     | `vite.config.ts`。タスクの足し方は「タスクを足す」、置き場所の決定は ADR-0004                                                                                                                                                                                                   |
 | `plugins` の React の plugin (`@vitejs/plugin-react`)     | `tooling/plugins/react.ts` の `reactPluginOptions`。アプリの `voidReact({ react })` と、ブラウザで走る project の `chromiumProjectBase` の `viteReact()` が、同じ関数から options を作る。分岐の書き方は `docs/guides/testing/configuration.md`「テストでだけ plugin を変える」 |
-| `server` の `forwardConsole`                              | `tooling/server/forward-console.ts` の `forwardConsole`。`vite.config.ts` の `server` と、`.storybook/main.ts` の `viteFinal` が同じ値を渡す。Storybook の dev の Vite は `vite.config.ts` の `server` を読まない (ADR-0062)                                                    |
+| `server` の `forwardConsole`                              | `tooling/server/forward-console.ts` の `forwardConsole`。`vite.config.ts` の `server` と、`.storybook/main.ts` の `viteFinal` が同じ値を渡す。2026-11-07 時点 (storybook 10.6.5) の記録では、Storybook の dev の Vite は `vite.config.ts` の `server` を読まなかった (ADR-0062) |
 
 ### block を別のファイルへ切り出す
 
@@ -59,7 +59,7 @@ Vite+ が読む設定は、ツールごとの設定ファイルに分けず `vit
 3. main thread と worker の両方が import する JSX/TSX のファイルは、名前を変えずに `exclude` に足す。足したファイルは main thread でも Fast Refresh の登録を受けなくなる
 4. `exclude` に足すときは `/\/node_modules\//` を残す。`exclude` は既定の値 `/\/node_modules\//` を置き換える ([plugin-react 6.2.1 の README][] の「exclude」: "Except if explicitly desired, you should keep `node_modules` in the exclude list")
 5. worker の入口に `import` も `export` も無ければ、`export {};` を足す。無いと JSX の変換が `require("react/jsx-dev-runtime")` を出し、worker が `Uncaught ReferenceError: require is not defined` で落ちる (2026-11-07 に dev で観測。どの変換が `require` を出すかは確かめていない)
-6. `refreshInclude` と `refreshExclude` では外さない。`refreshExclude` だけを渡すと worker と共有する `.ts` が登録を受けて落ち、`$` で終わる正規表現の `refreshExclude` は worker の入口に当たらない (「worker を `exclude` で外す理由」)
+6. `refreshInclude` と `refreshExclude` では外さない。2026-11-07 時点 (`@vitejs/plugin-react` 6.2.1) の記録では、`refreshExclude` だけを渡したときは worker と共有する `.ts` が登録を受けて落ち、`$` で終わる正規表現の `refreshExclude` は worker の入口に当たらなかった (「worker を `exclude` で外す理由」)
 
 外していないファイルを dev の worker が読むと、worker の `error` イベントに次のエラーが出る。dev server の端末にも `[vite+] (client) [Unhandled error] Error: Uncaught ReferenceError: …` で出る。
 
@@ -121,8 +121,8 @@ Vite+ は、重い plugin を `lazyPlugins` に渡す async の関数の中で `
 - `refreshInclude` と `refreshExclude` は、worker の JSX を React Compiler に通したまま Fast Refresh からだけ外すために、6.2.0 で足された ([vitejs/vite-plugin-react#1485 のコメント][] の "they want it to compile but not fast refresh"、[vitejs/vite-plugin-react#1516][]、[vitejs/vite-plugin-react#1543][])。2026-11-07 に 6.2.1 で使うと次の 2 つの落とし穴があったので、採らない
 - 2026-11-07 に読んだ [plugin-react 6.2.1 の `createReactCompilerPlugin`][] では、`compiler: true` の経路で、どちらかを 1 つでも渡すと、Fast Refresh を入れるかがその 2 つの filter だけで決まっていた。渡さないときに効く条件 (JSX のファイルか、JSX の runtime を import するファイル) が外れるので、`refreshExclude` だけを渡すと JSX を含まない `.ts` も登録を受けた。worker と共有する `.ts` に `$RefreshReg$` が入る [vitejs/vite-plugin-react#1478][] の形が戻った
 - 2026-11-07 に読んだ Vite 8.3.5 と plugin-react 6.2.1 では、その filter は Vite の `createFilter` (`@rollup/pluginutils` の re-export。[Vite 8.3.5 の `createFilter`][]) で作られ、query の付いた id のまま照合していた。`$` で終わる正規表現は worker の入口 (`?worker_file`) の id に当たらなかった。同じ経路の `exclude` と、Fast Refresh の runtime を足す wrapper の filter は、`@rolldown/pluginutils` の `makeIdFiltersToMatchWithQuery` で query の付いた id にも当たるよう変換してから照合していた ([plugin-react 6.2.1 の `createReactCompilerPlugin`][]、[plugin-react 6.2.1 の `viteReact`][])。`$` で終わる `refreshExclude` を渡した worker の入口は、登録だけを受けて runtime を受けなかった
-- `refreshInclude` と `refreshExclude` なら Compiler を残して Fast Refresh から外せるが、当たるかが id の query に左右される。下の表の最後の行で worker が動いたのは、`refreshExclude` が worker の入口を外したからではなく、`refreshInclude` が当たらなかったからである。README の案内する `exclude` を選ぶ
-- `reactPluginOptions` に先に入れておくのは、worker を足すときに設定を触らず名前だけで済ませるためである。外し忘れたときのエラーは `/@react-refresh` を指すだけで、`exclude` に辿り着けない。`.worker.tsx` のファイルが無い間は何にも当たらず、下の表のとおり、ほかの部品の Fast Refresh は変わらない
+- `refreshInclude` と `refreshExclude` なら Compiler を残して Fast Refresh から外せるが、2026-11-07 の実測 (下の表) では、当たるかが id の query に左右された。下の表の最後の行で worker が動いたのは、`refreshExclude` が worker の入口を外したからではなく、`refreshInclude` が当たらなかったからである。README の案内する `exclude` を選ぶ
+- `reactPluginOptions` に先に入れておくのは、worker を足すときに設定を触らず名前だけで済ませるためである。2026-11-07 時点 (`@vitejs/plugin-react` 6.2.1) の記録では、外し忘れたときのエラーは `/@react-refresh` を指すだけで、`exclude` に辿り着けなかった。`.worker.tsx` のファイルが無い間は何にも当たらず、下の表のとおり、ほかの部品の Fast Refresh は変わらない
 
 2026-11-07 に、`@vitejs/plugin-react` 6.2.1 (`compiler: true`)、vite-plus 1.4.0 (Vite 8.3.5)、Void 1.5.0 の dev で、部品を 1 つ定義する worker の入口と、その入口が import する [vitejs/vite-plugin-react#1478][] の形の `.ts` を置き、`reactPluginOptions` が返す形ごとに測った。worker は `new Worker(new URL(…))` と `?worker` の import の両方で起こし、どの形でも 2 つは同じ結果だった。登録の件数は、dev server が返した `.ts` の変換結果の `$RefreshReg$(` の行を数えた。ページの部品の Fast Refresh は、`pages/<path>.tsx` の変換結果に登録が出るかと、ページの見出しを編集したとき画面が読み直しなしに替わるかで見た。
 

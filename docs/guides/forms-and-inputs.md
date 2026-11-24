@@ -122,7 +122,7 @@ ADR-0056 に沿って、一覧のページの query で開く追加と編集の�
 | 操作中 (削除中など) の行の開くリンク                           | `ButtonLink` の `disabled` を渡す (`docs/guides/styling-and-tokens.md`「外見を層の外へ配る」)                                                                                                                                                                                                                               |
 
 - `QueryDialog` が持つのは、閉じる操作を `closeHref` への遷移にすること (scroll を保ち、クロスフェードにしない)、`blocksClose` の間の停止、閉じ終わるまで直前の中身を描くこと、`dialogKey` が替わったら中身を作り直すこと、開閉で `title` を読み上げること、読み込み中を出すこと (ADR-0056)。Root を自分で書くと、これらを 1 つずつ書き写すことになる
-- `blocksClose` に渡すのは、そのダイアログ自身の保存の pending だけにする。止めずに閉じると、閉じる遷移が保存の送信を取り消し、入力も消える (ADR-0056)
+- `blocksClose` に渡すのは、そのダイアログ自身の保存の pending だけにする。2026-11-02 時点 (Void 1.4.0) の記録では、止めずに閉じると、閉じる遷移が保存の送信を取り消し、入力も消えた (ADR-0056)
 - `dialogKey` に値の id を含めない (種類だけにする) と、開いたまま別の値の URL へ移ったとき、打ち始めた form が前の値のまま残る。ページは URL の変化で作り直されない (ADR-0027)
 - 操作中の開くリンクを無効のボタンに描き替えない。操作が失敗して無効が解けると要素が替わり、focus を持っていた利用者の位置が `<body>` へ落ちる
 - 開いた元の名前を誤っても、型検査も Base UI も気付かない。ダイアログを足したら、ページのテストで次の 3 つを確かめる
@@ -130,7 +130,7 @@ ADR-0056 に沿って、一覧のページの query で開く追加と編集の�
   - 保存したら、開いた元のリンクへ focus が戻る
   - 別のダイアログに替わったとき (別の値の URL へ、追加と編集の行き来、読み込み中から本物へ)、開いた元のリンクが focus を受けない
 - 読み込み中を出すまでの待ちは `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`) が持つ。読み込み中を確かめるテストは、`vi.mock(import("@/lib/pending-display"))` (`src/lib/__mocks__/pending-display.ts`) で 0 に縮め、テストごとに待ちの分だけ遅くしない。読み込みの navigation を渡して、読み込み中が開く前の描画 (押したリンクの `Spinner` など) を見るテストは、partial mock で待ちを広げる。広げないと、遅い runner で待ちが過ぎ、読み込み中のダイアログが一覧を `aria-hidden` にして覆う
-- `finalFocus` からリンクを返さない。Base UI は `finalFocus` を、閉じたのか別のダイアログに替わったのかが分かる前に呼ぶ。返したリンクは替わるときにも focus を受ける。`finalFocusToOpener` は Base UI に `false` を返し、commit の後に開いているダイアログが無いときだけ移す (ADR-0056)
+- `finalFocus` からリンクを返さない。2026-11-02 時点 (`@base-ui/react` 1.9.0) の記録では、Base UI は `finalFocus` を、閉じたのか別のダイアログに替わったのかが分かる前に呼んでいた。返したリンクは替わるときにも focus を受けた。`finalFocusToOpener` は Base UI に `false` を返し、commit の後に開いているダイアログが無いときだけ移す (ADR-0056)
 - 替わったときに開いた元のリンクが受ける focus は、すぐに替わる側の入力欄へ移るので、`toHaveFocus` の retry では捉えられない。替わる前に `recordFocusins` (`src/test/assert/focusin.ts`) で記録を始め、替わる側の入力欄の `toHaveFocus` を待ってから、記録に開いた元のリンクが無いことを見る。ダイアログが開いている間は背後の要素が `aria-hidden` になり、`getByRole` は既定で引かないので、記録の要素は可視の文字か `aria-label` で見分ける
 
 ### 入力欄の周りに要素を置く

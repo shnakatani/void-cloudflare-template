@@ -6,7 +6,7 @@
 
 ## Context
 
-Void 1.4.0 が失敗に用意しているものは次のとおり。
+2026-11-02 時点 (Void 1.4.0) の記録では、Void が失敗に用意していたものは次のとおりだった。出典の列は、その版のソースと docs である。
 
 | 失敗                                               | Void が返すもの                                                                                                                                                                | 出典                                                                                                                  |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
@@ -20,7 +20,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 
 - `public/404.html` と `public/500.html` は静的な HTML で、layout も React も通らない。アプリの CSS (`src/styles.css` から bundle が作るもの) も読まない
 - 境界が無いと、client の遷移の先の描画の throw で React の root ごと外れる。`#app` は空になり、URL は遷移の前のまま、live region も消えた (下の「調査結果」)
-- React は境界が受けた例外を、`createRoot` / `hydrateRoot` の既定の `onCaughtError` で `console.error` に出す (react-dom 19.3.1 の production の build でも `console.error(error)`)。Void は `hydrateRoot(appEl, app)` に options を渡さない
+- React は、root の options で `onCaughtError` を渡さなければ、境界が受けた例外を console に出す (react.dev「hydrateRoot」の Error logging in production)。2026-11-02 時点 (react-dom 19.3.1、Void 1.4.0) の記録では、production の build でも `console.error(error)` で出し、Void は `hydrateRoot(appEl, app)` に options を渡していなかった
 - react.dev「Component」の Catching rendering errors with an Error Boundary は、境界を関数の部品で書けないとし、`react-error-boundary` を案内する
 
 ## Decision
@@ -61,7 +61,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 | `router.refresh()` の決着を待ってから境界を戻す                                          | 読み直した props で描き直し、ページに戻った                                                                                                                          | **採用** |
 | 境界を戻してから `router.refresh()` を呼ぶ (`ErrorBoundary` の `onReset` で呼ぶ形を含む) | 失敗したときの props のまま描き直して同じ失敗をもう一度受け、エラー表示に戻った。読み直した props が届いても `resetKeys` (path) は変わらないので、境界は戻らなかった | 却下     |
 
-`onReset` は `resetErrorBoundary()` の中で、境界の state を戻す前に呼ばれる (`react-error-boundary` 6.1.6 の `dist/react-error-boundary.js` の `resetErrorBoundary` が `this.props.onReset?.(...)` の後に `this.setState` を呼ぶ。dist を読んで確かめた)。refresh を呼び出せても、その決着は待てない。
+2026-11-02 時点 (`react-error-boundary` 6.1.6) の記録では、`onReset` は `resetErrorBoundary()` の中で、境界の state を戻す前に呼ばれていた (`dist/react-error-boundary.js` の `resetErrorBoundary` が `this.props.onReset?.(...)` の後に `this.setState` を呼んでいた。dist を読んで確かめた)。その版では、refresh を呼び出せても、その決着は待てなかった。
 
 ### 検討した案: 全画面の再試行を走らせる場所
 
@@ -105,11 +105,11 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 - `public/error-page.css` の値は `src/styles.css` の写しである。`--background`・`--foreground`・`--font-sans` の light の値を変えたら、`error-page.css` も直す。アプリにテーマの切り替えを入れたら、静的なページの dark を決め直す
 - 静的なページの font は、端末に Geist Variable が無ければ `sans-serif` で描く。アプリの font のファイルは bundle の中にあり、静的なページから読めない
 - 静的なページの title にはアプリ名を文字列で書く。`src/lib/app-name.ts` の `APP_NAME` を替えたら、`public/404.html` と `public/500.html` の title も替える
-- `serveCustomPage` は要求の method を見ずに `/500.html` を返すので、action の POST が 500 になったときの本文も `public/500.html` になる (2026-11-03 に preview で実測。ADR-0065)
+- 2026-11-03 に Void 1.4.0 の preview で実測すると、`serveCustomPage` は要求の method を見ずに `/500.html` を返し、action の POST が 500 になったときの本文も `public/500.html` になった (ADR-0065)
 - `src/components/screens/app-error.test.tsx` は偽の router (ADR-0048) で描く。偽の `refresh()` は Void の commit を通らずに決着するので、再試行を Action の中で待つ形でもテストは通る。再試行の決着は dev で確かめる。Void を上げたら、client の最初の描画だけが throw するページへ `Link` で移り、再試行でページに戻ることと、続けて失敗したら再試行をまた押せることを確かめる (下の「調査結果」の形)
 - エラー表示から別のページへ移り、その先でも描画が失敗したときは、「エラー: 」が付かない可能性がある。`AppError` は作り直されず、Void が新しいページの title を書き換えるのは `AppError` の effect の後になりうる (推論。実測していない)
 - イベントハンドラと非同期の処理の throw は境界に届かない (react.dev「Component」)。`usePageAction` の送信から境界に届くのは `onSuccess` の throw だけ (ADR-0016)
-- title の扱いは Void の内部の順序に乗る。遷移の commit の `applyClientHead` (`void/src/pages/navigation-engine.ts` の `makeCommit`) が、エラー表示の effect より先に title を書き換えること。docs に書かれていない。Void を上げたら、描画が throw するページへ `Link` で遷移し、title と読み上げの region に「エラー: 」が付くことを確かめる
+- title の扱いは Void の内部の順序に乗る。2026-11-02 時点 (Void 1.4.0) の記録では、遷移の commit の `applyClientHead` (`void/src/pages/navigation-engine.ts` の `makeCommit`) が、エラー表示の effect より先に title を書き換えていた。この順序は docs に書かれていなかった。Void を上げたら、描画が throw するページへ `Link` で遷移し、title と読み上げの region に「エラー: 」が付くことを確かめる
 - `public/404.html` と `public/500.html` の応答にも `void.config.ts` の `routing.headers` のヘッダが付く (下の「調査結果」)。静的なページに inline の script と style を書くと、`script-src 'self'` の CSP を足したときに止まる
 
 ## 調査結果
@@ -148,6 +148,7 @@ Void 1.4.0 が失敗に用意しているものは次のとおり。
 この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - react.dev「Component」の Catching rendering errors with an Error Boundary: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
+- react.dev「hydrateRoot」の Error logging in production (既定で console に出すこと。2026-11-24 に原文を確認): https://react.dev/reference/react-dom/client/hydrateRoot#error-logging-in-production
 - `react-error-boundary` 6.1.6 の README と型の docstring: `node_modules/react-error-boundary/`
 - Void docs「Loaders & Props」の Handling Deferred State: `node_modules/void/docs/guide/pages-routing/loaders.md`
 - Void docs「Actions & Forms」: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`

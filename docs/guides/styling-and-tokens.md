@@ -43,7 +43,7 @@
 | `ui/` の `cva` の variant として配る | 同じ部品の見た目を分けるとき   |
 
 - `ui/` の内側での共有は対象外で、class 定数の export 自体は禁じない。`ui/` の外のファイルが import して部品へ渡せば規則が落とす
-- ボタンの見た目のリンクは `ButtonLink` (`src/components/parts/button-link.tsx`) で組み、`Button` の `render` でリンクを描かない ([shadcn docs「Button」][] の As Link)。ボタンの見た目のリンクを部品 (`TooltipTrigger` など) の `render` に渡すときも `ButtonLink` を渡す。`render` に渡した `ButtonLink` で tooltip が開き、押すと遷移を要求することは `button-link.test.tsx` が見張る。無効にするときは `ButtonLink` の `disabled` を渡し、`aria-disabled` を直に渡さない (型が止める)。`Link` は無効の状態を持たず、`aria-disabled` を付けただけでは押すと遷移する。`disabled` は同じ `a` のまま押下を止めるので、focus を持ったまま無効が解けても focus は動かない。リンクを無効のボタンに描き替えると、解けたときに要素が替わり、focus が `<body>` へ落ちる
+- ボタンの見た目のリンクは `ButtonLink` (`src/components/parts/button-link.tsx`) で組み、`Button` の `render` でリンクを描かない ([shadcn docs「Button」][] の As Link)。ボタンの見た目のリンクを部品 (`TooltipTrigger` など) の `render` に渡すときも `ButtonLink` を渡す。`render` に渡した `ButtonLink` で tooltip が開き、押すと遷移を要求することは `button-link.test.tsx` が見張る。無効にするときは `ButtonLink` の `disabled` を渡し、`aria-disabled` を直に渡さない (型が止める)。`Link` の props に無効の状態は無い ([Void docs「Pages Adapters」][] の React Runtime)。2026-11-02 時点 (`@void/react` 1.4.0) の記録では、`aria-disabled` を付けただけでは押すと遷移した。`disabled` は同じ `a` のまま押下を止めるので、focus を持ったまま無効が解けても focus は動かない。リンクを無効のボタンに描き替えると、解けたときに要素が替わり、focus が `<body>` へ落ちる
 - `@void/react` の `Link` を描く部品 (`Link`、`NavLink`、`ButtonLink`) を部品の `render` に渡すときは、`prefetch="visible"` を付けない (`SidebarMenuButton` の `render` に `NavLink` を渡す形も当たる)。`render` が渡す ref が、`Link` が先読みの観測に使う内部の ref に代わり、先読みが起きず、何も報告されない。`render` に渡した `ButtonLink` が visible の先読みをしないことは `button-link.test.tsx` が見張る。2026-11-24 に `@void/react` 1.11.0 と Base UI 1.9.0 で、`TooltipTrigger` の `render` に渡した `ButtonLink` でも hover の先読みが起き、tooltip の popup がリンクに合わせて付くことを確かめた。`SidebarMenuButton` の `render` に渡した `NavLink` も、同じ日と版で visible の先読みをしなかった
 - 部品として配るとき、その部品をどの層が持つかは、層の役割 (ADR-0011) と、汎用の層が負う責務の範囲 (ADR-0016) で決める
 - `ui/` の variant 関数 (`buttonVariants` など) を `ui/` の外で呼ぶときの書き方は、`docs/guides/lint/tailwind-and-shadcn.md`「`ui/` の variant 関数を外で呼ぶ」にある
@@ -373,3 +373,4 @@ ADR-0024 の Context は、上流生成物の値を oklch から sRGB へ変換�
 [Tailwind CSS の `index.ts`]: https://github.com/tailwindlabs/tailwindcss/blob/v4.3.3/packages/tailwindcss/src/index.ts
 [CSS Color 4「Resolving `<color>` Values」]: https://www.w3.org/TR/css-color-4/#resolving-color-values
 [cn の README]: https://github.com/shadcn-ui/cn/blob/cn%400.5.2/README.md#credits
+[Void docs「Pages Adapters」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/api/pages.md#react-runtime

@@ -8,14 +8,21 @@
 
 Void は、ページ・API・middleware・DB などを、名前の決まったディレクトリ (規約のディレクトリ) から読む。それをどこに置くかで、docs や `void init` の出力とパスが一致するか、テンプレートの道具 (lint・tsconfig・Tailwind の scan・rules) が指す範囲が決まる。
 
-| 事実                                                                                                                                                                                                                               | 出典                                                                                      |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 規約のディレクトリは `routes/`・`pages/`・`middleware/`・`db/`・`crons/`・`queues/`・`email/`・`durable-objects/` で、どれも任意。`src/` は "Shared application code" で、規約を持たず自由に組んでよい                             | Void docs「Project Structure」                                                            |
-| `void.config.ts` の `sourceDir` を設定すると、`pages/`・`routes/`・`middleware/`・`crons/`・`queues/`・`db/`・`auth.ts`・`env.ts` がその下に移る。`public/` と設定ファイルはルートに残る。両方に置くと、どちらを読むかが決まらない | Void docs「Configuration」の `sourceDir`                                                  |
-| `durable-objects/` は `sourceDir` によらず、ルートの直下から読む                                                                                                                                                                   | Void 1.4.0 の `packages/void/src/durable/scan.ts` (`join(root, 'durable-objects')`)       |
-| `void init` は `pages/index.tsx`・`pages/index.server.ts` をルートの直下に書く                                                                                                                                                     | Void 1.4.0 の `packages/void/src/cli/template.ts`                                         |
-| docs の例はすべてルートの直下のパス (`pages/users/index.server.ts`、`routes/api/hello.ts`、`middleware/01.logger.ts`) で書かれている                                                                                               | Void docs「Loaders & Props」「Server Routing」「Project Structure」                       |
-| `pages/` の下のファイルは、dev の依存の事前バンドルの entry として丸ごと読まれる (`pages/**/*.{js,jsx,ts,tsx}`)。`_` で始まるパスをページから外すのは `scanPages` のソースの挙動で、docs の `pages/` の節に記述は無い              | `@void/react` 1.4.0 の `plugin-pages.ts`、Void 1.4.0 の `packages/void/src/pages/scan.ts` |
+Void の docs は、規約のディレクトリの置き場所に関わる挙動を次のように書く。
+
+| 事実                                                                                                                                                                                                                               | 出典                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 規約のディレクトリは `routes/`・`pages/`・`middleware/`・`db/`・`crons/`・`queues/`・`email/`・`durable-objects/` で、どれも任意。`src/` は "Shared application code" で、規約を持たず自由に組んでよい                             | Void docs「Project Structure」                                      |
+| `void.config.ts` の `sourceDir` を設定すると、`pages/`・`routes/`・`middleware/`・`crons/`・`queues/`・`db/`・`auth.ts`・`env.ts` がその下に移る。`public/` と設定ファイルはルートに残る。両方に置くと、どちらを読むかが決まらない | Void docs「Configuration」の `sourceDir`                            |
+| docs の例はすべてルートの直下のパス (`pages/users/index.server.ts`、`routes/api/hello.ts`、`middleware/01.logger.ts`) で書かれている                                                                                               | Void docs「Loaders & Props」「Server Routing」「Project Structure」 |
+
+2026-11-03 時点 (Void 1.4.0) の記録では、規約のディレクトリの置き場所に関わる Void の振る舞いは次のとおりだった。出典の列は、その版のソースと docs である。
+
+| 事実                                                                                                                                                                                                                  | 出典                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `durable-objects/` は `sourceDir` によらず、ルートの直下から読む                                                                                                                                                      | Void 1.4.0 の `packages/void/src/durable/scan.ts` (`join(root, 'durable-objects')`)       |
+| `void init` は `pages/index.tsx`・`pages/index.server.ts` をルートの直下に書く                                                                                                                                        | Void 1.4.0 の `packages/void/src/cli/template.ts`                                         |
+| `pages/` の下のファイルは、dev の依存の事前バンドルの entry として丸ごと読まれる (`pages/**/*.{js,jsx,ts,tsx}`)。`_` で始まるパスをページから外すのは `scanPages` のソースの挙動で、docs の `pages/` の節に記述は無い | `@void/react` 1.4.0 の `plugin-pages.ts`、Void 1.4.0 の `packages/void/src/pages/scan.ts` |
 
 テンプレートの道具は、規約のディレクトリを名前で持つ。lint の override、テストの `include` と coverage、tsconfig の `include`、`src/styles.css` の `@source`、rules の `paths` が、`src/**` に加えてこれらのディレクトリを指す (`scripts/lib/void-source-dirs.ts` の docstring が一覧を持つ)。
 
@@ -33,11 +40,11 @@ Void は、ページ・API・middleware・DB などを、名前の決まった�
 
 ### 検討した選択肢
 
-| 案                                                                                       | 評価                                                                                                                                                                                                                                                                               | 採否     |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| ルートに置き、アプリのコードは `src/` に置く                                             | docs の例、`void init` の出力、同梱の skill とパスが一致する。Void を上げたときに `void init` の出力と比べられる                                                                                                                                                                   | **採用** |
-| `sourceDir: "src"` で規約のディレクトリを `src/` の下に移す                              | `src/` の 1 本の木に見えるが、`durable-objects/` はルートに残るので木は 1 本にならない。docs と `void init` の例を読み替えることになる。lint・tsconfig・`@source` の一覧は、`src/**` の中で規約のディレクトリを区別する必要が残るので減らない                                      | 却下     |
-| アプリのコードも規約のディレクトリの中 (`pages/_<画面>/` など) に置き、`src/` を持たない | `pages/` の下は事前バンドルの entry として丸ごと読まれ、`_` の除外は docs の `pages/` の節に記述の無いソースの挙動に頼る。規約のディレクトリのテストは `_` で始めて直下に置く規約 (`docs/guides/testing/configuration.md`「テストの種別と置き場所」) に、`pages/` だけの例外が要る | 却下     |
+| 案                                                                                       | 評価                                                                                                                                                                                                                                                                                                                                 | 採否     |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| ルートに置き、アプリのコードは `src/` に置く                                             | docs の例、`void init` の出力、同梱の skill とパスが一致する。Void を上げたときに `void init` の出力と比べられる                                                                                                                                                                                                                     | **採用** |
+| `sourceDir: "src"` で規約のディレクトリを `src/` の下に移す                              | `src/` の 1 本の木に見えるが、Context の記録の表では `durable-objects/` はルートに残ったので、木は 1 本にならない作りだった。docs と `void init` の例を読み替えることになる。lint・tsconfig・`@source` の一覧は、`src/**` の中で規約のディレクトリを区別する必要が残るので減らない                                                   | 却下     |
+| アプリのコードも規約のディレクトリの中 (`pages/_<画面>/` など) に置き、`src/` を持たない | Context の記録の表では、`pages/` の下は事前バンドルの entry として丸ごと読まれ、`_` の除外は docs の `pages/` の節に記述の無いソースの挙動だった。その挙動に頼ることになる。規約のディレクトリのテストは `_` で始めて直下に置く規約 (`docs/guides/testing/configuration.md`「テストの種別と置き場所」) に、`pages/` だけの例外が要る | 却下     |
 
 ## Consequences
 

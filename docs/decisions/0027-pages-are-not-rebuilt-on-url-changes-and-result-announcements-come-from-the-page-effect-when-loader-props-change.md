@@ -12,11 +12,11 @@ ADR-0026 は通知を `announce()` (常時 mount の live region) に集約し�
 
 決めるうえでの制約は次のとおり。
 
-| 制約                                                                                                                                                                                   | 出どころ                                                                                                                                                   |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 一覧は page の loader の props で届く。条件を変えた遷移の間は前の props が描かれたままで、新しい props は応答が揃ってから Transition の中で 1 回で入れ替わる                           | `@void/react` 1.4.0 の `runtime/pages-client.ts` の `App` (`schedule` の `reveal`。ソースで確認)、ADR-0015「page の props は Transition の中で入れ替わる」 |
-| 同じ page への遷移では、page は作り直されない。`App` が `RouteResource` を、`RouteResource` が page を、どちらも `key` なしで描くので、同じ page の component なら state と DOM が残る | `pages-client.ts` (ソースで確認)。docs `reference/api/pages.md` は Vue と Solid が GET の遷移で page を作り直すことを書き、React については書いていない    |
-| 同じ条件に対する通知は 1 回にする                                                                                                                                                      | 重複は通知を埋める                                                                                                                                         |
+| 制約                                                                                                                                                                                                                                                                                          | 出どころ                                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 一覧は page の loader の props で届く。遷移は Transition として予約される (Void docs「Pages Adapters」の React Runtime、v1.11.0)。2026-11-02 時点 (`@void/react` 1.4.0) の記録では、条件を変えた遷移の間は前の props が描かれたままで、新しい props は応答が揃ってから 1 回で入れ替わっていた | `@void/react` 1.4.0 の `runtime/pages-client.ts` の `App` (`schedule` の `reveal`。ソースで確認)、ADR-0015「page の props は Transition の中で入れ替わる」 |
+| 同じ版では、同じ page への遷移で page は作り直されなかった。`App` が `RouteResource` を、`RouteResource` が page を、どちらも `key` なしで描いていたので、同じ page の component なら state と DOM が残った                                                                                   | `pages-client.ts` (ソースで確認)。docs `reference/api/pages.md` は Vue と Solid が GET の遷移で page を作り直すことを書き、React については書いていない    |
+| 同じ条件に対する通知は 1 回にする                                                                                                                                                                                                                                                             | 重複は通知を埋める                                                                                                                                         |
 
 先行例は次のとおり (2026-09-23 に確認)。
 
@@ -30,7 +30,7 @@ ADR-0026 は通知を `announce()` (常時 mount の live region) に集約し�
 
 ## Decision
 
-**ページの中は URL が変わっても作り直さない (page の要素は Void が `key` なしで作るので、ページの中の要素に URL ごとの `key` を付けない)。そのページの `useEffect` が、loader の props が持つ条件の変化を契機に `announce()` で件数を通知する。直前に通知した条件は `useRef` が持ち、同じなら出さない。初期表示は通知しない。**
+**ページの中は URL が変わっても作り直さない (Context の記録の版では page の要素を Void が `key` なしで作っていたので、ページの中の要素に URL ごとの `key` を付けない)。そのページの `useEffect` が、loader の props が持つ条件の変化を契機に `announce()` で件数を通知する。直前に通知した条件は `useRef` が持ち、同じなら出さない。初期表示は通知しない。**
 
 | 規範                                                                                                                               | 守らないと何が壊れるか                                                                                                                |
 | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -46,7 +46,7 @@ ADR-0026 は通知を `announce()` (常時 mount の live region) に集約し�
 
 - ADR-0026 の「呼び出し層」を広げる: 操作の通知は feature 側の Action と `onSuccess`、取得結果の通知はページの effect。どちらも部品は announce しない
 - 新しい props が届くまで通知は出ないので、取得中に古い件数を読むことは起きない。条件を変えて応答の前に元の条件へ戻すと、途中の遷移は中断され (ADR-0017)、元の条件の props が届く。条件が直前に通知したものと同じなので、通知は出ない
-- page が作り直されないことは Void の React の adapter の作りに乗っていて、docs に書かれていない。Void を上げたら、同じ page で条件だけを変える遷移の前後で、入力欄の要素と focus が保たれることを確かめる
+- page が作り直されないことは Void の React の adapter の作りに乗っていて、2026-11-02 時点 (Void 1.4.0) の docs には書かれていなかった。Void を上げたら、同じ page で条件だけを変える遷移の前後で、入力欄の要素と focus が保たれることを確かめる
 
 ### 再評価の条件
 
@@ -68,6 +68,7 @@ ADR-0026 は通知を `announce()` (常時 mount の live region) に集約し�
 
 この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は v1.4.0 を読んだ。固定した版は https://github.com/voidzero-dev/void/tree/v1.4.0/docs の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.4.0 と同じ内容とは限らない。
 
+- Void docs「Pages Adapters」の React Runtime (`useRouter()` の "React navigations are scheduled as transitions."。2026-11-24 に原文を確認): https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/api/pages.md#react-runtime
 - WCAG 2.2 Understanding 4.1.3 Status Messages: <https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html>
 - WCAG 技術 ARIA22 (`role="status"`): <https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA22>
 - GOV.UK accessible-autocomplete `src/status.js`: <https://github.com/alphagov/accessible-autocomplete/blob/00979884732ce00f9dfa0b2fb5f37d9d837048dd/src/status.js>

@@ -6,18 +6,18 @@
 
 ## Context
 
-このアプリは Void で作り、Cloudflare の自分のアカウントの Workers へ出す。`void deploy` は、build、資源の作成、migration の適用、D1 の復元点の保存、新しい version の readiness の確認を順に行う (Void の docs「Deployment」「Cloudflare」の What happens during deploy)。
+このアプリは Void で作り、Cloudflare の自分のアカウントの Workers へ出す。`void deploy` が行う手順は、Void の docs「Deployment」の Migrations と「Cloudflare」の What happens during deploy にある。
 
 Void の docs は、Cloudflare へ出す経路として次の 2 つを案内する。
 
-| 経路             | 案内                                                                                                                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 手元から         | `void connect --platform cloudflare` のあとに `void deploy --platform cloudflare`。connect はブラウザでログインさせ、アカウントを選ばせ、向き先を `.void/project.json` に保存する (Void の docs「Deployment」の Deploy to Cloudflare) |
-| GitHub から (CI) | `void init --github` が workflow を生成する。repository の secret に `CLOUDFLARE_API_TOKEN` を置く (Void の docs「Deployment」の Deploy from GitHub)                                                                                  |
+| 経路             | 案内                                                                                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 手元から         | `void connect --platform cloudflare` のあとに `void deploy --platform cloudflare` (Void の docs「Deployment」の Deploy to Cloudflare)                |
+| GitHub から (CI) | `void init --github` が workflow を生成する。repository の secret に `CLOUDFLARE_API_TOKEN` を置く (Void の docs「Deployment」の Deploy from GitHub) |
 
-Cloudflare の Git 連携 (Workers Builds) は、Void 1.4.0 の `docs/` と `packages/void/src/` に出てこない (2026-11-03 に `grep -rniE 'workers builds|ci-cd/builds|git integration'` で確かめた)。
+2026-11-03 に Void 1.4.0 の `docs/` と `packages/void/src/` を `grep -rniE 'workers builds|ci-cd/builds|git integration'` で探すと、Cloudflare の Git 連携 (Workers Builds) は出てこなかった。
 
-2026-11-03 に Void 1.4.0 の `void init --github` を、`.void/project.json` に `{"platform":"cloudflare"}` を置いたこのリポジトリの写しで打った。生成物 (`.github/workflows/void-deploy.yml`) を zizmor 1.31.1 にかけると、`unpinned-uses` が 3 件 (high)、`artipacked` が 1 件 (low) 出た。生成物は ADR-0006 の検査を通らない。
+2026-11-03 に Void 1.4.0 の `void init --github` を、`.void/project.json` に `{"platform":"cloudflare"}` を置いたこのリポジトリの写しで打った。生成物 (`.github/workflows/void-deploy.yml`) を zizmor 1.31.1 にかけると、`unpinned-uses` が 3 件 (high)、`artipacked` が 1 件 (low) 出た。生成物は ADR-0006 の検査を通らなかった。
 
 workflow のファイルはテンプレートから作った repository にそのまま届く。GitHub Docs は Disable を、ファイルを repository から消さずに trigger を止める操作として書く (「Disabling and enabling a workflow」)。Disable はファイルに残らないので、作った repository では workflow が有効のまま届く (推論。届いた先の状態を書いた docs は無い)。
 
@@ -26,6 +26,8 @@ workflow のファイルはテンプレートから作った repository にそ�
 **main への push で `void deploy --platform cloudflare` を走らせる GitHub Actions の workflow を、`void init --github` の生成物から作る。生成物との差は、下の表の作法の分だけにする。deploy しない repository (このテンプレート自身を含む) では、ファイルを残したまま GitHub の側で workflow を Disable にする。**
 
 ### 生成物との差
+
+生成物の列は、2026-11-03 に Void 1.4.0 の `void init --github` が生成した workflow の記録である。
 
 | 生成物                                                              | `.github/workflows/void-deploy.yml`                                                          | 理由                                                                                                                                                                                                                                               |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -38,7 +40,7 @@ workflow のファイルはテンプレートから作った repository にそ�
 | `DATABASE_URL` を渡す                                               | 渡さない                                                                                     | PostgreSQL と MySQL のためのもので、このアプリは D1 を使う (ADR-0052)                                                                                                                                                                              |
 | 英語のコメント                                                      | 日本語のコメント                                                                             | ほかの workflow とそろえる                                                                                                                                                                                                                         |
 
-ファイル名、trigger、`concurrency`、`permissions`、残りの環境変数 (`CLOUDFLARE_WORKERS_SUBDOMAIN`、`CF_ACCESS_*`) は生成物のままにする。`concurrency` の `cancel-in-progress: true` は、古い commit の deploy が新しい commit の deploy を後から上書きしないためのものである (Void 1.4.0 の `cli/init.ts` の Void platform 向けの分岐のコメント "Latest push wins")。取り消しは migration を当てたあとにも起こりうるが、deploy は当てる前に復元点を保存して `void db restore` の command をログに出し、次の push の deploy が未適用の migration を当てる (Void の docs「Deployment」の Migrations、Void 1.4.0 の `cli/deploy-migrations.ts` は当てる前にログへ出す)。`void init --github` は `void-deploy.yml` があれば生成を飛ばすので (Void 1.4.0 の `cli/init.ts` の `setupGithubActions`)、名前を変えると、打ち直したときに 2 本目の deploy の workflow ができる。
+ファイル名、trigger、`concurrency`、`permissions`、残りの環境変数 (`CLOUDFLARE_WORKERS_SUBDOMAIN`、`CF_ACCESS_*`) は生成物のままにする。2026-11-03 時点 (Void 1.4.0) の記録では、`concurrency` の `cancel-in-progress: true` は、古い commit の deploy が新しい commit の deploy を後から上書きしないためのものだった (`cli/init.ts` の Void platform 向けの分岐のコメント "Latest push wins")。取り消しは migration を当てたあとにも起こりうる。deploy が migration を当てる前に復元点を保存して `void db restore` の command を出すことと、次の deploy が未適用の migration を当てることは、Void 1.11.0 の docs「Deployment」の Migrations にある。同じ 2026-11-03 の記録では、`cli/deploy-migrations.ts` は `void db restore` の command を migration を当てる前にログへ出し、`void init --github` は `void-deploy.yml` があれば生成を飛ばしていた (`cli/init.ts` の `setupGithubActions`)。名前を変えると、打ち直したときに 2 本目の deploy の workflow ができうる。
 
 ### 検討した選択肢
 
@@ -60,7 +62,7 @@ workflow のファイルはテンプレートから作った repository にそ�
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。本文に v1.11.0 と書いた節は、2026-11-24 に v1.11.0 で読んだ。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - Void の docs「Deployment」(Deploy to Cloudflare、Deploy from GitHub、Migrations): `node_modules/void/docs/guide/deployment.md`
 - Void の docs「Cloudflare」(What happens during deploy、Deploying from CI): `node_modules/void/docs/integrations/cloudflare.md`

@@ -103,13 +103,13 @@ lint では見ないのでレビューで見る。
 
 - ページのデータは `pages/<path>.server.ts` の loader が返す props で読む。client にサーバの状態の取得やキャッシュの層 (TanStack Query など) を足さず、取り直しは action の応答、`router.refresh()`、遷移の loader の再実行に任せる (ADR-0063)
 - 遅い値も loader で await して返す。deferred props は使わない (ADR-0051)。遷移を待たせたくない値は、ページを分ける (ADR-0063)
-- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらない (ADR-0063)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらないことがある (ADR-0063)
 
 ## ページの失敗は loader の値と区画の境界で受ける
 
 lint では見ないのでレビューで見る。
 
-- ページの対象そのものが無いときは、loader で `return c.notFound()` を返す。`throw new HTTPException(404)` は本文が text だけの 404 になる (ADR-0050)
+- ページの対象そのものが無いときは、loader で `return c.notFound()` を返す。`throw new HTTPException(404)` は、合う error component の無いこのテンプレートでは例外の応答 (本文が text だけの 404) がそのまま返る (`docs/guides/data-loading.md`「loader で読めなかったものを返す」)
 - ページは在り、その中の区画のデータや開く 1 件を読めない・無いときは、loader で throw せず失敗の値で返し、ページが区画に失敗を描く。throw するとページごと静的な 500 になり、検索欄のような周りも消える (ADR-0057)
 - 失敗の値を返したら、server の `logger.error` に残す。応答は 200 で届き、ほかに気付く手掛かりが無い (ADR-0057)
 - 描画の失敗で周りを残したい区画は `SectionErrorBoundary` で包む。全画面の境界は `pages/layout.tsx` が持つので、ページに足さない (ADR-0050)

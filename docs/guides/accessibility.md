@@ -109,7 +109,7 @@ a11y の検査は、ブラウザテストの中に 2 種類が混ざっている
 
 ### `head()` を持たないページの title
 
-Void は title を、ページの `head()`、middleware の `headDefaults`、`void.config.ts` の `head` の順に探し、最初に見つかった値を使う ([Void docs「Head Management」][] の Precedence: "Page wins."。Void 1.4.0 の `packages/void/src/pages/head.ts` の `resolveHead` は `pageHead?.title ?? middlewareHead?.title ?? configHead?.title`)。クライアント遷移でも同じ値に書き換わる ([Void docs「Head Management」][] の Client-side updates)。
+Void は title を、ページの `head()`、middleware の `headDefaults`、`void.config.ts` の `head` の順に探し、最初に見つかった値を使う ([Void docs「Head Management」][] の Precedence: "Page wins."。2026-11-02 時点 (Void 1.4.0) の記録では、`packages/void/src/pages/head.ts` の `resolveHead` は `pageHead?.title ?? middlewareHead?.title ?? configHead?.title` だった)。クライアント遷移でも同じ値に書き換わる ([Void docs「Head Management」][] の Client-side updates)。
 
 このテンプレートの middleware は title を返さず、`void.config.ts` の `head.title` はアプリ名だけである。そのため `head()` を持たないページの title はアプリ名だけになり、ホームと同じ文字列になる。`titleTemplate` は使わないので (ADR-0049)、ページ名の付け忘れは型でも実行時の例外でも現れない。
 

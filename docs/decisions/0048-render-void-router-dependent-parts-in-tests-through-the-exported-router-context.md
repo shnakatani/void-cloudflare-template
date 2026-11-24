@@ -5,9 +5,9 @@
 
 ## Context
 
-この ADR は、`Link`・`useRouter`・`useNavigation`・`useShared` のように Void のページの context を読む部品を、story とブラウザテストでどう描くかを決める。これらの部品は `RouterContext` と `NavigationContext` の値が無いと、遷移を起こせず、現在の path も読めない。`useShared` は `SharedContext` の値が無いと throw する。
+この ADR は、`Link`・`useRouter`・`useNavigation`・`useShared` のように Void のページの context を読む部品を、story とブラウザテストでどう描くかを決める。2026-11-01 時点 (Void 1.4.0) の記録では、これらの部品は `RouterContext` と `NavigationContext` の値が無いと、遷移を起こせず、現在の path も読めなかった。`useShared` は `SharedContext` の値が無いと throw していた。
 
-Void 1.4.0 の確認結果は次のとおり (2026-11-01、`node_modules/void/docs/` と `node_modules/@void/react/dist/index.d.mts`)。
+2026-11-01 に Void 1.4.0 の `node_modules/void/docs/` と `node_modules/@void/react/dist/index.d.mts` を読んだ結果は、次のとおりだった。
 
 | 観点                                                              | 結果                                                                                                                                               |
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -23,7 +23,7 @@ Void 1.4.0 の確認結果は次のとおり (2026-11-01、`node_modules/void/do
 
 - `createFakeRouter(initialPath)` は `VoidRouter` を満たし、`visit` を `visits` に記録し、`refresh` の options を `refreshes` に記録する。`navigate(path)` が URL を書き換え、遷移が commit された状態を作る
 - `VoidRouterProvider` は 2 つの context を与え、`navigate` のたびに `useRouter()` の購読者を新しい値で描き直す。`navigation` を渡すと `useNavigation()` がその状態を返す
-- `VoidRouterProvider` に `shared` を渡すと `useShared()` がその値を返す。渡さないと `SharedContext` を与えず、`useShared()` は Void のページの外と同じく throw する
+- `VoidRouterProvider` に `shared` を渡すと `useShared()` がその値を返す。渡さないと `SharedContext` を与えない。2026-11-02 時点 (Void 1.4.0) の記録では、そのとき `useShared()` は Void のページの外と同じく throw していた
 
 | 案                                                       | 評価                                                                        | 採否     |
 | -------------------------------------------------------- | --------------------------------------------------------------------------- | -------- |
@@ -34,5 +34,9 @@ Void 1.4.0 の確認結果は次のとおり (2026-11-01、`node_modules/void/do
 ## Consequences
 
 - Void を上げたら、3 つの context が `@void/react` の export に残っているかを確かめる。docs の公開 API ではないので、消えても通知されない
-- 偽の router は Void の遷移 (loader の実行、title の更新、scroll、`visit` の決着の時点) を再現しない。本物の GET の `visit` は新しいページの commit まで決着しないが、偽物はすぐ決着する。それらに頼る振る舞いは dev server で確かめる
+- 偽の router は Void の遷移 (loader の実行、title の更新、scroll、`visit` の決着の時点) を再現しない。本物の `visit` が決着する時点は Void docs「Pages Adapters」の React navigation completion が書く (下の「出典」)。偽物はすぐ決着する。それらに頼る振る舞いは dev server で確かめる
 - `VoidRouter` の型が変わると `createFakeRouter` が型検査で落ちる。足場が追随し損ねたままテストが通ることは無い
+
+## 出典
+
+- Void docs「Pages Adapters」の React navigation completion (v1.11.0、2026-11-24 に原文を確認): https://github.com/voidzero-dev/void/blob/v1.11.0/docs/reference/api/pages.md#react-navigation-completion

@@ -22,11 +22,11 @@
 3. 操作のあとの値は action の応答の props に任せ、読み直しは `router.refresh()` で行う (ADR-0063)。client で取得やキャッシュの層 (TanStack Query など) を足さない
 
 - 遅い値も同じ loader で待つ。deferred props は使わない (ADR-0051)。遷移を待たせたくない値が出たら、そのページを分ける (ADR-0063)
-- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。visit は先読みの cache にある値をそのまま描き、取り直した値には入れ替わらない (ADR-0063)。足すときは `prefetch` と `cacheFor` をそのリンクで明示し、行き先の値が hover の時点のものになってよいページに限る。ダイアログを開くリンクには足さない (ADR-0056)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。2026-11-03 時点 (Void 1.4.0) の記録では、visit は先読みの cache にある値をそのまま描き、取り直した値には入れ替わらなかった (ADR-0063)。足すときは `prefetch` と `cacheFor` をそのリンクで明示し、行き先の値が hover の時点のものになってよいページに限る。ダイアログを開くリンクには足さない (ADR-0056)
 
 ### client に届く文言を書く
 
-production の Void は、loader と action の未知の例外の文言を client へ運ばない。client に届くのは、開発者が選んで書く 3 つの文言だけである (ADR-0055)。
+2026-11-02 時点 (Void 1.4.0) の記録では、production の Void は loader と action の未知の例外の文言を client へ運ばず、client に届くのは開発者が選んで書く次の 3 つの文言だけだった (ADR-0055)。
 
 | 文言                                                  | 届き方                                                        |
 | ----------------------------------------------------- | ------------------------------------------------------------- |
@@ -35,19 +35,19 @@ production の Void は、loader と action の未知の例外の文言を clien
 | `withValidator` に渡した valibot の schema の message | 項目ごとに `form.errors` に入る                               |
 
 - 3 つの文言に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。パスや id は載せてよい (ADR-0055)
-- server で調べたい失敗は、`HTTPException` を投げる前に「server のログに失敗を残す」の形で残す。`HTTPException` は server のログに出ない (ADR-0055)
-- 未知の例外は包み直さない。文言は Void が落とし、stack ごと server のログに残る (ADR-0055)
+- server で調べたい失敗は、`HTTPException` を投げる前に「server のログに失敗を残す」の形で残す。2026-11-02 時点 (Void 1.4.0) の記録では、`HTTPException` は server のログに出なかった (ADR-0055)
+- 未知の例外は包み直さない。2026-11-02 時点 (Void 1.4.0) の記録では、文言は Void が落とし、stack ごと server のログに残っていた (ADR-0055)
 
 ### server のログに失敗を残す
 
 1. `void/log` の `logger.error(<message>, <fields>)` で書く。1 回の呼び出しが 1 行の JSON になり、Workers Logs で message と項目で絞れる ([Void docs「Resource Clients」][] の Logging、[Cloudflare docs「Workers Best Practices」][] の Enable Workers Logs and Traces)
 2. message は `[<domain>] <起きたこと>` の固定の文言にし、値を埋め込まない。値は fields に分ける
-3. 捕まえた例外は `{ error }` のように Error のまま fields に渡す。`logger` が name・message・stack・cause を写す (ADR-0055)
+3. 捕まえた例外は `{ error }` のように Error のまま fields に渡す。2026-11-03 時点 (Void 1.5.0) の記録では、`logger` が name・message・stack・cause を写していた (ADR-0055)
 
 - `console.error` に文字列と Error を並べて渡さない。message と Error が別の引数になり、fields を項目で絞れない (ADR-0055)
 - fields に秘密と個人情報 (DB の行の値、ユーザーの入力) を載せない。id は載せてよい (ADR-0055)
-- URL の query に載る値 (検索語など) は、Workers Logs の invocation log に要求の URL ごと残り、trace を取った要求では trace の span の `url.full` にも残る。fields から外しても消えないので、秘密は URL の query に載せない (ADR-0055)
-- loader と action から投げたまま Void に任せた例外と、Better Auth の `/api/auth/*` の失敗は、Error をそのまま `console.error` に渡すので複数行に出て、1 行の JSON にならない (ADR-0055)
+- URL の query に載る値 (検索語など) は、Workers Logs の invocation log に要求の URL ごと残り ([Cloudflare docs「Workers Logs」][] の Invocation Logs)、trace を取った要求では trace の span の `url.full` にも残る ([Cloudflare docs「Spans and attributes」][] の Fetch Handler)。fields から外しても消えないので、秘密は URL の query に載せない (ADR-0055)
+- 2026-11-03 時点 (Void 1.4.0) の記録では、loader と action から投げたまま Void に任せた例外と、Better Auth の `/api/auth/*` の失敗は、Error をそのまま `console.error` に渡していたので複数行に出て、1 行の JSON にならなかった (ADR-0055)
 
 ### loader で読めなかったものを返す
 
@@ -59,9 +59,9 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 | ページは在り、その中の区画のデータ (一覧など) を読めない | throw せず、区画の値を失敗の値 (`null` など) で返し、server の `logger.error` に残す (ADR-0057)                 | ページを描き、区画に失敗の文言と再試行を出す                     |
 | ページは在り、その上で開く 1 件が無い、または読めない    | throw せず、「見つからない」と「読めない」を区別できる値で返す。読めないときは `logger.error` に残す (ADR-0057) | 区画 (一覧の上のダイアログなど) に、見つからないことか失敗を出す |
 
-- 区画の失敗を throw にしない。ページごと静的な 500 になり、検索欄のような周りの要素も消える (ADR-0057)
+- 区画の失敗を throw にしない。2026-11-02 時点 (Void 1.4.0) の記録では、ページごと静的な 500 になり、検索欄のような周りの要素も消えた (ADR-0057)
 - 失敗の値を返したら、「server のログに失敗を残す」の形で残す。応答は HTTP の 200 で届くので、ほかに気付く手掛かりが無い (ADR-0057)
-- not found に `throw new HTTPException(404)` を使わない。本文が message だけの text の 404 になり、`public/404.html` を通らない (ADR-0050)
+- not found に `throw new HTTPException(404)` を使わない。合う error component の無いこのテンプレートでは、例外の応答がそのまま返る ([Void docs「Not Found & Errors」][] の HTTP exceptions)。2026-11-02 時点 (Void 1.4.0) の記録では、本文が message だけの text の 404 になり、`public/404.html` を通らなかった (ADR-0050)
 - loader の Props の型で、読めた値と失敗の値を区別できる形にする (一覧なら `readonly T[] | null`)。ページは型の分岐で失敗の区画を描く
 - loader が失敗の値を返した区画の見出しは、`StatusHeading` (`src/components/parts/status-heading.tsx`) で描く。遷移でページへ来たときの focus が、ページ名の `<h1>` でなく失敗の見出しへ移る (ADR-0057)
 - 区画がページの主な中身で、それが失敗の値なら、`head()` が loader の props から組む title に `errorPageTitle` (`src/lib/page-title.ts`) を付ける。付けないと、タブの title と遷移の読み上げにページ名だけが出て、失敗が伝わらない (ADR-0057)
@@ -74,7 +74,7 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 | ページの中の区画 (周りを残したい) | 使う側が `SectionErrorBoundary` (`src/components/parts/section-error-boundary.tsx`) で包み、区画の見出しにする `message` と、区画の中身を替える値を `resetKeys` に渡す (ADR-0050) |
 
 - 区画の境界はページごとの既定にせず、周りを残したい区画にだけ置く。置いていない区画の失敗は、layout の境界が全画面で受ける (ADR-0050)
-- 境界の `onError` で `console.error` を重ねて出さない。React が既定の `onCaughtError` で 1 回出す (ADR-0050)
+- 境界の `onError` で `console.error` を重ねて出さない。root の options で `onCaughtError` を渡さなければ、React が境界の受けた例外を console に出す ([react.dev「hydrateRoot」][] の Error logging in production)。2026-11-02 時点 (Void 1.4.0) の記録では、Void は `hydrateRoot` に options を渡していなかった (ADR-0050)
 - 例外の文言を画面に出さない。全画面は固定の文言、区画は `message` を出す (ADR-0050)
 - イベントハンドラと非同期の処理の throw は境界に届かない ([react.dev「Component」][])。操作の失敗は `usePageAction` の `run` が toast に出す (ADR-0016)
 
@@ -86,14 +86,14 @@ loader で起きたことごとに、返し方を次の表から選ぶ。仕組�
 | 全画面の境界                        | `AppErrorBoundary` の再試行が持つ。足さない (ADR-0050)                                                                                                                                         |
 | 区画の境界 (`SectionErrorBoundary`) | 境界の再試行のボタンが持つ。子を描き直すだけで、loader を読み直さない (ADR-0050)                                                                                                               |
 
-- `router.refresh()` を Action の中で待たない。`ActionButton` の `action` に渡すと、読み直しの応答が返っても表示が替わらず、ボタンが押せないまま残る (ADR-0050)
+- `router.refresh()` を Action の中で待たない。2026-11-02 時点 (Void 1.4.0) の記録では、`ActionButton` の `action` に渡すと、読み直しの応答が返っても表示が替わらず、ボタンが押せないまま残った (ADR-0050)
 - loader が失敗の値を返した区画を、`SectionErrorBoundary` の再試行に任せない。境界が受けるのは描画の throw だけで、子を描き直しても loader は読み直されない (「区画の境界と loader の失敗を分ける理由」)
 
 ## explanation
 
 ### loader の失敗が届く先
 
-Void 1.4.0 は、loader の結果ごとに次の応答を返す。出典は ADR-0050 の Context にある。
+2026-11-02 時点 (Void 1.4.0) の記録では、Void は loader の結果ごとに次の応答を返していた。出典は ADR-0050 の Context にある。
 
 | loader で起きたこと                 | 返る応答                                       |
 | ----------------------------------- | ---------------------------------------------- |
@@ -102,7 +102,7 @@ Void 1.4.0 は、loader の結果ごとに次の応答を返す。出典は ADR-
 | ほかの throw                        | `public/500.html` を status 500 で             |
 | client の遷移の先の loader の throw | router が document を読み直し、上の 500 になる |
 
-1 つの URL に描くページは 1 つで、loader も 1 つである。ページを描いたまま、区画だけの失敗を Void に出させる口は無い。そのため、ページの一部だけが失敗したことは loader が値で返し、ページが描き分ける。
+1 つの URL に描くページは 1 つで、loader も 1 つである。2026-11-02 時点 (Void 1.4.0) の記録では、ページを描いたまま、区画だけの失敗を Void に出させる口は無かった。そのため、ページの一部だけが失敗したことは loader が値で返し、ページが描き分ける。
 
 ### 区画の境界と loader の失敗を分ける理由
 
@@ -110,9 +110,13 @@ Void 1.4.0 は、loader の結果ごとに次の応答を返す。出典は ADR-
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。Cloudflare docs は 2026-11-03 に確認した。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs は v1.5.0 に固定した版を指す。ただし「Not Found & Errors」は v1.11.0 に固定し、2026-11-24 に原文と照らした。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、v1.5.0 と同じ内容とは限らない。Cloudflare docs は 2026-11-03 に確認した (「Workers Logs」と「Spans and attributes」は 2026-11-24 に原文と照らした)。react.dev「hydrateRoot」は 2026-11-24 に原文と照らした。
 
 [Cloudflare docs「Workers Best Practices」]: https://developers.cloudflare.com/workers/best-practices/workers-best-practices/#enable-workers-logs-and-traces
+[Cloudflare docs「Workers Logs」]: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#invocation-logs
+[Cloudflare docs「Spans and attributes」]: https://developers.cloudflare.com/workers/observability/traces/spans-and-attributes/#fetch-handler
 [react.dev「Component」]: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
+[react.dev「hydrateRoot」]: https://react.dev/reference/react-dom/client/hydrateRoot#error-logging-in-production
 [Void docs「Loaders & Props」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/pages-routing/loaders.md
 [Void docs「Resource Clients」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/api/resources.md
+[Void docs「Not Found & Errors」]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/pages-routing/errors.md#http-exceptions

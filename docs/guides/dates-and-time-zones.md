@@ -81,10 +81,10 @@
   </Suspense>
   ```
 
-- 自前の `<Suspense>` を省かない。省くと、Void がページと layout をまとめて包む `fallback: null` の Suspense が受け、初めの HTML から `<main>` も live region も消える。応答は 200 のままで、console にも server のログにも何も出ない (「自前の Suspense を省いたときに起きること」)
+- 自前の `<Suspense>` を省かない。2026-11-03 に Void 1.4.0 の preview で実測すると、省いたときは Void がページと layout をまとめて包む `fallback: null` の Suspense が受け、初めの HTML から `<main>` も live region も消えた。応答は 200 のままで、console にも何も出なかった。同じ日の記録では、Void が `onBrowserBailout` を渡していなかったので、server のログにも出なかった (「自前の Suspense を省いたときに起きること」)
 - fallback には、ブラウザの値を使わずに描ける形 (値を除いた同じ大きさの枠など) を置く。JS を読み込むまでは fallback が見える。fallback に `role="status"` と `aria-busy` を付けない (ADR-0026)
 - 呼び出し側が Suspense を置くとは限らない hook では、`use(browser())` を呼ばず、`useSyncExternalStore` の `getServerSnapshot` で server の描画と hydration の間だけ代わりの値を返す ([React docs「useSyncExternalStore」][] の Adding support for server rendering)。hydration の後にブラウザの値で描き直す。値が変わらないなら、`subscribe` には、何もしない関数を返す関数を部品の外で定義して渡す
-- server で `throw` して Suspense に受けさせる形 ([React docs「Suspense」][] の Providing a fallback for server errors and client-only content) と、`getServerSnapshot` を省いて client で描かせる形 ([React docs「useSyncExternalStore」][] の Adding support for server rendering) は使わない。どちらも server の描画が error を投げる。Void 1.4.0 は shell を返す前の描画で出た error をページの失敗として扱うので、throw の形は Suspense の中でもページごと 500 を返し、省く形も同じになると見ている (「自前の Suspense を省いたときに起きること」)
+- server で `throw` して Suspense に受けさせる形 ([React docs「Suspense」][] の Providing a fallback for server errors and client-only content) と、`getServerSnapshot` を省いて client で描かせる形 ([React docs「useSyncExternalStore」][] の Adding support for server rendering) は使わない。どちらも server の描画が error を投げる。2026-11-03 時点 (Void 1.4.0) の記録では、Void は shell を返す前の描画で出た error をページの失敗として扱っていたので、throw の形は Suspense の中でもページごと 500 を返した。省く形も同じになると見ている (「自前の Suspense を省いたときに起きること」)
 - effect で state を切り替える 2 回の描画 ([React docs「hydrateRoot」][] の Handling different client and server content) は使わない。effect の中の setState を lint (`react/set-state-in-effect`) が止める
 - この形は inline の `<script>` を足さないので、本番の CSP (`script-src 'self'`、ADR-0051) の下で動く。2026-11-03 に `vp preview` で CSP の違反が無いことを確かめた (「自前の Suspense を省いたときに起きること」)
 
@@ -119,7 +119,7 @@ SSR する画面では、同じ値をサーバーとブラウザの両方で整�
 
 ### ブラウザでだけ描く形を選んだ理由
 
-Void 1.4.0 の React の adapter は、部品をブラウザでだけ描く口を持たない。server で描かない口は、ページ単位の `export const ssr = false` だけである ([Void docs「Pages Routing」][] の How Navigation Works)。部品単位では React の機能で組む。
+2026-11-03 時点 (Void 1.4.0) の記録では、React の adapter は部品をブラウザでだけ描く口を持たず、server で描かない口はページ単位の `export const ssr = false` だけだった ([Void docs「Pages Routing」][] の How Navigation Works)。部品単位では React の機能で組む。
 
 | 形                                                                   | 評価                                                                                                                                                                                                                                                                 | 採否                                                                                               |
 | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
@@ -127,14 +127,14 @@ Void 1.4.0 の React の adapter は、部品をブラウザでだけ描く口�
 | hook の中で `use(browser())` を呼び、Suspense を呼び出し側に置かせる | [React docs「browser」][] の Conditionally rendering on the server の `useTimeZone` の例。呼び出し側が Suspense を置き忘れると、Void がページを包む Suspense が受け、ページごと初めの HTML から消え、何も報告されない (「自前の Suspense を省いたときに起きること」) | 呼び出し側がすぐ外に `<Suspense>` を置くと決まっている hook で採用。置くとは限らない hook では却下 |
 | `useSyncExternalStore` の `getServerSnapshot`                        | Suspense が要らないので、呼び出し側を選ばない hook にできる。server の HTML は代わりの値で描かれ、hydration の後にもう一度描く                                                                                                                                       | 呼び出し側が Suspense を置くとは限らない hook で採用                                               |
 | effect で state を切り替える 2 回の描画                              | [React docs「hydrateRoot」][] の例。同じページの Pitfall は、2 回描くので hydration が遅くなると書く。effect の中の setState を lint が止める                                                                                                                        | 却下                                                                                               |
-| server で `throw` して Suspense で受ける                             | [React docs「Suspense」][] の例。Void 1.4.0 では 500 になる (下の表)                                                                                                                                                                                                 | 却下                                                                                               |
+| server で `throw` して Suspense で受ける                             | [React docs「Suspense」][] の例。2026-11-03 に Void 1.4.0 で実測すると 500 になった (下の表)                                                                                                                                                                         | 却下                                                                                               |
 | ページ単位の `export const ssr = false`                              | ページの部品を server で描かず、ブラウザで mount する。ブラウザの値に依らない部分も初めの HTML に載らない                                                                                                                                                            | 却下                                                                                               |
 | island のページ                                                      | [Void docs「Islands」][] の island は、HTML を server で描いてから hydration する時機を選ぶ口で、server で描かない口ではない。ページの遷移も文書ごとの読み込みになる                                                                                                 | 却下                                                                                               |
 | `suppressHydrationWarning`                                           | 警告を止めるだけで、server の値が残る (「タイムゾーンを明示して整形する理由」)                                                                                                                                                                                       | 却下                                                                                               |
 
 ### 自前の Suspense を省いたときに起きること
 
-Void 1.4.0 の React の adapter は、Pages Routing のページ (island のページを除く) を描くとき、ページと layout を `fallback: null` の `<Suspense>` で包む ([Void 1.4.0 の `pages-server.ts`][])。[React docs「browser」][] は、`use(browser())` の外に Suspense が無いと server の描画が失敗すると書く。このページでは外側にこの境界があるので、描画は失敗せず、この境界が受ける。境界の中はページと layout のすべてなので、初めの HTML から `<main>` も live region も消える。Void は `renderToReadableStream` に `onBrowserBailout` を渡さないので、ブラウザに任せた境界は server のログにも出ない。
+2026-11-03 時点 (Void 1.4.0) の記録では、React の adapter は、Pages Routing のページ (island のページを除く) を描くとき、ページと layout を `fallback: null` の `<Suspense>` で包んでいた ([Void 1.4.0 の `pages-server.ts`][])。[React docs「browser」][] は、`use(browser())` の外に Suspense が無いと server の描画が失敗すると書く。Void のページでは外側にこの境界があったので、描画は失敗せず、この境界が受けた。境界の中はページと layout のすべてだったので、初めの HTML から `<main>` も live region も消えた。Void は `renderToReadableStream` に `onBrowserBailout` を渡していなかったので、ブラウザに任せた境界は server のログにも出なかった。
 
 2026-11-03 に、Void 1.4.0・React 19.3.1 の `vp preview` (本番の CSP `script-src 'self'`) で、ブラウザの TZ を返す部品を置いた一時のページを開いて確かめた。ブラウザは Playwright 1.64.1 の Chromium 156 で、TZ を `Pacific/Kiritimati` にした。
 
@@ -147,7 +147,7 @@ Void 1.4.0 の React の adapter は、Pages Routing のページ (island のペ
 
 - どの置き方でも、console・page error・CSP の違反は空だった。HTML の `<script>` は、実行されないページデータ (`type="application/json"`) と、`src` を持つ client の入り口だけだった
 - `vp dev` でも、同じ置き方で同じ HTML の形になり、hydration の警告は出なかった
-- server で `throw` すると 500 になるのは、Void が shell を返す前に `onError` に届いた error をページの失敗として投げ直すためである ([Void 1.4.0 の `pages-server.ts`][])
+- server で `throw` すると 500 になったのは、Void が shell を返す前に `onError` に届いた error をページの失敗として投げ直していたためである ([Void 1.4.0 の `pages-server.ts`][])
 - `getServerSnapshot` を省いた `useSyncExternalStore` も同じ経路に乗ると見ている。[React docs「useSyncExternalStore」][] は、省くと server の描画が error を投げると書く。2026-11-03 に React 19.3.1 の `renderToReadableStream` へ、`fallback: null` の Suspense の中で省いた部品を直に渡すと、shell より前に `onError` へ `Missing getServerSnapshot` の error が届いた。Void の上で開いて 500 になるかは測っていない
 
 ## 出典
