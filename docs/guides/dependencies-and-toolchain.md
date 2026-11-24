@@ -47,6 +47,7 @@ commit のたびに、`vp staged` が `vite.config.ts` の `staged` のコマン
 
 - 依存は `vp add` / `vp remove` で足し外す ([Vite+ docs「Package Management」][] の「Add and Remove」)。素の `pnpm` / `npm` / `yarn` で足し外さない。理由は「入口を `vp` にそろえる理由」にある
 - `vp` が中継しないサブコマンドだけは素の `pnpm` で打つ。`pnpm peers check` がこれに当たる (「peer の食い違いを数える」)
+- 依存を外したら、その依存が必須の peer として入れていたパッケージが残っていないかを `vp why <パッケージ>` で確かめる。pnpm は optional peer を、範囲に合う版がすでに入っているときだけ入れる ([pnpm 11.x docs「Optional peer dependencies」][])。残っていたら、それを optional peer に持つ依存を `vp remove` して `vp add` し直す。2026-11-24 に pnpm 11.28.0 で、lock の写しから `eslint-plugin-testing-library` を外すと、ESLint は `@shadcn/lint` の optional peer として lock に残り (変えていない依存の optional peer が lock にある版のまま保たれた)、`@shadcn/lint` を外して入れ直すと消えた
 
 ### Void の skill を扱う
 
@@ -293,6 +294,7 @@ pin を足すときは、ADR-0005「pin には出口条件を書く」に従っ�
 [Vite+ docs「Check」]: https://github.com/voidzero-dev/vite-plus/blob/v1.7.0/docs/guide/check.md
 [Vite+ docs「Lint」]: https://github.com/voidzero-dev/vite-plus/blob/v1.7.0/docs/guide/lint.md
 [tsrs の README「Type-aware lint」]: https://github.com/oxc-project/tsrs/blob/v7.1.0-beta.tsrs2/README.md#type-aware-lint
+[pnpm 11.x docs「Optional peer dependencies」]: https://github.com/pnpm/pnpm.io/blob/6f91a0c24f9ffc8946b5b4294f46b9a49e18a7e9/versioned_docs/version-11.x/settings/peer-dependencies.md#optional-peer-dependencies
 [pnpm docs「Overriding peer dependencies」]: https://pnpm.io/settings/dependency-resolution#overriding-peer-dependencies
 [pnpm docs「pnpm patch」]: https://pnpm.io/cli/patch
 [pnpm docs「peerDependencyRules.allowedVersions」]: https://pnpm.io/settings/peer-dependencies#peerdependencyrulesallowedversions
