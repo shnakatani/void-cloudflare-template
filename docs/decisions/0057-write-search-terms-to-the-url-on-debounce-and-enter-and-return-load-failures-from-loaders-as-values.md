@@ -100,5 +100,5 @@ loader が返す値は次のとおりにする。ページそのもの (一覧) 
 - WCAG 2.2 Understanding「Status Messages」: https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html
 - APG「Alert Pattern」: https://www.w3.org/WAI/ARIA/apg/patterns/alert/
 - govuk-frontend の Character count のソース: https://github.com/alphagov/govuk-frontend/blob/9c211d7a935d293df308b3bf332843726467085e/packages/govuk-frontend/src/govuk/components/character-count/character-count.mjs
-- TanStack Pacer「Debouncing Guide」: https://tanstack.com/pacer/latest/docs/guides/debouncing
+- TanStack Pacer「Debouncing Guide」(`@tanstack/react-pacer` 0.24.1 の tag): https://github.com/TanStack/pacer/blob/@tanstack/react-pacer@0.24.1/docs/guides/debouncing.md
 - Nielsen Norman Group「Response Times: The 3 Important Limits」: https://www.nngroup.com/articles/response-times-3-important-limits/
