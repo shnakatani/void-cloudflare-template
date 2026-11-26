@@ -62,7 +62,7 @@
 
 ### ブラウザでだけ描く部品を組む
 
-ブラウザでしか決まらない値 (ブラウザの TZ、その TZ の今日) で描く部品は、server で描かず、ブラウザでだけ描く。server で描くと、server の値が hydration の後も残る (ADR-0031 の Context)。
+ブラウザでしか決まらない値 (ブラウザの TZ、その TZ の今日) で描く部品は、server で描かず、ブラウザでだけ描く。server で描くと、hydration で server の描画と食い違う。食い違った属性は、hydration の後も server の値のまま残ることがある ([React docs「hydrateRoot」][]: "There are no guarantees that attribute differences will be patched up in case of mismatches."。ADR-0031 の Context の Calendar では残った)。
 
 - 部品の中で `use(browser())` を呼び、部品のすぐ外を自前の `<Suspense>` で包む。server の描画では fallback が HTML に残り、ブラウザでは `use(browser())` が `undefined` を返して部品を描く ([React docs「browser」][])。`browser` は `react-dom` の export で、React 19.3.0 で入った ([React 19.3.0 の release notes][])
 
