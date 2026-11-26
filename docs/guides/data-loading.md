@@ -22,7 +22,7 @@
 3. 操作のあとの値は action の応答の props に任せ、読み直しは `router.refresh()` で行う (ADR-0063)。client で取得やキャッシュの層 (TanStack Query など) を足さない
 
 - 遅い値も同じ loader で待つ。deferred props は使わない (ADR-0051)。遷移を待たせたくない値が出たら、そのページを分ける (ADR-0063)
-- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。2026-11-03 時点 (Void 1.4.0) の記録では、visit は先読みの cache にある値をそのまま描き、取り直した値には入れ替わらなかった (ADR-0063)。足すときは `prefetch` と `cacheFor` をそのリンクで明示し、行き先の値が hover の時点のものになってよいページに限る。ダイアログを開くリンクには足さない (ADR-0056)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さず、`voidReact()` に `prefetch.defaultStrategy` を置かない。2026-11-03 時点 (Void 1.4.0) の記録では、visit は先読みの cache にある値をそのまま描き、取り直した値には入れ替わらなかった (ADR-0063)。足すときは `prefetch` と `cacheFor` をそのリンクで明示し、行き先の値が hover の時点のものになってよいページに限る。ダイアログを開くリンクには足さない (ADR-0056)
 
 ### client に届く文言を書く
 
