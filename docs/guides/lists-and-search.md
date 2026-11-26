@@ -108,15 +108,15 @@ debounce を `useEffect` と `setTimeout` で手組みする形は採らない�
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。shadcn docs「Empty」と shadcn skill「Component Composition」は shadcn 4.21.0 に固定した版を指す。WAI-ARIA 1.2 と APG「Providing Accessible Names and Descriptions」の引用は 2026-10-06 に、APG「Dialog (Modal) Pattern」と「Developing a Keyboard Interface」の引用は 2026-10-08 に原文と照らした。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。shadcn docs「Empty」と shadcn skill「Component Composition」は shadcn 4.21.0 に、TanStack Pacer docs は `@tanstack/react-pacer` 0.24.1 の tag に固定した版を指す。WAI-ARIA 1.2 と APG「Providing Accessible Names and Descriptions」の引用は 2026-10-06 に、APG「Dialog (Modal) Pattern」と「Developing a Keyboard Interface」の引用は 2026-10-08 に原文と照らした。
 
 [TanStack Table docs「FlexRender」]: https://tanstack.com/table/latest/docs/framework/react/guide/flex-render
 [shadcn docs「Data Table」]: https://ui.shadcn.com/docs/components/base/data-table
 [`@tanstack/table-core` の `skills/core/references/typescript.md`]: https://github.com/TanStack/table/blob/@tanstack/table-core@9.2.6/packages/table-core/skills/core/references/typescript.md
 [TanStack Table docs「React Compiler」]: https://tanstack.com/table/latest/docs/framework/react/guide/react-compiler
 [TanStack Table docs「Table and Column Meta」]: https://tanstack.com/table/latest/docs/guide/table-and-column-meta
-[TanStack Pacer docs「Overview」]: https://tanstack.com/pacer/latest/docs/overview
-[TanStack Pacer docs「useDebouncer」]: https://tanstack.com/pacer/latest/docs/framework/react/reference/functions/useDebouncer
+[TanStack Pacer docs「Overview」]: https://github.com/TanStack/pacer/blob/@tanstack/react-pacer@0.24.1/docs/overview.md
+[TanStack Pacer docs「useDebouncer」]: https://github.com/TanStack/pacer/blob/@tanstack/react-pacer@0.24.1/docs/framework/react/reference/functions/useDebouncer.md
 [React docs「Adjusting some state when a prop changes」]: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
 [React docs「Choosing the State Structure」]: https://react.dev/learn/choosing-the-state-structure#don-t-mirror-props-in-state
 [shadcn docs「Empty」]: https://github.com/shadcn-ui/ui/blob/shadcn@4.21.0/apps/v4/content/docs/components/base/empty.mdx

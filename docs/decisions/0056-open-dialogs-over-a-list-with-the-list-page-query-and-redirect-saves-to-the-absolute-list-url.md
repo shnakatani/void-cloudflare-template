@@ -94,7 +94,7 @@
 - 行き先は `useNavigation()` の `location` から、loader と同じ読み方で読む。開いているダイアログがあれば出さない
 - 1000ms は TanStack Router の `defaultPendingMs` の既定に倣う (TanStack Router docs「Data Loading」の Showing a pending component)。値は `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`) が持つ
 - 読み込み中は読み上げない。focus がダイアログの中の閉じるボタンへ移り、ダイアログの名前が読まれる。読み終えたダイアログが開いたときに title を 1 回読む
-- 閉じる操作は、ほかのダイアログと同じく一覧の URL への遷移にする。後から始めた遷移が読み込みを取り消す (ADR-0017)。2026-11-02 時点 (Void 1.4.0) の記録では、Void の router は遷移を取り消す口を持たなかった (`VoidRouter` の型)
+- 閉じる操作は、ほかのダイアログと同じく一覧の URL への遷移にする。後から始めた遷移が読み込みを取り消す (ADR-0017)。2026-11-27 に読んだ Void 1.12.0 では、Void の router は始まった遷移を取り消す口を持たなかった (`packages/void/src/pages/client.ts` の `VoidRouter` と、`navigation-engine.ts` の `VisitOptions` の型)。docs「Pages Routing」の `Link` の "cancellation" は、同じ日に読んだ v1.12.0 の `packages/void/src/pages/link.ts` の `handleLinkClick` では、`onNavigate` で `event.preventDefault()` を呼んで、`router.visit` を呼ぶ前に止める口だった
 - 読み終えると、中身は key の替わりで本物に替わり、`finalFocusToOpener` は開いているダイアログを見て開いた元を経由しない
 
 | 案                                                                 | 評価                                                                                                                                                                                                  | 採否         |
@@ -134,12 +134,14 @@
 
 ## 出典
 
-この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
+この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0・v1.5.0・v1.12.0 のどれかを読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
 - Void docs「Layouts & Shared Data」: `node_modules/void/docs/guide/pages-routing/layouts.md`
 - Void docs「Pages API」(`useNavigation()`): `node_modules/void/docs/reference/api/pages.md`
 - Void docs「Scroll Restoration」: `node_modules/void/docs/guide/pages-routing/overview.md`
 - Void docs「Actions & Forms」の Named Actions: `node_modules/void/docs/guide/pages-routing/actions-and-forms.md`
+- Void docs「Pages Routing」の `Link` の cancellation (v1.12.0): `node_modules/void/docs/guide/pages-routing/overview.md`
+- Void 1.12.0 のソース: `packages/void/src/pages/link.ts` (`handleLinkClick`)、`packages/void/src/pages/client.ts` (`VoidRouter`)、`packages/void/src/pages/navigation-engine.ts` (`VisitOptions`)
 - Void 1.4.0 のソース: `packages/void/src/pages/scan.ts` (`scanPages`)、`packages/void/src/pages/action-key.ts`、`packages/react/src/runtime/pages-client.ts` (`finishNavigation`、`navigationFallback`、`setPopStateHandler`)、`packages/void/src/pages/navigation-engine.ts` (`makeCommit`)
 - Base UI docs「Dialog」の Popup の Data Attributes (`data-open`): `node_modules/@base-ui/react/docs/react/components/dialog.md`
 - `@base-ui/react` 1.9.0 のソース: `floating-ui-react/components/FloatingFocusManager.mjs` (return focus の後始末)、`popover/popup/PopoverPopup.mjs` (Popover の Popup の `role: 'dialog'`)

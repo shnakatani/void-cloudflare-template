@@ -59,7 +59,7 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 - `db` と operator (`eq`・`and` など) は `void/db` から import する。`drizzle-orm` を直接 import しない ([Void docs「Database」][] の Querying)
 - 列の SQL の名前は schema で明示する (`text("user_id")`)。`database.casing` に頼らない。テストの `db` には casing が効かない (「`db.query.*` と casing に頼らない理由」)
 - `db.query.*` (relational query) を使わず、`db.select()`・`db.insert()`・`db.update()`・`db.delete()` で書く。`db` の型も実体も schema を持たない
-- ユーザーの行は、読み出しも更新も削除も `where` で `userId` に絞る。更新と削除は `and(eq(<table>.id, id), eq(<table>.userId, userId))` にする。Void の docs に、ユーザーで行を絞る仕組みや例は無い
+- ユーザーの行は、読み出しも更新も削除も `where` で `userId` に絞る。更新と削除は `and(eq(<table>.id, id), eq(<table>.userId, userId))` にする。Void の docs (v1.12.0) に、ログイン中のユーザーで行を絞る仕組みは無い
 - 読み出した行は、読み出し口で valibot のスキーマの `v.safeParse` に通す (ADR-0013)
 - 互いの結果を使わない複数の書き込みは `db.batch([...])` で 1 回にまとめて送る ([Void docs「D1 (SQLite)」][] の Batch Operations)。batch は transaction で、途中の文が失敗すると全体を戻す ([Cloudflare docs「D1 Database」][] の batch)。別々に `await` すると、途中で失敗したときに前の文だけが残る
 
@@ -92,7 +92,7 @@ D1 は 1 つの query と 1 回の Worker の呼び出しに上限を持つ。�
 3. deploy したあと、`vp exec void db execute --remote "PRAGMA optimize"` で統計を取り直す。index を作ったあとに打つよう Cloudflare が勧める ([Cloudflare docs「SQL statements」][] の `PRAGMA optimize`)
 
 - D1 は返した行ではなく読んだ行の数で課金する。全行を読む query は、1 行を返すだけでも全行の分を払う ([Cloudflare docs「Use indexes」][] の Indexes and your bill)
-- 手元の `vp exec void db execute` は `SELECT` で始まる文の結果だけを表に出し、`EXPLAIN QUERY PLAN` の結果を出さない (Void 1.5.0 の `dist/db-*.mjs` の `runExecute`)。手元ではテストの D1 で読む。`--remote` は結果の行をすべて表に出す
+- 手元の `vp exec void db execute "EXPLAIN QUERY PLAN <SQL>"` も plan を表に出す。行を返す文の結果は表に出る ([Void docs「void db execute」][])。それでも plan は、`createTestD1()` の D1 に `.toSQL()` の SQL と parameter を渡して読む。2026-11-27 に Void 1.12.0 のソースを読むと、手元の `void db execute` は D1 のファイルを better-sqlite3 で開いていた (`packages/void/src/migrations/runner.ts` の `openSqliteDatabase`)。workerd の D1 と同じ SQLite で plan を立てるとは限らない。`void db execute` が受けるのは `<sql>` か `--file <path>` で、parameter を渡す口は無い ([Void docs「void db execute」][])
 
 ### ユーザー入力で部分一致の検索を組む
 
@@ -228,13 +228,14 @@ D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs �
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.5.0 か v1.11.0) を固定して指す。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に、Better Auth docs は 2026-11-04 に原文と照らした。Void のテストも v1.5.0 に固定した版を指す。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.5.0・v1.11.0・v1.12.0 のどれか) を固定して指す。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に、Better Auth docs は 2026-11-04 に原文と照らした。Void のテストも v1.5.0 に固定した版を指す。
 
 [Void docs「Database」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database.md
 [Void docs「Database」の Seeding]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database.md#seeding
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md
 [Void docs「Authentication」の Database and Migrations]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/auth.md#database-and-migrations
 [Void docs「void db reset」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md
+[Void docs「void db execute」]: https://github.com/voidzero-dev/void/blob/v1.12.0/docs/reference/cli/database.md#void-db-execute
 [SQLite docs「SQL Language Expressions」]: https://www.sqlite.org/lang_expr.html#like
 [SQLite docs「Query Planning」]: https://www.sqlite.org/queryplanner.html
 [SQLite docs「FTS5」]: https://www.sqlite.org/fts5.html#the_trigram_tokenizer
