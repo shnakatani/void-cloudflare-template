@@ -59,7 +59,7 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 - `db` と operator (`eq`・`and` など) は `void/db` から import する。`drizzle-orm` を直接 import しない ([Void docs「Database」][] の Querying)
 - 列の SQL の名前は schema で明示する (`text("user_id")`)。`database.casing` に頼らない。テストの `db` には casing が効かない (「`db.query.*` と casing に頼らない理由」)
 - `db.query.*` (relational query) を使わず、`db.select()`・`db.insert()`・`db.update()`・`db.delete()` で書く。`db` の型も実体も schema を持たない
-- ユーザーの行は、読み出しも更新も削除も `where` で `userId` に絞る。更新と削除は `and(eq(<table>.id, id), eq(<table>.userId, userId))` にする。Void の docs に、ユーザーで行を絞る仕組みや例は無い
+- ユーザーの行は、読み出しも更新も削除も `where` で `userId` に絞る。更新と削除は `and(eq(<table>.id, id), eq(<table>.userId, userId))` にする。Void の docs (v1.12.0) に、ログイン中のユーザーで行を絞る仕組みは無い
 - 読み出した行は、読み出し口で valibot のスキーマの `v.safeParse` に通す (ADR-0013)
 - 互いの結果を使わない複数の書き込みは `db.batch([...])` で 1 回にまとめて送る ([Void docs「D1 (SQLite)」][] の Batch Operations)。batch は transaction で、途中の文が失敗すると全体を戻す ([Cloudflare docs「D1 Database」][] の batch)。別々に `await` すると、途中で失敗したときに前の文だけが残る
 
