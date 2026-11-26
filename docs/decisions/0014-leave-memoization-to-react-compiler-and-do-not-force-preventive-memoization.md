@@ -91,7 +91,7 @@ oxlint 1.79 で `react/react-compiler` と `reportAllBailouts` は廃止され�
 
 - Compiler の適用は experimental な機能に乗る (`@vitejs/plugin-react` の README が明記)。壊れたときの退避は `docs/guides/react/memoization.md`「React Compiler の診断を読む」にある
 - `package.json` から babel を外しても install からは消えない。`@vitejs/plugin-react` の optional peer として `@rolldown/plugin-babel` と `babel-plugin-react-compiler` と `@babel/core` が lockfile に残る (2026-09-02 実測: `vp why babel-plugin-react-compiler` が plugin-react 経由で解決する)。プロジェクト root からは解決できないので (`require.resolve` が `MODULE_NOT_FOUND`)、`vite.config.ts` から使うことはできない
-- Compiler は client 環境だけで走る。自前コードの SSR 出力にメモ化は入らない (2026-09-02 に SSR の bundle の `useMemoCache` を数えて実測。0 件)。単一レンダーの経路なのでメモ化の効きどころが無い
+- 2026-11-27 に Void 1.12.0 と `@vitejs/plugin-react` 6.3.0 で確かめると、自前コードの SSR の出力にメモ化は入っていなかった。plugin の `vite:react-compiler` (`dist/index.js`) は、`consumer` が `"server"` の環境では Compiler を掛けていなかった。`vp build` の出力で、Compiler が書く `Symbol.for("react.memo_cache_sentinel")` の比較を数えると、`dist/client` には 53 件あり、`dist/ssr` には React 自身の定義の 3 件しかなかった。SSR は単一レンダーの経路なのでメモ化の効きどころが無い
 - Todo の bail out はビルドログにしか出ない。増減はゲートにならず、気づくのはログを読んだときになる。Compiler がカバーしない箇所を欠陥として扱わないと決めているので、この非対称は意図どおりである。Invariant は `react/invariant` が `vp check` で止める
 - Compiler 自身の不整合で `react/invariant` が鳴り、書き換えで消えないときは、行単位で抑制して理由を書くことになる。oxlint が書き換えで消える形を `react/immutability` などの上流の分類で報告するようになったら、名指しを外すかを見直す
 - Compiler が黙って外れる経路 (`vite.config.ts` から `compiler` オプションが消える) を機械で見張るものは無い。塞ぐならビルド成果物を見る検査が要る
