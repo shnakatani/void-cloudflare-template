@@ -7,7 +7,6 @@ import { noteSeeds } from "../src/features/notes/note-seeds";
 /**
  * `vp exec void db seed` が、dev の D1 を作り直して migration を当てたあとに呼ぶ (`docs/guides/database.md`「見本のデータを入れる」)。
  * `DEV_EMAIL` と `DEV_PASSWORD` でログインできる user を作る。
- * `void db seed` は jiti で読み、tsconfig の `paths` を解決しないので、`@/` で import しない
  */
 export default defineSeed<typeof import("./schema")>(async (context) => {
   const { db } = context;

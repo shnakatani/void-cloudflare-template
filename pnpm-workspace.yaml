@@ -32,6 +32,23 @@ minimumReleaseAgeExclude:
   - "@vitest/*"
   - tsrs
   - "@tsrs/*"
+  - void@1.12.0
+  - "@void/react@1.12.0"
+  - "@cloudflare/build-output-utils@1.0.0-rc.4"
+  - "@cloudflare/config@1.0.0-rc.4"
+  - "@cloudflare/runtime-types@0.1.34"
+  - "@cloudflare/vite-plugin@2.0.0-rc.5"
+  - "@cloudflare/workers-auth@0.18.8"
+  - "@cloudflare/workers-types@5.20261125.1"
+  - "@cloudflare/workers-utils@0.57.0"
+  - "@void/deploy-cloudflare@1.12.0"
+  - "@void/deploy-core@1.12.0"
+  - "@void/edge@1.12.0"
+  - "@void/isr@1.12.0"
+  - "@void/platform@1.12.0"
+  - cf@1.0.0-rc.5
+  - devalue@6.0.4
+  - miniflare@5.20261123.1-beta
 
 # vitest の行は vp migrate が書き、消しても書き戻す。allowAny の vite と値が '*' の allowedVersions.vite は vp migrate が消す (docs/guides/dependencies-and-toolchain.md「peer の食い違いを数える」)
 peerDependencyRules:
