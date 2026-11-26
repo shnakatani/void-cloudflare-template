@@ -35,9 +35,9 @@ global の middleware は、`await next()` のあとで応答ごとに nonce を
 | 値の配信            | 解決した値は、Void が HTML の後ろに流す nonce の無い inline の `<script>` で届く                                                                                                                                                                                                                               | `packages/void/src/pages/protocol.ts` の `runPageGet` が `streamDeferredResponse` に渡す関数                                                                |
 | client の hydration | React は `$RX` が付けた digest を持つ回復できるエラーを `onRecoverableError` に渡し、境界を client で描き直す。Void の client は `hydrateRoot` に `onRecoverableError` を渡し、digest が `VOID_DEFERRED_SHELL` のエラーを捨て、ほかを `reportError` で報告する                                                 | `packages/react/src/runtime/pages-client.ts` の `onRecoverableError` と `startReactPages`、`react-dom` 19.3.1 の `react-dom-client.development.js` (`dgst`) |
 
-`$RX` が止まると、境界は「待っている」印 (`<!--$?-->`) のまま残る。React 19 は、文書の読み込みが終わったあとも「待っている」印のままの境界を、server が描き終えられなかった境界として扱い (`react-dom` 19.3.1 の `isSuspenseInstanceFallback`)、digest の無い error 419 ("The server could not finish this Suspense boundary …") を報告する。digest が無いので、Void の `onRecoverableError` はこのエラーを捨てない。
+同じ日に読んだ `react-dom` 19.3.1 のソースでは、`$RX` が止まると、境界は「待っている」印 (`<!--$?-->`) のまま残る。React は、文書の読み込みが終わったあとも「待っている」印のままの境界を、server が描き終えられなかった境界として扱っていた (`isSuspenseInstanceFallback`)。そのとき作る error 419 ("The server could not finish this Suspense boundary …") の digest は `$RX` が付ける `data-dgst` から読むので、`$RX` が止まると digest を持たず、Void の `onRecoverableError` の条件に当たらない。この digest の有無はソースの読みで、実測では見ていない。
 
-2026-11-27 に、`defer()` で 1.5 秒待つ値を `use()` で描く一時のページを Playwright の Chromium で開いた (Void 1.12.0、react-dom 19.3.1)。どの環境でも、HTML は `$RX("B:0","VOID_DEFERRED_SHELL",…)` を持っていた。
+2026-11-27 に、`defer()` で 1.5 秒待つ値を `use()` で描く一時のページを Playwright の Chromium で開いた (Void 1.12.0、react-dom 19.3.1)。`vp dev` と、`script-src 'self'` の `vp preview` の HTML は、`$RX("B:0","VOID_DEFERRED_SHELL",…)` を持っていた。
 
 | 環境                                                                 | 値                       | error 419                                                                                                                 |
 | -------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
@@ -79,7 +79,7 @@ global の middleware は、`await next()` のあとで応答ごとに nonce を
 ## Consequences
 
 - 遅いデータは loader で待つ。Context の 2026-11-27 の実測 (Void 1.12.0) では、deferred props は本番の CSP の下で値が届かず、error 419 も出した。error 419 は本物の hydration の食い違いと同じ経路で出るので、出ることが当たり前になると本物に気付けない
-- 再評価の条件は 2 つ。nonce の strict CSP は、Void の描画が自身の `<script>` にだけ nonce を付ける口を持ち、キャッシュから返す HTML の nonce を応答ごとに作り直す形になったら決め直す。deferred props は、それに加えて、その nonce が React の inline の script (`$RX`) と、Void が値を流す inline の script にも付くようになったら決め直す。`$RX` が動けば、error 419 は Void の client が捨てる (Context の実測の表の `'unsafe-inline'` の行)
+- 再評価の条件は 2 つ。nonce の strict CSP は、Void の描画が自身の `<script>` にだけ nonce を付ける口を持ち、キャッシュから返す HTML の nonce を応答ごとに作り直す形になったら決め直す。deferred props は、それに加えて、その nonce が React の inline の script (`$RX`) と、Void が値を流す inline の script にも付くようになったら決め直す。2026-11-27 の実測では、inline の script が動く環境 (Context の実測の表の `'unsafe-inline'` の 2 行) で error 419 は出なかった
 - `<script>` を足すときは、`src` を持つ module の script にする。JSX や head の inline の `<script>` は本番で止まる
 - dev では inline の script が止まらないので、inline の script の違反は dev で見えない。`vp run verify:security-headers` が、本番の成果物の HTML の応答から `script-src 'self'` で止まる script (inline の `<script>`、別の origin の `src`、イベントハンドラの属性、`javascript:` の URL) を探して落とす。ログインが要るページも、検査のユーザーでログインして読む。script を足す機能 (deferred props など) は、ログインが要るページで使われやすい
 - `vp run verify:security-headers` は、SSR のページ (ログインが要るページを含む)、`/robots.txt`、404 の応答に上の CSP が乗っていることを見る。期待する値は検査の側に写しで持つので、値を変えたら `void.config.ts` と検査の両方を直す
