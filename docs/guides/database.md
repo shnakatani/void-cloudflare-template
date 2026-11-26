@@ -92,7 +92,7 @@ D1 は 1 つの query と 1 回の Worker の呼び出しに上限を持つ。�
 3. deploy したあと、`vp exec void db execute --remote "PRAGMA optimize"` で統計を取り直す。index を作ったあとに打つよう Cloudflare が勧める ([Cloudflare docs「SQL statements」][] の `PRAGMA optimize`)
 
 - D1 は返した行ではなく読んだ行の数で課金する。全行を読む query は、1 行を返すだけでも全行の分を払う ([Cloudflare docs「Use indexes」][] の Indexes and your bill)
-- 手元の `vp exec void db execute` は `SELECT` で始まる文の結果だけを表に出し、`EXPLAIN QUERY PLAN` の結果を出さない (Void 1.5.0 の `dist/db-*.mjs` の `runExecute`)。手元ではテストの D1 で読む。`--remote` は結果の行をすべて表に出す
+- `vp exec void db execute "EXPLAIN QUERY PLAN <SQL>"` でも plan を読める。行を返す文の結果は表に出る ([Void docs「void db execute」][])。`void db execute` は SQL の文字列だけを受け、parameter を bind する口を持たないので、`.toSQL()` の `?` は値に書き換えて渡す
 
 ### ユーザー入力で部分一致の検索を組む
 
@@ -228,13 +228,14 @@ D1 で部分一致を組む形は 3 つある。2026-11-03 に Cloudflare docs �
 
 ## 出典
 
-本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.5.0 か v1.11.0) を固定して指す。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に、Better Auth docs は 2026-11-04 に原文と照らした。Void のテストも v1.5.0 に固定した版を指す。
+本文の出典の名前がリンクになっている。名前と URL の対応は、この節のソースにあるリンクの定義が持つ。Void docs はリンクごとに版 (v1.5.0・v1.11.0・v1.12.0 のどれか) を固定して指す。SQLite docs の引用は 2026-11-02 に (「Query Planning」と「FTS5」は 2026-11-03 に)、Cloudflare docs の値・引用・手順は 2026-11-03 に、Better Auth docs は 2026-11-04 に原文と照らした。Void のテストも v1.5.0 に固定した版を指す。
 
 [Void docs「Database」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/database.md
 [Void docs「Database」の Seeding]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/database.md#seeding
 [Void docs「Authentication」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/guide/auth.md
 [Void docs「Authentication」の Database and Migrations]: https://github.com/voidzero-dev/void/blob/v1.11.0/docs/guide/auth.md#database-and-migrations
 [Void docs「void db reset」]: https://github.com/voidzero-dev/void/blob/v1.5.0/docs/reference/cli/database.md
+[Void docs「void db execute」]: https://github.com/voidzero-dev/void/blob/v1.12.0/docs/reference/cli/database.md#void-db-execute
 [SQLite docs「SQL Language Expressions」]: https://www.sqlite.org/lang_expr.html#like
 [SQLite docs「Query Planning」]: https://www.sqlite.org/queryplanner.html
 [SQLite docs「FTS5」]: https://www.sqlite.org/fts5.html#the_trigram_tokenizer
