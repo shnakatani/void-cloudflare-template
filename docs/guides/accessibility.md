@@ -111,7 +111,7 @@ a11y の検査は、ブラウザテストの中に 2 種類が混ざっている
 
 Void は title を、ページの `head()`、middleware の `headDefaults`、`void.config.ts` の `head` の順に探し、最初に見つかった値を使う ([Void docs「Head Management」][] の Precedence: "Page wins."。2026-11-02 時点 (Void 1.4.0) の記録では、`packages/void/src/pages/head.ts` の `resolveHead` は `pageHead?.title ?? middlewareHead?.title ?? configHead?.title` だった)。クライアント遷移でも同じ値に書き換わる ([Void docs「Head Management」][] の Client-side updates)。
 
-このテンプレートの middleware は title を返さず、`void.config.ts` の `head.title` はアプリ名だけである。そのため `head()` を持たないページの title はアプリ名だけになり、ホームと同じ文字列になる。`titleTemplate` は使わないので (ADR-0049)、ページ名の付け忘れは型でも実行時の例外でも現れない。
+このテンプレートの middleware は title を返さず、`void.config.ts` の `head.title` はアプリ名だけである。そのため `head()` を持たないページの title はアプリ名だけになり、ホームと同じ文字列になる。ページ名の付け忘れは、型でも実行時の例外でも現れない (ADR-0049「title の組み方」)。
 
 ### `ItemGroup` をネイティブのリストで組む理由
 
@@ -303,7 +303,7 @@ export const head = defineHead(() => ({ title: pageTitle("<ページ名>") }));
 [Vitest docs「Test Tags」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/guide/test-tags.md
 [Vitest docs「tags」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/tags.md
 [Vitest docs「strictTags」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/stricttags.md
-[Void docs「Head Management」]: https://github.com/voidzero-dev/void/blob/v1.4.0/docs/guide/pages-routing/head.md
+[Void docs「Head Management」]: https://github.com/voidzero-dev/void/blob/v1.12.0/docs/guide/pages-routing/head.md
 [WAI-ARIA 1.2]: https://www.w3.org/TR/wai-aria-1.2/
 [Vitest docs「hideSkippedTests」]: https://github.com/vitest-dev/vitest/blob/v5.0.1/docs/config/hideskippedtests.md
 [APG「Landmark Regions」]: https://www.w3.org/WAI/ARIA/apg/practices/landmark-regions/

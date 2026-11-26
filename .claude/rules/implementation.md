@@ -78,7 +78,7 @@ lint では見ないのでレビューで見る (ADR-0015、Action 層は ADR-00
 lint では見ないのでレビューで見る。
 
 - ホーム以外のページを足したら、`pages/<path>.server.ts` で `defineHead` の `head` を export し、`{ title: pageTitle(<ページ名>) }` (`src/lib/page-title.ts`) を返す。書き忘れると title がアプリ名だけになり、遷移の読み上げでホームと区別できず、何も落ちない (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
-- title を文字列で直接書かず `pageTitle` を通す。`void.config.ts` の `head.titleTemplate` は使わない (ADR-0049)
+- title を文字列で直接書かず `pageTitle` を通す。`titleTemplate` (`void.config.ts` の `head`、middleware の `headDefaults`、ページの `head()`) は使わない (ADR-0049)
 - ページの本文に `<h1>` を 1 つ描き、title のページ名と同じ文字列にする。見出しの行を持つページは `PageHeader` の `title` に渡す (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 - 読み込んだデータで名前が決まるページは、`head()` の 2 つ目の引数 (loader の props) から title を組む (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
 - layout に `<h1>` を置かない。遷移のたびに focus が layout の `<h1>` へ移る (`docs/guides/accessibility.md`「ページを足すときに title と見出しを持たせる」)
@@ -103,7 +103,7 @@ lint では見ないのでレビューで見る。
 
 - ページのデータは `pages/<path>.server.ts` の loader が返す props で読む。client にサーバの状態の取得やキャッシュの層 (TanStack Query など) を足さず、取り直しは action の応答、`router.refresh()`、遷移の loader の再実行に任せる (ADR-0063)
 - 遅い値も loader で await して返す。deferred props は使わない (ADR-0051)。遷移を待たせたくない値は、ページを分ける (ADR-0063)
-- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらないことがある (ADR-0063)
+- `Link`・`ButtonLink`・`NavLink` に既定で `prefetch` を渡さず、`voidReact()` に `prefetch.defaultStrategy` を置かない。渡すときは `cacheFor` も明示し、行き先の値が hover の時点のものになってよいページに限る。visit は先読みの cache の値をそのまま描き、取り直した値には入れ替わらないことがある (ADR-0063)
 
 ## ページの失敗は loader の値と区画の境界で受ける
 
