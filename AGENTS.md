@@ -95,7 +95,7 @@ release. Add a tool name to select part of the graph. For example, run
 
 <!--VITE PLUS END-->
 
-<!--injected-by-void-v1.11.0-->
+<!--injected-by-void-v1.12.0-->
 
 ## Void
 
