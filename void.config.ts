@@ -17,7 +17,7 @@ export default defineConfig({
     // build の prerender) がすべて受ける最新の日付にする (Cloudflare Workers「Best Practices」の Keep your
     // compatibility date current)。それより新しい日付では、その workerd が起動しない。上げ方は
     // docs/guides/dependencies-and-toolchain.md「依存を上げたときに見直すもの」の Void の行
-    compatibility_date: "2026-11-03",
+    compatibility_date: "2026-11-26",
   },
   database: {
     // D1 の read replication を切り、読みをすべて primary にする (ADR-0067)。省くと既存の database の設定を変えず、
