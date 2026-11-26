@@ -9,7 +9,8 @@
       // .void/tsconfig.json の paths の写し。パスはこのファイルからの相対で書く。
       // void/db と void/routes は写さない (ADR-0047)
       "@schema": ["./db/schema.ts"],
-      "@schema/*": ["./db/schema/*"]
+      "@schema/*": ["./db/schema/*"],
+      "@auth-schema": ["./.void/better-auth-schema.ts"]
     }
   }
 }
