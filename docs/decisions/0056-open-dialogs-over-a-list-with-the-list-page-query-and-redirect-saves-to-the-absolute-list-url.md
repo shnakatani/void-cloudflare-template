@@ -94,7 +94,7 @@
 - 行き先は `useNavigation()` の `location` から、loader と同じ読み方で読む。開いているダイアログがあれば出さない
 - 1000ms は TanStack Router の `defaultPendingMs` の既定に倣う (TanStack Router docs「Data Loading」の Showing a pending component)。値は `PENDING_DISPLAY_DELAY_MS` (`src/lib/pending-display.ts`) が持つ
 - 読み込み中は読み上げない。focus がダイアログの中の閉じるボタンへ移り、ダイアログの名前が読まれる。読み終えたダイアログが開いたときに title を 1 回読む
-- 閉じる操作は、ほかのダイアログと同じく一覧の URL への遷移にする。後から始めた遷移が読み込みを取り消す (ADR-0017)。2026-11-02 時点 (Void 1.4.0) の記録では、Void の router は遷移を取り消す口を持たなかった (`VoidRouter` の型)
+- 閉じる操作は、ほかのダイアログと同じく一覧の URL への遷移にする。後から始めた遷移が読み込みを取り消す (ADR-0017)。2026-11-02 時点 (Void 1.4.0) の記録では、Void の router は遷移を取り消す口を持たなかった (`VoidRouter` の型)。2026-11-27 に読んだ Void 1.12.0 でも、`VoidRouter` と `VisitOptions` に始まった遷移を取り消す口は無かった。docs の `Link` の "cancellation" は、`onNavigate` で `event.preventDefault()` を呼んで `router.visit` を呼ぶ前に止める口である (`packages/void/src/pages/link.ts` の `handleLinkClick`)
 - 読み終えると、中身は key の替わりで本物に替わり、`finalFocusToOpener` は開いているダイアログを見て開いた元を経由しない
 
 | 案                                                                 | 評価                                                                                                                                                                                                  | 採否         |
