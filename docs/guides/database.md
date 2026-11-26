@@ -92,7 +92,7 @@ D1 は 1 つの query と 1 回の Worker の呼び出しに上限を持つ。�
 3. deploy したあと、`vp exec void db execute --remote "PRAGMA optimize"` で統計を取り直す。index を作ったあとに打つよう Cloudflare が勧める ([Cloudflare docs「SQL statements」][] の `PRAGMA optimize`)
 
 - D1 は返した行ではなく読んだ行の数で課金する。全行を読む query は、1 行を返すだけでも全行の分を払う ([Cloudflare docs「Use indexes」][] の Indexes and your bill)
-- `vp exec void db execute "EXPLAIN QUERY PLAN <SQL>"` でも plan を読める。行を返す文の結果は表に出る ([Void docs「void db execute」][])。`void db execute` は SQL の文字列だけを受け、parameter を bind する口を持たないので、`.toSQL()` の `?` は値に書き換えて渡す
+- 手元の `vp exec void db execute "EXPLAIN QUERY PLAN <SQL>"` も plan を表に出す。行を返す文の結果は表に出る ([Void docs「void db execute」][])。それでも plan は 2 のテストの D1 で読む。2026-11-27 に Void 1.12.0 のソースを読むと、手元の `void db execute` は D1 のファイルを better-sqlite3 で開いていた (`packages/void/src/migrations/runner.ts` の `openSqliteDatabase`)。workerd の D1 と同じ SQLite で plan を立てるとは限らない。SQL の文字列だけを受け、parameter を bind する口も無い
 
 ### ユーザー入力で部分一致の検索を組む
 
