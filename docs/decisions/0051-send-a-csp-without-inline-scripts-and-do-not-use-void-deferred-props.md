@@ -12,7 +12,7 @@ XSS で差し込まれた script の実行を止める層として CSP を送り
 
 - 2026-11-03 時点 (Void 1.4.0) の記録では、React の adapter は `renderToReadableStream` を `nonce` の option なしで呼んでいた (`packages/react/src/runtime/pages-server.ts`)。2026-11-03 に Void 1.4.0 の `vp preview` で見ると、Void が HTML に書くページデータと client の入り口の `<script>` も nonce を持たなかった。Void が作る nonce は、dev の CSS を `style-src` に通すもの (`packages/void/src/pages/protocol.ts` の `devCssNonce`) だけだった
 - `routing.headers` は静的な文字列しか取れない (Void の docs「Custom Headers」)
-- 2026-11-01 に Void 1.4.0 の `vp preview` と Playwright の Chromium で確かめると、deferred props の値は nonce の無い inline の `<script>` で HTML に届き (`packages/void/src/pages/protocol.ts`)、`script-src 'self'` の下ではこの script が実行されず、値が解決しなかった
+- 2026-11-27 に Void 1.12.0 の `vp preview` と Playwright の Chromium で確かめると、deferred props の値は nonce の無い inline の `<script>` で HTML に届き (`packages/void/src/pages/protocol.ts`)、`script-src 'self'` の下ではこの script が実行されず、値が解決しなかった (「deferred props は Void 1.12.0 で、`script-src 'self'` の下では値が届かず React の error 419 を出した」の実測の表)
 - 本番の HTML が持つ script は、`<script type="application/json">` のページデータ (実行されない) と、`src` を持つ `<script type="module">` だけである。2026-11-02 に `vp preview` の `/` で確かめた。deferred props を使わなければ、`script-src 'self'` で hydration まで通る
 - 2026-11-02 に Void 1.4.0 の `vp dev` で見ると、dev の HTML は React Refresh の preamble を inline の `<script type="module">` で持ち、`script-src 'self'` だと実行されず、`@vitejs/plugin-react can't detect preamble` で描画が止まった
 
