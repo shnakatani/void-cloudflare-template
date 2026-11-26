@@ -5,7 +5,6 @@ import type { Note } from "./schema";
  * id の昇順に作成日時を進め、一覧の新しい順の並びを読めるようにする。
  * 長いタイトル・空の本文・改行を含む本文・期日の有無のような確かめたい見た目を持つ行に、一覧の並びと行の高さを見比べられる件数の行を足す。
  * 未来の期日は、テンプレートを使う間に過去にならない年に置く。
- * `void db seed` は jiti で読み、tsconfig の `paths` を解決しないので、`@/` で import しない
  */
 export function noteSeeds(userId: string): Note[] {
   return NOTE_SEEDS.map((seed) => ({ ...seed, userId }));

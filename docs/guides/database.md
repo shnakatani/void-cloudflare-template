@@ -50,7 +50,6 @@ D1 の schema・migration・query を変える手順と、D1 の上限に収め�
 - ログインに使うユーザーは `db/seed.ts` が作る。email と password は `db/seed.ts` の `DEV_EMAIL` と `DEV_PASSWORD` にある。password の hash は seed の中で作るので、`DEV_PASSWORD` を書き換えて打ち直せば、新しい password でログインできる (「見本のユーザーの password の hash を seed の中で作る理由」)
 - `db/seed.ts` は `void/seed` の `defineSeed` で包んで default export にする ([Void docs「Database」][] の Seeding)。2026-11-02 時点 (Void 1.4.0) の記録では、渡る `db` は better-sqlite3 の drizzle だったので、書き込みは `.run()` で同期に打つ
 - 渡る `schema` は `db/schema.ts` の export である ([Void docs「Database」の Seeding][])。auth の table を持たないので、auth の table の行は ``db.run(sql`…`)`` で入れる。列は Better Auth の email の sign-up が入れる行に合わせる。2026-11-02 時点 (better-auth 1.7.14) の記録では、その行の `account` の `providerId` は `credential`、`accountId` は user の id だった
-- `db/seed.ts` と、そこから実行時に読むファイルは `@/` で import しない。2026-11-02 時点 (Void 1.4.0) の記録では、`void db seed` は jiti で読み、tsconfig の `paths` を渡していなかった (`cli/db.ts` の `importLocalModule`)。`import type` は実行時に消えるので、`@/` を使うファイルから型だけ引いてよい (2026-11-02 に実測)
 - 見本の行の id と作成日時・更新日時は固定の値で書く。既定値に任せると、打つたびに実行時刻が入り、一覧の並びが変わる
 - 見本の配列は `src/features/<domain>/` に置き、ドメインの読み出しの型を付ける。各行が読み出しのスキーマを通ることを、同じディレクトリの unit のテストで確かめる。`db/` にはテストを置けない (`docs/guides/testing/configuration.md`「テストの種別と置き場所」)
 
