@@ -208,11 +208,12 @@ HTML の応答に `Cache-Control: no-cache` は足さない。Vite docs の同�
 
 ### title の組み方
 
-| 候補                                                                        | 評価                                                                                                                                                                                                                 | 採否     |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| ページの `head()` が `pageTitle` で組み、config の `title` をアプリ名にする | ホームはアプリ名だけになる。ページ名の付け忘れは、そのページの title がアプリ名だけになることで現れる                                                                                                                | **採用** |
-| `void.config.ts` の `head.titleTemplate` (`%s — <アプリ名>`)                | テンプレートは config の `title` にも掛かり、ホームが「アプリ名 — アプリ名」になる (`void/src/pages/head.ts` の `resolveHead` は、勝った title の層を問わずテンプレートを掛ける)。ホームをアプリ名だけにする口が無い | 却下     |
-| `titleTemplate` を使い、ホームの `head()` に「ホーム」などの名前を返させる  | ホームの title にアプリ名でない語が付く。`head()` を書き忘れたページは「アプリ名 — アプリ名」になる                                                                                                                  | 却下     |
+| 候補                                                                                                       | 評価                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 採否     |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| ページの `head()` が `pageTitle` で組み、config の `title` をアプリ名にする                                | ホームは `head()` を持たず、config の `title` でアプリ名だけになる。組み立てはアプリのコード (`src/lib/page-title.ts`) にあり、`head()` を通らない偽の router のテスト (ADR-0048) も同じ関数で期待する title を組む。ページ名の付け忘れは、そのページの title がアプリ名だけになることで現れる                                                                                                                                                                                                                                                                                                                 | **採用** |
+| config の `head.titleTemplate` (`%s — <アプリ名>`) を置き、ホームの `head()` が `titleTemplate: ''` を返す | Void docs「Head Management」の Page title templates (v1.12.0) が、title がサイト名を含むページ (ホームなど) に示す形。下の「調査結果」の 2026-11-27 の実測では、ホームはアプリ名だけ、名前だけを返すページは `<ページ名> — <アプリ名>` になった。代わりに、アプリ名を付けるのが Void だけになり、偽の router のテストは Void の組み立てを写して期待する title を組むことになる。ホームに `head()` だけを持つ `.server.ts` が要り、その `titleTemplate: ''` が消えるとホームは `<アプリ名> — <アプリ名>` になる。`head()` の書き忘れは `<アプリ名> — <アプリ名>` になり、採用案と同じく、どのページかを伝えない | 却下     |
+| middleware の `headDefaults.titleTemplate`                                                                 | Void docs「Head Management」の Middleware defaults (v1.12.0) が示す、middleware が通る要求ごとに config の template を置き換える口。組み立てが Void に移る点と、ホームを外すのにページの `titleTemplate` が要る点は、上の案と同じ                                                                                                                                                                                                                                                                                                                                                                              | 却下     |
+| `titleTemplate` を使い、ホームの `head()` に「ホーム」などの名前を返させる                                 | ホームの title にアプリ名でない語が付く。`head()` を書き忘れたページは `<アプリ名> — <アプリ名>` になる                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | 却下     |
 
 ページ名を先に置くのは、タブが狭くても区別できるようにするためである。
 
@@ -257,7 +258,14 @@ HTML の応答に `Cache-Control: no-cache` は足さない。Vite docs の同�
 
 idle に戻った effect で読み上げる形では、続けてブラウザの戻るでホームへ戻ると、region に `<アプリ名>` が入り、focus はホームの `<h1>` に移った。
 
-- `titleTemplate` を `%s — <アプリ名>` にすると、ホームの server の HTML の `<title>` は `<アプリ名> — <アプリ名>` になった
+2026-11-27、Void 1.12.0 の dev server で、`void.config.ts` の `head` に `titleTemplate` (`%s — <アプリ名>`) を一時的に置き、server の HTML の `<title>` を読んだ。ホームはログインした cookie を付けて開いた。
+
+| ページ                                                                | `<title>`                 |
+| --------------------------------------------------------------------- | ------------------------- |
+| ホーム。`head()` が `{ title: <アプリ名>, titleTemplate: "" }` を返す | `<アプリ名>`              |
+| ホーム。`head()` を持たない                                           | `<アプリ名> — <アプリ名>` |
+| `head()` が `{ title: "ログイン" }` を返す                            | `ログイン — <アプリ名>`   |
+| `head()` を持たないページ                                             | `<アプリ名> — <アプリ名>` |
 
 ### 実測: 待ちの読み上げ
 
@@ -306,7 +314,7 @@ idle に戻った effect で読み上げる形では、続けてブラウザの�
 
 この ADR が `node_modules/void/docs/` のパスで挙げた Void の docs は、書いた時点に同梱されていた v1.4.0 か v1.5.0 を読んだ (行に版を書いたものはその版。版の無い行は、その行を書いた commit の `package.json` の `void` の版を読んだ。commit は `git blame -w -M` で引く (同じファイルの中で動いた行も、書いた commit まで辿る))。固定した版は `https://github.com/voidzero-dev/void/tree/v<版>/docs` の下の同じパスにある。同梱の `node_modules/void/docs/` は今入っている Void の版のもので、読んだ版と同じ内容とは限らない。
 
-- Void docs「Head Management」: `node_modules/void/docs/guide/pages-routing/head.md`
+- Void docs「Head Management」(v1.12.0。Middleware defaults、Page title templates、Client-side updates): https://github.com/voidzero-dev/void/blob/v1.12.0/docs/guide/pages-routing/head.md
 - Void docs「Pages」の React Runtime: `node_modules/void/docs/reference/api/pages.md`
 - `voidzero-dev/void#140`: https://github.com/voidzero-dev/void/pull/140
 - react.dev「useLayoutEffect」の Caveats: https://react.dev/reference/react/useLayoutEffect

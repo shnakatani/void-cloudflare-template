@@ -35,8 +35,8 @@ export default defineConfig({
   },
   // すべてのページの <head> の既定。ページの head() とマージされ、ページの値が勝つ (Void の docs「Head Management」)。
   // lang と title は WCAG 3.1.1 と 2.4.2。title はホームと head() を持たないページの title になる。
-  // titleTemplate は使わない。この title にも掛かり、ホームが「アプリ名 — アプリ名」になる。ページ名は
-  // ページの head() が pageTitle (src/lib/page-title.ts) で付ける (ADR-0049)
+  // titleTemplate は使わない。ページ名はページの head() が pageTitle (src/lib/page-title.ts) で付ける。
+  // 使わない理由は ADR-0049「title の組み方」
   // ホームの title がアプリ名になることを確かめる単体テストは持たない。この値は Void が応答の <head> へ
   // 合成する設定で、設定を写すテストは設定が効いていることを示さない。実応答を読む検査も足さない (退行の
   // 記録が無い)。Void を上げたら、vp preview でログインして / を開いて見る。外れたら verify:security-headers に足す
